@@ -54,13 +54,13 @@ export async function getTaskDetail(id: string) {
   return { task, checklist: checklist ?? [], comments: comments ?? [], attachments: attachments ?? [], totalMinutes };
 }
 
-export async function nextTaskCode(clientId: string | null, isInternal: boolean) {
-  const supabase = await createClient();
-  let prefix = "INT";
-  if (!isInternal && clientId) {
-    const { data: client } = await supabase.from("clients").select("code_prefix").eq("id", clientId).single();
-    if (client) prefix = client.code_prefix;
-  }
+async function resolveTaskCodePrefix(supabase: Awaited<ReturnType<typeof createClient>>, clientId: string | null, isInternal: boolean) {
+  if (isInternal || !clientId) return "INT";
+  const { data: client } = await supabase.from("clients").select("code_prefix").eq("id", clientId).single();
+  return client?.code_prefix ?? "INT";
+}
+
+async function highestTaskCodeNumber(supabase: Awaited<ReturnType<typeof createClient>>, prefix: string) {
   const { data } = await supabase
     .from("tasks")
     .select("code")
@@ -72,5 +72,20 @@ export async function nextTaskCode(clientId: string | null, isInternal: boolean)
     const n = parseInt(row.code.split("-")[1] ?? "0", 10);
     if (!isNaN(n) && n > max) max = n;
   }
+  return max;
+}
+
+export async function nextTaskCode(clientId: string | null, isInternal: boolean) {
+  const supabase = await createClient();
+  const prefix = await resolveTaskCodePrefix(supabase, clientId, isInternal);
+  const max = await highestTaskCodeNumber(supabase, prefix);
   return `${prefix}-${String(max + 1).padStart(2, "0")}`;
+}
+
+/** Generates `count` sequential task codes for the same prefix in one shot (e.g. for a playbook run). */
+export async function nextTaskCodes(clientId: string | null, isInternal: boolean, count: number) {
+  const supabase = await createClient();
+  const prefix = await resolveTaskCodePrefix(supabase, clientId, isInternal);
+  const start = (await highestTaskCodeNumber(supabase, prefix)) + 1;
+  return Array.from({ length: count }, (_, i) => `${prefix}-${String(start + i).padStart(2, "0")}`);
 }

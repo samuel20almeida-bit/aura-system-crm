@@ -3,6 +3,7 @@ import { AreaCard } from "@/components/metas/MetasClient";
 import { MetasHeaderActions } from "@/components/metas/MetasHeaderActions";
 import { currentQuarter, listGoals, quarterRange } from "@/lib/data/goals";
 import { listProfiles } from "@/lib/data/profile";
+import { todayInAppTz } from "@/lib/timezone";
 
 export default async function MetasPage({
   searchParams,
@@ -10,7 +11,7 @@ export default async function MetasPage({
   searchParams: Promise<{ quarter?: string }>;
 }) {
   const { quarter: quarterParam } = await searchParams;
-  const year = new Date().getFullYear();
+  const year = Number(todayInAppTz().slice(0, 4));
   const quarter = quarterParam ?? currentQuarter();
 
   const [goals, profiles] = await Promise.all([listGoals(quarter), listProfiles()]);

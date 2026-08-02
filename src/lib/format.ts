@@ -1,3 +1,5 @@
+import { APP_TIMEZONE, todayInAppTz } from "./timezone";
+
 export function formatCurrency(value: number): string {
   return new Intl.NumberFormat("pt-BR", {
     style: "currency",
@@ -16,10 +18,15 @@ export function formatCurrencyCompact(value: number): string {
 }
 
 export function formatDate(value: string | Date, opts?: Intl.DateTimeFormatOptions): string {
-  const date = typeof value === "string" ? new Date(value + (value.length === 10 ? "T00:00:00" : "")) : value;
+  const isDateOnly = typeof value === "string" && value.length === 10;
+  const date = typeof value === "string" ? new Date(value + (isDateOnly ? "T12:00:00Z" : "")) : value;
   return new Intl.DateTimeFormat("pt-BR", {
     day: "2-digit",
     month: "short",
+    // Date-only values (e.g. due_date) have no real timezone — pin to noon UTC above and skip
+    // zone conversion here so the calendar day never shifts. Timestamps (created_at etc.) are
+    // real instants, so display them in the timezone Aura actually operates in.
+    timeZone: isDateOnly ? "UTC" : APP_TIMEZONE,
     ...opts,
   }).format(date).replace(".", "");
 }
@@ -50,10 +57,11 @@ export function formatRelative(dateStr: string): string {
 }
 
 export function daysUntil(dateStr: string): number {
-  const target = new Date(dateStr + "T00:00:00");
-  const now = new Date();
-  now.setHours(0, 0, 0, 0);
-  return Math.round((target.getTime() - now.getTime()) / 86400000);
+  const [ty, tm, td] = todayInAppTz().split("-").map(Number);
+  const [dy, dm, dd] = dateStr.split("-").map(Number);
+  const todayUtcMs = Date.UTC(ty, tm - 1, td);
+  const targetUtcMs = Date.UTC(dy, dm - 1, dd);
+  return Math.round((targetUtcMs - todayUtcMs) / 86400000);
 }
 
 export function initialsFromName(name: string): string {

@@ -1,23 +1,28 @@
 import { createClient } from "@/lib/supabase/server";
+import {
+  currentQuarterInAppTz,
+  startOfMonthInAppTz,
+  startOfWeekInAppTz,
+  todayInAppTz,
+} from "@/lib/timezone";
 
-function startOfWeek(d: Date) {
-  const date = new Date(d);
-  const day = date.getDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  date.setDate(date.getDate() + diff);
-  date.setHours(0, 0, 0, 0);
-  return date;
+function addDaysToDateStr(dateStr: string, days: number): string {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const result = new Date(Date.UTC(y, m - 1, d + days));
+  return result.toISOString().slice(0, 10);
 }
 
 export async function getDashboardData(userId: string) {
   const supabase = await createClient();
-  const now = new Date();
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-  const weekStart = startOfWeek(now);
+  const todayStr = todayInAppTz();
+  const monthStart = startOfMonthInAppTz();
+  const monthEnd = startOfMonthInAppTz(new Date(), 1);
+  const weekStart = startOfWeekInAppTz();
   const weekEnd = new Date(weekStart.getTime() + 7 * 86400000);
-  const friday = new Date(weekStart.getTime() + 4 * 86400000);
-  const quarter = `${now.getFullYear()}-Q${Math.floor(now.getMonth() / 3) + 1}`;
+  const todayDow = new Date(todayStr + "T00:00:00Z").getUTCDay(); // 0=Sun..6=Sat, safe: todayStr is a plain calendar date
+  const weekStartStr = addDaysToDateStr(todayStr, todayDow === 0 ? -6 : 1 - todayDow);
+  const fridayStr = addDaysToDateStr(weekStartStr, 4);
+  const quarter = currentQuarterInAppTz();
 
   const [
     { data: profiles },
@@ -39,7 +44,7 @@ export async function getDashboardData(userId: string) {
     supabase.from("time_entries").select("user_id, minutes, billable").gte("started_at", weekStart.toISOString()).lt("started_at", weekEnd.toISOString()).not("minutes", "is", null),
     supabase.from("invoices").select("*, client:clients(id, name)").eq("status", "overdue").order("due_date"),
     supabase.from("invoices").select("amount").eq("status", "paid").gte("paid_at", monthStart.toISOString().slice(0, 10)).lt("paid_at", monthEnd.toISOString().slice(0, 10)),
-    supabase.from("contracts").select("*, client:clients(id, name)").eq("status", "active").not("end_date", "is", null).lte("end_date", new Date(now.getTime() + 30 * 86400000).toISOString().slice(0, 10)).gte("end_date", now.toISOString().slice(0, 10)),
+    supabase.from("contracts").select("*, client:clients(id, name)").eq("status", "active").not("end_date", "is", null).lte("end_date", addDaysToDateStr(todayStr, 30)).gte("end_date", todayStr),
     supabase.from("goals").select("*").eq("quarter", quarter).eq("area", "Geral").eq("unit", "currency").ilike("title", "%fatur%").maybeSingle(),
     supabase.from("activity_log").select("*, user:profiles(id, full_name, initials)").order("created_at", { ascending: false }).limit(6),
   ]);
@@ -49,8 +54,8 @@ export async function getDashboardData(userId: string) {
     .select("id", { count: "exact", head: true })
     .neq("status", "done")
     .not("due_date", "is", null)
-    .lte("due_date", friday.toISOString().slice(0, 10))
-    .gte("due_date", weekStart.toISOString().slice(0, 10));
+    .lte("due_date", fridayStr)
+    .gte("due_date", weekStartStr);
 
   const monthRevenue = (paidInvoicesThisMonth ?? []).reduce((s, i) => s + Number(i.amount), 0);
   const overdueAmount = (overdueInvoices ?? []).reduce((s, i) => s + Number(i.amount), 0);
@@ -63,13 +68,11 @@ export async function getDashboardData(userId: string) {
   const myWeekMinutes = (weekEntries ?? []).filter((e) => e.user_id === userId).reduce((s, e) => s + (e.minutes ?? 0), 0);
   const myWeekBillable = (weekEntries ?? []).filter((e) => e.user_id === userId && e.billable).reduce((s, e) => s + (e.minutes ?? 0), 0);
 
-  const todayStr = now.toISOString().slice(0, 10);
   const myTasksToday = (myTasks ?? []).filter((t) => t.due_date && t.due_date <= todayStr).length;
   const myTasksWeek = (myTasks ?? []).length - myTasksToday;
 
   return {
     todayStr,
-    weekLabel: friday,
     myTasks: (myTasks ?? []).slice(0, 5),
     myTasksToday,
     myTasksWeek,

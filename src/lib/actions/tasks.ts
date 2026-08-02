@@ -72,13 +72,19 @@ export async function updateTaskPosition(input: {
 
   const { data: prevTask } = await supabase.from("tasks").select("status, title").eq("id", input.taskId).single();
 
-  await supabase.from("tasks").update({ status: input.status }).eq("id", input.taskId);
+  const { error: statusError } = await supabase
+    .from("tasks")
+    .update({ status: input.status })
+    .eq("id", input.taskId);
+  if (statusError) throw statusError;
 
-  await Promise.all(
+  const positionResults = await Promise.all(
     input.orderedIdsInColumn.map((id, index) =>
       supabase.from("tasks").update({ position: index }).eq("id", id)
     )
   );
+  const positionError = positionResults.find((r) => r.error)?.error;
+  if (positionError) throw positionError;
 
   if (prevTask && prevTask.status !== input.status && user) {
     const labels: Record<string, string> = { todo: "A fazer", in_progress: "Em andamento", done: "Finalizadas" };
@@ -144,7 +150,8 @@ export async function toggleChecklistItem(itemId: string, done: boolean) {
 
 export async function deleteChecklistItem(itemId: string) {
   const supabase = await createClient();
-  await supabase.from("task_checklist_items").delete().eq("id", itemId);
+  const { error } = await supabase.from("task_checklist_items").delete().eq("id", itemId);
+  if (error) throw error;
   revalidatePath("/kanban");
 }
 

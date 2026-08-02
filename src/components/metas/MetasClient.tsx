@@ -63,7 +63,17 @@ function GoalRowItem({ goal }: { goal: GoalRow }) {
         </span>
         <button
           disabled={pending}
-          onClick={() => startTransition(async () => { if (confirm("Excluir meta?")) { await deleteGoal(goal.id); router.refresh(); } })}
+          onClick={() =>
+            startTransition(async () => {
+              if (!confirm("Excluir meta?")) return;
+              try {
+                await deleteGoal(goal.id);
+                router.refresh();
+              } catch {
+                alert("Não foi possível excluir a meta. Tente novamente.");
+              }
+            })
+          }
           className="hidden font-mono text-[11px] text-faint hover:text-red group-hover:block"
         >
           excluir

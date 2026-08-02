@@ -161,7 +161,16 @@ export function PlaybooksBody({
                               <button
                                 key={rs.id}
                                 disabled={pending}
-                                onClick={() => startTransition(async () => { await toggleRunStep(rs.id, !rs.done); router.refresh(); })}
+                                onClick={() =>
+                                  startTransition(async () => {
+                                    try {
+                                      await toggleRunStep(rs.id, !rs.done);
+                                      router.refresh();
+                                    } catch {
+                                      alert("Não foi possível atualizar a etapa. Tente novamente.");
+                                    }
+                                  })
+                                }
                                 className={`rounded px-1.5 py-0.5 font-mono text-[10px] ${rs.done ? "bg-accent-tint text-accent" : "bg-neutral-tint text-muted"}`}
                                 title={detail.steps[i]?.title}
                               >
@@ -296,16 +305,22 @@ function RunPlaybookModal({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [clientId, setClientId] = useState("");
+  const [error, setError] = useState<string | null>(null);
 
   return (
     <Modal onClose={onClose}>
       <form
         onSubmit={(e) => {
           e.preventDefault();
+          setError(null);
           startTransition(async () => {
-            await runPlaybook(playbookId, clientId || null);
-            router.refresh();
-            onClose();
+            try {
+              await runPlaybook(playbookId, clientId || null);
+              router.refresh();
+              onClose();
+            } catch {
+              setError("Não foi possível rodar o playbook. Tente novamente.");
+            }
           });
         }}
         className="flex flex-col gap-3.5 p-5.5"
@@ -318,6 +333,7 @@ function RunPlaybookModal({
           </Select>
         </Field>
         <p className="text-[12.5px] text-muted">Isso vai criar uma tarefa no Kanban para cada etapa do playbook.</p>
+        {error && <p className="rounded-lg bg-red-tint px-3 py-2 text-[12.5px] text-red">{error}</p>}
         <div className="flex justify-end gap-2">
           <Button type="button" variant="ghost" onClick={onClose}>Cancelar</Button>
           <Button type="submit" disabled={pending}>{pending ? "Criando…" : "Confirmar"}</Button>

@@ -2,7 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
-import { nextTaskCode } from "@/lib/data/tasks";
+import { nextTaskCodes } from "@/lib/data/tasks";
 
 export async function createCategory(name: string) {
   const supabase = await createClient();
@@ -75,7 +75,8 @@ export async function addStep(playbookId: string, title: string) {
 
 export async function deleteStep(stepId: string) {
   const supabase = await createClient();
-  await supabase.from("playbook_steps").delete().eq("id", stepId);
+  const { error } = await supabase.from("playbook_steps").delete().eq("id", stepId);
+  if (error) throw error;
   revalidatePath("/playbooks");
 }
 
@@ -98,30 +99,26 @@ export async function runPlaybook(playbookId: string, clientId: string | null) {
     .single();
   if (runError) throw runError;
 
-  await supabase
+  const { error: runStepsError } = await supabase
     .from("playbook_run_steps")
     .insert(steps.map((s) => ({ run_id: run.id, step_id: s.id, done: false })));
+  if (runStepsError) throw runStepsError;
 
   const isInternal = !clientId;
-  const code = await nextTaskCode(clientId, isInternal);
-  const [prefix] = code.split("-");
-  const { data: existing } = await supabase.from("tasks").select("code").ilike("code", `${prefix}-%`);
-  let counter = existing?.length ?? 0;
+  const codes = await nextTaskCodes(clientId, isInternal, steps.length);
 
-  const taskRows = steps.map((s) => {
-    counter += 1;
-    return {
-      code: `${prefix}-${String(counter).padStart(2, "0")}`,
-      title: s.title,
-      client_id: clientId,
-      is_internal: isInternal,
-      status: "todo" as const,
-      priority: "medium",
-      created_by: user?.id ?? null,
-      description: `Gerado pelo playbook "${playbook.name}".`,
-    };
-  });
-  await supabase.from("tasks").insert(taskRows);
+  const taskRows = steps.map((s, i) => ({
+    code: codes[i],
+    title: s.title,
+    client_id: clientId,
+    is_internal: isInternal,
+    status: "todo" as const,
+    priority: "medium",
+    created_by: user?.id ?? null,
+    description: `Gerado pelo playbook "${playbook.name}".`,
+  }));
+  const { error: tasksError } = await supabase.from("tasks").insert(taskRows);
+  if (tasksError) throw tasksError;
 
   revalidatePath("/playbooks");
   revalidatePath("/kanban");
@@ -130,16 +127,18 @@ export async function runPlaybook(playbookId: string, clientId: string | null) {
 
 export async function toggleRunStep(runStepId: string, done: boolean) {
   const supabase = await createClient();
-  await supabase.from("playbook_run_steps").update({ done }).eq("id", runStepId);
+  const { error: updateError } = await supabase.from("playbook_run_steps").update({ done }).eq("id", runStepId);
+  if (updateError) throw updateError;
 
   const { data: step } = await supabase.from("playbook_run_steps").select("run_id").eq("id", runStepId).single();
   if (step) {
     const { data: allSteps } = await supabase.from("playbook_run_steps").select("done").eq("run_id", step.run_id);
     const allDone = (allSteps ?? []).every((s) => s.done);
-    await supabase
+    const { error: runError } = await supabase
       .from("playbook_runs")
       .update({ status: allDone ? "done" : "in_progress", completed_at: allDone ? new Date().toISOString() : null })
       .eq("id", step.run_id);
+    if (runError) throw runError;
   }
 
   revalidatePath("/playbooks");

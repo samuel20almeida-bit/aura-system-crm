@@ -10,14 +10,7 @@ import { listClientsLite } from "@/lib/data/tasks";
 import { listProfiles } from "@/lib/data/profile";
 import { createClient } from "@/lib/supabase/server";
 import { formatCurrency, formatDate, formatRelative } from "@/lib/format";
-
-function isoWeek(date: Date) {
-  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-  const dayNum = d.getUTCDay() || 7;
-  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-  return Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
-}
+import { APP_TIMEZONE, currentHourInAppTz, isoWeekInAppTz } from "@/lib/timezone";
 
 function greeting(hour: number) {
   if (hour < 12) return "Bom dia";
@@ -37,7 +30,12 @@ export default async function InicioPage() {
   ]);
   const tasksLite = (await supabase.from("tasks").select("id, title, client_id")).data ?? [];
 
-  const dateLabel = new Intl.DateTimeFormat("pt-BR", { weekday: "long", day: "2-digit", month: "long" }).format(now);
+  const dateLabel = new Intl.DateTimeFormat("pt-BR", {
+    weekday: "long",
+    day: "2-digit",
+    month: "long",
+    timeZone: APP_TIMEZONE,
+  }).format(now);
   const dateLabelCap = dateLabel.charAt(0).toUpperCase() + dateLabel.slice(1);
   const monthlyGoal = data.revenueGoal ? Number(data.revenueGoal.target) / 3 : null;
   const goalPct = monthlyGoal ? (data.monthRevenue / monthlyGoal) * 100 : null;
@@ -65,9 +63,9 @@ export default async function InicioPage() {
     <PageBody>
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-[21px] font-medium">{greeting(now.getHours())}, {profile.full_name.split(" ")[0]}</h1>
+          <h1 className="text-[21px] font-medium">{greeting(currentHourInAppTz(now))}, {profile.full_name.split(" ")[0]}</h1>
           <div className="mt-0.5 text-[12.5px] text-muted">
-            {dateLabelCap} · Semana {isoWeek(now)}
+            {dateLabelCap} · Semana {isoWeekInAppTz(now)}
             {data.openTasksThisWeek > 0 && (
               <> · <span className="accent-italic">{data.openTasksThisWeek} entregas até sexta</span></>
             )}
@@ -123,7 +121,7 @@ export default async function InicioPage() {
 
           <div className="mt-1 flex items-center justify-between">
             <span className="label">CAPACIDADE DA EQUIPE</span>
-            <span className="font-mono text-[11px] text-muted">semana {isoWeek(now)}</span>
+            <span className="font-mono text-[11px] text-muted">semana {isoWeekInAppTz(now)}</span>
           </div>
           <div className="flex flex-col gap-2.5">
             {data.capacity.map(({ profile: p, hours, target }) => (

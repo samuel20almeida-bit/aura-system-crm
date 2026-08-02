@@ -51,6 +51,7 @@ export async function updateGoalProgress(goalId: string, current: number) {
 
 export async function deleteGoal(goalId: string) {
   const supabase = await createClient();
-  await supabase.from("goals").delete().eq("id", goalId);
+  const { error } = await supabase.from("goals").delete().eq("id", goalId);
+  if (error) throw error;
   revalidatePath("/metas");
 }

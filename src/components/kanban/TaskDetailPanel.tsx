@@ -258,8 +258,12 @@ export function TaskDetailPanel({ detail, profiles }: { detail: TaskDetail; prof
                     <button
                       onClick={() =>
                         startTransition(async () => {
-                          await deleteChecklistItem(item.id);
-                          router.refresh();
+                          try {
+                            await deleteChecklistItem(item.id);
+                            router.refresh();
+                          } catch {
+                            alert("Não foi possível remover a subtarefa. Tente novamente.");
+                          }
                         })
                       }
                       className="hidden text-faint hover:text-red group-hover:block"

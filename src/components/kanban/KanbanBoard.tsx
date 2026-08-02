@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   DndContext,
   DragOverlay,
@@ -92,11 +93,20 @@ export function KanbanBoard({
   const [prevTasks, setPrevTasks] = useState(tasks);
   const [columns, setColumns] = useState<ColumnsState>(() => groupTasks(tasks));
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [dragError, setDragError] = useState<string | null>(null);
+  const [dragStartColumns, setDragStartColumns] = useState<ColumnsState | null>(null);
+  const router = useRouter();
 
   if (tasks !== prevTasks) {
     setPrevTasks(tasks);
     setColumns(groupTasks(tasks));
   }
+
+  useEffect(() => {
+    if (!dragError) return;
+    const timeout = setTimeout(() => setDragError(null), 4000);
+    return () => clearTimeout(timeout);
+  }, [dragError]);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
@@ -119,6 +129,8 @@ export function KanbanBoard({
 
   function handleDragStart(e: DragStartEvent) {
     setActiveId(String(e.active.id));
+    setDragStartColumns(columns);
+    setDragError(null);
   }
 
   function handleDragOver(e: DragOverEvent) {
@@ -167,10 +179,24 @@ export function KanbanBoard({
 
     const destCol = overCol;
     const orderedIds = finalColumns[destCol].map((t) => t.id);
-    updateTaskPosition({ taskId: String(active.id), status: destCol, orderedIdsInColumn: orderedIds }).catch(() => {});
+    const revertTo = dragStartColumns;
+    updateTaskPosition({ taskId: String(active.id), status: destCol, orderedIdsInColumn: orderedIds }).catch(() => {
+      if (revertTo) setColumns(revertTo);
+      setDragError("Não foi possível mover a tarefa. Tente novamente.");
+      router.refresh();
+    });
   }
 
   return (
+    <>
+      {dragError && (
+        <div
+          role="alert"
+          className="fixed right-5 top-16 z-50 rounded-lg border border-red-tint-border bg-red-tint px-3.5 py-2.5 text-[13px] text-red shadow-lg"
+        >
+          {dragError}
+        </div>
+      )}
     <DndContext
       sensors={sensors}
       collisionDetection={closestCorners}
@@ -197,5 +223,6 @@ export function KanbanBoard({
         ) : null}
       </DragOverlay>
     </DndContext>
+    </>
   );
 }

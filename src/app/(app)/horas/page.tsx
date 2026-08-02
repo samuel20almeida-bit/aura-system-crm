@@ -8,6 +8,7 @@ import { listClientsLite } from "@/lib/data/tasks";
 import { requireProfile } from "@/lib/data/profile";
 import { createClient } from "@/lib/supabase/server";
 import { formatCurrency } from "@/lib/format";
+import { monthStartInAppTz, yearMonthInAppTz } from "@/lib/timezone";
 
 const MONTH_NAMES = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
@@ -22,14 +23,24 @@ export default async function HorasPage({
   const { month } = await searchParams;
   const { profile } = await requireProfile();
 
-  const now = month ? new Date(`${month}-01T00:00:00`) : new Date();
-  const year = now.getFullYear();
-  const monthIdx = now.getMonth();
-  const monthStart = new Date(year, monthIdx, 1);
-  const monthEnd = new Date(year, monthIdx + 1, 1);
-  const prevMonth = new Date(year, monthIdx - 1, 1);
-  const nextMonth = new Date(year, monthIdx + 1, 1);
-  const monthKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  let year: number;
+  let monthIdx: number;
+  if (month) {
+    const [y, m] = month.split("-").map(Number);
+    year = y;
+    monthIdx = m - 1;
+  } else {
+    ({ year, month0: monthIdx } = yearMonthInAppTz());
+  }
+  const monthStart = monthStartInAppTz(year, monthIdx);
+  const monthEnd = monthStartInAppTz(year, monthIdx + 1);
+  const prevMonth = monthStartInAppTz(year, monthIdx - 1);
+  const nextMonth = monthStartInAppTz(year, monthIdx + 1);
+  const monthKeyOf = (y: number, m0: number) => `${y}-${String(m0 + 1).padStart(2, "0")}`;
+  const monthKey = (d: Date) => {
+    const { year, month0 } = yearMonthInAppTz(d);
+    return monthKeyOf(year, month0);
+  };
 
   const [{ entries, profiles, clients, tasks, invoices }, running, clientsLite, supabase] = await Promise.all([
     getHorasPageData(monthStart, monthEnd),
