@@ -7,6 +7,12 @@
       "skillPath": "skills/brainstorming/SKILL.md",
       "computedHash": "225b53fce53d627d3a1e94bfea84060ccdbf11a58a2d5cf11eefef89d598020e"
     },
+    "developing-claude-code-plugins": {
+      "source": "obra/superpowers-developing-for-claude-code",
+      "sourceType": "github",
+      "skillPath": "skills/developing-claude-code-plugins/SKILL.md",
+      "computedHash": "1bd422bdd44fe3262f43e6f139041c5d1e6231ad49da74e0c2ed7b7bdad1b7ee"
+    },
     "dispatching-parallel-agents": {
       "source": "obra/superpowers",
       "sourceType": "github",
@@ -78,6 +84,18 @@
       "sourceType": "github",
       "skillPath": "skills/verification-before-completion/SKILL.md",
       "computedHash": "b529822bdac4b197b180fe12225cff86b930b65910435103c10622df7f041651"
+    },
+    "working-with-claude-code": {
+      "source": "obra/superpowers-developing-for-claude-code",
+      "sourceType": "github",
+      "skillPath": "skills/working-with-claude-code/SKILL.md",
+      "computedHash": "19f58b532fb5c916e6d8b2259c58f7cf8e61fb3e7747d613b142769c9340faaf"
+    },
+    "writing-clearly-and-concisely": {
+      "source": "obra/the-elements-of-style",
+      "sourceType": "github",
+      "skillPath": "skills/writing-clearly-and-concisely/SKILL.md",
+      "computedHash": "c702d9db967bc320da26630c1bb2b6794ec7d058bc535818f72e2d3301c2448a"
     },
     "writing-plans": {
       "source": "obra/superpowers",
