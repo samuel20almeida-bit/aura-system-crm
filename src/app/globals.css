@@ -1,0 +1,55 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bone: #f7f5f0;
+  --color-ink: #1e1e1c;
+  --color-surface: #ffffff;
+  --color-border: #e4e1d8;
+  --color-border-soft: #edeae2;
+  --color-muted: #5c5a52;
+  --color-faint: #9a9890;
+  --color-accent: #0b6b54;
+  --color-accent-logo: #0f6e56;
+  --color-accent-tint: #e1f0ea;
+  --color-accent-tint-border: #cfe4da;
+  --color-red: #c4574a;
+  --color-red-tint: #fbecea;
+  --color-red-tint-border: #ebcfca;
+  --color-amber: #d8b24a;
+  --color-neutral-tint: #f2f0ea;
+  --color-neutral-tint-border: #e9e5dc;
+
+  --font-sans: "Archivo", ui-sans-serif, sans-serif;
+  --font-serif: "Fraunces", ui-serif, serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+}
+
+body {
+  background: var(--color-bone);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+}
+
+::selection {
+  background: var(--color-accent-tint);
+  color: var(--color-accent);
+}
+
+.label {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 10.5px;
+  color: var(--color-faint);
+  letter-spacing: 0.03em;
+}
+
+.accent-italic {
+  font-family: var(--font-serif);
+  font-style: italic;
+  color: var(--color-accent);
+}
+
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
