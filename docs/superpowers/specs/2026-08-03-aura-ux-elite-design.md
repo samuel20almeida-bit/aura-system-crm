@@ -253,10 +253,17 @@ geração de código de tarefa, início e parada de timer, e reversão otimista.
 - Colunas configuráveis por usuário
 - Relatórios exportáveis além do CSV de horas já existente
 
-## Dependência externa
+## Ambiente de produção
 
-O deploy na Vercel devolve `500 MIDDLEWARE_INVOCATION_FAILED`. A causa provável,
-identificada na revisão de código: `NEXT_PUBLIC_SUPABASE_URL` e
-`NEXT_PUBLIC_SUPABASE_ANON_KEY` ausentes nas variáveis de ambiente do projeto.
-Configurar essas duas variáveis e reconectar o projeto ao repositório
-`aura-system-crm` libera a visualização de todo este trabalho.
+Resolvido em 2026-08-03. O `500 MIDDLEWARE_INVOCATION_FAILED` vinha de
+`NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_ANON_KEY` ausentes, conforme a
+revisão de código previu ao ler o código-fonte do `@supabase/ssr`. Os logs da
+Vercel confirmaram a mensagem exata — *"Your project's URL and Key are required
+to create a Supabase client!"*, na rota `/middleware` — e os erros cessaram assim
+que as variáveis entraram.
+
+- **Produção:** https://aurasystem-kappa.vercel.app
+- **Projeto Vercel:** `aurasystem`, conectado a `samuel20almeida-bit/aura-system-crm`
+
+A URL de branch (`aurasystem-git-main-…`) permanece atrás do SSO da Vercel;
+divulgue apenas a URL de produção.
