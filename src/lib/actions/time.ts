@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { elapsedMinutes } from "@/lib/time-math";
 import { revalidatePath } from "next/cache";
 
 export async function startTimer(taskId: string | null, clientId: string | null) {
@@ -41,7 +42,7 @@ export async function stopRunningTimer(note?: string) {
   if (!running) return;
 
   const endedAt = new Date();
-  const minutes = Math.max(1, Math.round((endedAt.getTime() - new Date(running.started_at).getTime()) / 60000));
+  const minutes = elapsedMinutes(running.started_at, endedAt);
 
   await supabase
     .from("time_entries")

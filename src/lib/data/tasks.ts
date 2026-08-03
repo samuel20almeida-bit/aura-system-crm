@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { buildSequentialCodes, highestCodeNumber } from "@/lib/task-codes";
 
 export async function listTasks() {
   const supabase = await createClient();
@@ -66,26 +67,18 @@ async function highestTaskCodeNumber(supabase: Awaited<ReturnType<typeof createC
     .select("code")
     .ilike("code", `${prefix}-%`)
     .order("code", { ascending: false });
-
-  let max = 0;
-  for (const row of data ?? []) {
-    const n = parseInt(row.code.split("-")[1] ?? "0", 10);
-    if (!isNaN(n) && n > max) max = n;
-  }
-  return max;
+  return highestCodeNumber((data ?? []).map((row) => row.code));
 }
 
 export async function nextTaskCode(clientId: string | null, isInternal: boolean) {
   const supabase = await createClient();
   const prefix = await resolveTaskCodePrefix(supabase, clientId, isInternal);
-  const max = await highestTaskCodeNumber(supabase, prefix);
-  return `${prefix}-${String(max + 1).padStart(2, "0")}`;
+  return buildSequentialCodes(prefix, (await highestTaskCodeNumber(supabase, prefix)) + 1, 1)[0];
 }
 
 /** Generates `count` sequential task codes for the same prefix in one shot (e.g. for a playbook run). */
 export async function nextTaskCodes(clientId: string | null, isInternal: boolean, count: number) {
   const supabase = await createClient();
   const prefix = await resolveTaskCodePrefix(supabase, clientId, isInternal);
-  const start = (await highestTaskCodeNumber(supabase, prefix)) + 1;
-  return Array.from({ length: count }, (_, i) => `${prefix}-${String(start + i).padStart(2, "0")}`);
+  return buildSequentialCodes(prefix, (await highestTaskCodeNumber(supabase, prefix)) + 1, count);
 }
