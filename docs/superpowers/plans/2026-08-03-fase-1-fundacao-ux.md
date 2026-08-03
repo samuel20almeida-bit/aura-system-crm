@@ -2077,7 +2077,43 @@ Aplicar o mesmo padrão à tabela "POR CLIENTE" em `src/app/(app)/horas/page.tsx
 
 Em `src/components/kanban/KanbanClient.tsx`, adicionar um estado `mobileColumn: ColumnId` com abas visíveis apenas em `md:hidden`. Passar `mobileColumn` ao `KanbanBoard`, que no celular renderiza somente a coluna correspondente (`grid-cols-1 md:grid-cols-3`, escondendo as outras com `hidden md:flex`).
 
-Desabilitar os sensores de arraste abaixo de `md` — no `KanbanBoard`, usar `useSensors()` sem sensores quando `window.matchMedia("(max-width: 767px)").matches`, calculado num `useState` inicializado por função para não quebrar a renderização no servidor.
+Desabilitar os sensores de arraste abaixo de `md`, já que arrastar no celular sequestra a rolagem da página. Ler o tamanho da tela exige cuidado: `window` não existe durante a renderização no servidor, e um inicializador de `useState` **também roda lá**. Usar `useSyncExternalStore`, que é a forma que o React oferece para ler estado do navegador com um valor de servidor explícito.
+
+Criar `src/lib/use-media-query.ts`:
+
+```ts
+"use client";
+
+import { useCallback, useSyncExternalStore } from "react";
+
+/** `true` quando a consulta casa. No servidor devolve `serverValue`, sem tocar em `window`. */
+export function useMediaQuery(query: string, serverValue = false): boolean {
+  const subscribe = useCallback(
+    (onChange: () => void) => {
+      const list = window.matchMedia(query);
+      list.addEventListener("change", onChange);
+      return () => list.removeEventListener("change", onChange);
+    },
+    [query]
+  );
+
+  return useSyncExternalStore(
+    subscribe,
+    () => window.matchMedia(query).matches,
+    () => serverValue
+  );
+}
+```
+
+Em `src/components/kanban/KanbanBoard.tsx`, substituir a criação dos sensores por:
+
+```tsx
+const isMobile = useMediaQuery("(max-width: 767px)");
+const pointerSensor = useSensor(PointerSensor, { activationConstraint: { distance: 6 } });
+const sensors = useSensors(...(isMobile ? [] : [pointerSensor]));
+```
+
+O valor de servidor `false` mantém o comportamento de desktop na primeira renderização, e o hook corrige após a hidratação — a escolha certa, porque desktop é onde se arrasta.
 
 - [ ] **Step 5: Ajustar o corpo da página**
 
