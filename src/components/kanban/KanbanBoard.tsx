@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   DndContext,
@@ -18,15 +18,17 @@ import { useDroppable } from "@dnd-kit/core";
 import { TaskCard } from "./TaskCard";
 import { updateTaskPosition } from "@/lib/actions/tasks";
 import type { TaskWithRelations } from "@/lib/data/tasks";
+import { moveItem, reorderWithin, type Columns, type ColumnId as OptimisticColumnId } from "@/lib/optimistic";
+import { useToast } from "@/components/ui/Toast";
 
 const COLUMNS = [
   { id: "todo", label: "A FAZER" },
   { id: "in_progress", label: "EM ANDAMENTO" },
   { id: "done", label: "FINALIZADAS" },
-] as const;
+] as const satisfies { id: OptimisticColumnId; label: string }[];
 
-type ColumnId = (typeof COLUMNS)[number]["id"];
-type ColumnsState = Record<ColumnId, TaskWithRelations[]>;
+type ColumnId = OptimisticColumnId;
+type ColumnsState = Columns<TaskWithRelations>;
 
 function groupTasks(tasks: TaskWithRelations[]): ColumnsState {
   return {
@@ -93,20 +95,14 @@ export function KanbanBoard({
   const [prevTasks, setPrevTasks] = useState(tasks);
   const [columns, setColumns] = useState<ColumnsState>(() => groupTasks(tasks));
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [dragError, setDragError] = useState<string | null>(null);
   const [dragStartColumns, setDragStartColumns] = useState<ColumnsState | null>(null);
   const router = useRouter();
+  const { notify } = useToast();
 
   if (tasks !== prevTasks) {
     setPrevTasks(tasks);
     setColumns(groupTasks(tasks));
   }
-
-  useEffect(() => {
-    if (!dragError) return;
-    const timeout = setTimeout(() => setDragError(null), 4000);
-    return () => clearTimeout(timeout);
-  }, [dragError]);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
@@ -130,7 +126,6 @@ export function KanbanBoard({
   function handleDragStart(e: DragStartEvent) {
     setActiveId(String(e.active.id));
     setDragStartColumns(columns);
-    setDragError(null);
   }
 
   function handleDragOver(e: DragOverEvent) {
@@ -140,18 +135,7 @@ export function KanbanBoard({
     const overCol = findColumnOf(String(over.id));
     if (!activeCol || !overCol || activeCol === overCol) return;
 
-    setColumns((prev) => {
-      const activeItems = prev[activeCol];
-      const activeIndex = activeItems.findIndex((t) => t.id === active.id);
-      if (activeIndex === -1) return prev;
-      const [moved] = activeItems.slice(activeIndex, activeIndex + 1);
-      const newActiveItems = activeItems.filter((t) => t.id !== active.id);
-      const overItems = prev[overCol];
-      const overIndex = overItems.findIndex((t) => t.id === over.id);
-      const insertAt = overIndex === -1 ? overItems.length : overIndex;
-      const newOverItems = [...overItems.slice(0, insertAt), moved, ...overItems.slice(insertAt)];
-      return { ...prev, [activeCol]: newActiveItems, [overCol]: newOverItems };
-    });
+    setColumns((prev) => moveItem(prev, String(active.id), overCol, String(over.id)));
   }
 
   function handleDragEnd(e: DragEndEvent) {
@@ -165,16 +149,8 @@ export function KanbanBoard({
 
     let finalColumns = columns;
     if (activeCol === overCol && active.id !== over.id) {
-      const items = columns[activeCol];
-      const oldIndex = items.findIndex((t) => t.id === active.id);
-      const newIndex = items.findIndex((t) => t.id === over.id);
-      if (oldIndex !== -1 && newIndex !== -1) {
-        const reordered = [...items];
-        const [moved] = reordered.splice(oldIndex, 1);
-        reordered.splice(newIndex, 0, moved);
-        finalColumns = { ...columns, [activeCol]: reordered };
-        setColumns(finalColumns);
-      }
+      finalColumns = { ...columns, [activeCol]: reorderWithin(columns[activeCol], String(active.id), String(over.id)) };
+      setColumns(finalColumns);
     }
 
     const destCol = overCol;
@@ -182,21 +158,12 @@ export function KanbanBoard({
     const revertTo = dragStartColumns;
     updateTaskPosition({ taskId: String(active.id), status: destCol, orderedIdsInColumn: orderedIds }).catch(() => {
       if (revertTo) setColumns(revertTo);
-      setDragError("Não foi possível mover a tarefa. Tente novamente.");
+      notify("error", "Não foi possível mover a tarefa. Ela voltou para a posição anterior.");
       router.refresh();
     });
   }
 
   return (
-    <>
-      {dragError && (
-        <div
-          role="alert"
-          className="fixed right-5 top-16 z-50 rounded-lg border border-red-tint-border bg-red-tint px-3.5 py-2.5 text-[13px] text-red shadow-lg"
-        >
-          {dragError}
-        </div>
-      )}
     <DndContext
       sensors={sensors}
       collisionDetection={closestCorners}
@@ -223,6 +190,5 @@ export function KanbanBoard({
         ) : null}
       </DragOverlay>
     </DndContext>
-    </>
   );
 }
