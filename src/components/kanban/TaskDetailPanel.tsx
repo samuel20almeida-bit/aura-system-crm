@@ -18,6 +18,7 @@ import {
 } from "@/lib/actions/tasks";
 import { startTimer } from "@/lib/actions/time";
 import type { Tables } from "@/lib/supabase/database.types";
+import { useToast } from "@/components/ui/Toast";
 
 type Profile = Tables<"profiles">;
 
@@ -35,6 +36,7 @@ type TaskDetail = {
 
 export function TaskDetailPanel({ detail, profiles }: { detail: TaskDetail; profiles: Profile[] }) {
   const router = useRouter();
+  const { notify } = useToast();
   const [tab, setTab] = useState<"detalhes" | "comentarios" | "historico">("detalhes");
   const [newItem, setNewItem] = useState("");
   const [newComment, setNewComment] = useState("");
@@ -262,7 +264,7 @@ export function TaskDetailPanel({ detail, profiles }: { detail: TaskDetail; prof
                             await deleteChecklistItem(item.id);
                             router.refresh();
                           } catch {
-                            alert("Não foi possível remover a subtarefa. Tente novamente.");
+                            notify("error", "Não foi possível remover a subtarefa. Tente novamente.");
                           }
                         })
                       }

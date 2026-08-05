@@ -9,6 +9,7 @@ import { Modal } from "@/components/ui/Overlay";
 import { Field, Input, Select } from "@/components/ui/Field";
 import { createGoal, deleteGoal, updateGoalProgress } from "@/lib/actions/goals";
 import type { GoalRow } from "@/lib/data/goals";
+import { useToast } from "@/components/ui/Toast";
 
 function formatValue(value: number, unit: string) {
   if (unit === "currency") return `R$ ${value.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}`;
@@ -19,6 +20,7 @@ function formatValue(value: number, unit: string) {
 
 function GoalRowItem({ goal }: { goal: GoalRow }) {
   const router = useRouter();
+  const { notify } = useToast();
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(String(goal.current));
   const [pending, startTransition] = useTransition();
@@ -70,7 +72,7 @@ function GoalRowItem({ goal }: { goal: GoalRow }) {
                 await deleteGoal(goal.id);
                 router.refresh();
               } catch {
-                alert("Não foi possível excluir a meta. Tente novamente.");
+                notify("error", "Não foi possível excluir a meta. Tente novamente.");
               }
             })
           }
