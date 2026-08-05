@@ -894,7 +894,10 @@ const DURATION_MS = 240;
 
 /** Anima de 0 até `value` uma única vez. `format` controla a exibição. */
 export function CountUp({ value, format }: { value: number; format: (n: number) => string }) {
-  const [shown, setShown] = useState(value);
+  // Começa em 0, não em `value`: iniciar com o valor final faria o primeiro
+  // paint mostrar o número certo e o efeito o jogaria de volta para perto de
+  // zero no primeiro quadro — o KPI piscaria correto, zeraria e recontaria.
+  const [shown, setShown] = useState(0);
 
   useEffect(() => {
     if (typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
