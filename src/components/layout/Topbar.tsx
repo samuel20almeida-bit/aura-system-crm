@@ -4,6 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Avatar } from "@/components/ui/Avatar";
+import { TimerWidget, type RunningTimer } from "@/components/layout/TimerWidget";
 
 const crumbs: { match: RegExp; label: string }[] = [
   { match: /^\/inicio/, label: "Início" },
@@ -16,7 +17,7 @@ const crumbs: { match: RegExp; label: string }[] = [
 
 type SearchResult = { type: "tarefa" | "cliente"; id: string; title: string; sub: string; href: string };
 
-export function Topbar({ initials }: { initials: string }) {
+export function Topbar({ initials, running }: { initials: string; running: RunningTimer | null }) {
   const pathname = usePathname();
   const router = useRouter();
   const crumb = crumbs.find((c) => c.match.test(pathname))?.label ?? "";
@@ -86,6 +87,8 @@ export function Topbar({ initials }: { initials: string }) {
           ⌘K
         </span>
       </button>
+
+      <TimerWidget running={running} />
 
       <Avatar initials={initials} />
 

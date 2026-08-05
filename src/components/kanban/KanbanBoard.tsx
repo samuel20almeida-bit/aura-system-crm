@@ -48,12 +48,14 @@ function Column({
   tasks,
   checklistCounts,
   onOpen,
+  runningTaskId,
 }: {
   id: ColumnId;
   label: string;
   tasks: TaskWithRelations[];
   checklistCounts: Record<string, { done: number; total: number }>;
   onOpen: (id: string) => void;
+  runningTaskId?: string | null;
 }) {
   const { setNodeRef } = useDroppable({ id });
   return (
@@ -70,6 +72,7 @@ function Column({
               task={task}
               checklistSummary={checklistSummaryFor(task.id, checklistCounts)}
               onOpen={() => onOpen(task.id)}
+              isRunning={task.id === runningTaskId}
             />
           ))}
           {tasks.length === 0 && (
@@ -87,10 +90,12 @@ export function KanbanBoard({
   tasks,
   checklistCounts,
   onOpenTask,
+  runningTaskId,
 }: {
   tasks: TaskWithRelations[];
   checklistCounts: Record<string, { done: number; total: number }>;
   onOpenTask: (id: string) => void;
+  runningTaskId?: string | null;
 }) {
   const [prevTasks, setPrevTasks] = useState(tasks);
   const [columns, setColumns] = useState<ColumnsState>(() => groupTasks(tasks));
@@ -189,13 +194,19 @@ export function KanbanBoard({
               tasks={columns[col.id]}
               checklistCounts={checklistCounts}
               onOpen={onOpenTask}
+              runningTaskId={runningTaskId}
             />
           </div>
         ))}
       </div>
       <DragOverlay>
         {activeTask ? (
-          <TaskCard task={activeTask} checklistSummary={checklistSummaryFor(activeTask.id, checklistCounts)} onOpen={() => {}} />
+          <TaskCard
+            task={activeTask}
+            checklistSummary={checklistSummaryFor(activeTask.id, checklistCounts)}
+            onOpen={() => {}}
+            isRunning={activeTask.id === runningTaskId}
+          />
         ) : null}
       </DragOverlay>
     </DndContext>

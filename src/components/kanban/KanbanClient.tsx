@@ -20,11 +20,13 @@ export function KanbanClient({
   clients,
   profiles,
   checklistCounts,
+  runningTaskId,
 }: {
   tasks: TaskWithRelations[];
   clients: ClientLite[];
   profiles: Tables<"profiles">[];
   checklistCounts: Record<string, { done: number; total: number }>;
+  runningTaskId?: string | null;
 }) {
   const router = useRouter();
   const [view, setView] = useState<"board" | "list">("board");
@@ -136,7 +138,7 @@ export function KanbanClient({
       </div>
 
       {view === "board" ? (
-        <KanbanBoard tasks={filtered} checklistCounts={checklistCounts} onOpenTask={openTask} />
+        <KanbanBoard tasks={filtered} checklistCounts={checklistCounts} onOpenTask={openTask} runningTaskId={runningTaskId} />
       ) : (
         <div className="flex-1 overflow-y-auto scrollbar-thin rounded-xl border border-border bg-surface">
           <div className="grid grid-cols-[1.6fr_1fr_1fr_.8fr_80px] gap-2 border-b border-border px-3 py-2 font-mono text-[9.5px] font-semibold tracking-wide text-faint">

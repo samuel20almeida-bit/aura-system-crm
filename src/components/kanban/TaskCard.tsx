@@ -20,10 +20,12 @@ export function TaskCard({
   task,
   checklistSummary,
   onOpen,
+  isRunning,
 }: {
   task: TaskWithRelations;
   checklistSummary?: { done: number; total: number } | null;
   onOpen: () => void;
+  isRunning?: boolean;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: task.id,
@@ -54,7 +56,12 @@ export function TaskCard({
         <Tag tone={priorityTone[task.priority]} dot>
           {priorityLabel[task.priority]}
         </Tag>
-        <span className="font-mono text-[11px] text-muted">{task.code}</span>
+        <span className="flex items-center gap-1.5 font-mono text-[11px] text-muted">
+          {task.code}
+          {isRunning && (
+            <span className="h-1.5 w-1.5 rounded-full bg-accent motion-safe:animate-pulse-soft" title="Timer rodando" />
+          )}
+        </span>
       </div>
       <div className={clsx("text-[13px] font-medium", isDone && "line-through")}>{task.title}</div>
       {task.client && (
