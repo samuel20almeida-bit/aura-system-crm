@@ -1241,7 +1241,7 @@ Em `src/lib/actions/tasks.ts`, acrescentar chamadas a `logActivity` com o `taskI
 - `updateTask`: após o update bem-sucedido, registrar o campo alterado. Para `assignee_id`, verbo `"trocou o responsável de"`; para `due_date`, `"mudou o prazo de"`; para `status` igual a `"done"`, `"concluiu"`. Passar o título da tarefa como `detail` e `taskId` como quinto argumento.
 - `toggleChecklistItem`: quando `done` for verdadeiro, registrar `"concluiu a subtarefa"` com o título do item; buscar `task_id` do item para passar adiante.
 
-Em `src/lib/actions/time.ts`, em `stopRunningTimer` e `logManualTime`, registrar `"lançou horas em"` com a quantidade em `detail` e o `task_id` da entrada.
+Em `src/lib/actions/time.ts`, em `stopRunningTimer` e `logManualTime`, registrar `"lançou"` com a quantidade em `detail` (o painel monta `{nome} {verbo} {detalhe}`, então "lançou" + "1,5h" lê como "Julia lançou 1,5h"; com "lançou horas em" a frase ficaria "lançou horas em 1,5h", que não faz sentido) e o `task_id` da entrada.
 
 - [ ] **Step 6: Buscar o histórico**
 
