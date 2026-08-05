@@ -52,7 +52,7 @@ export async function stopRunningTimer(note?: string) {
     .eq("id", running.id);
 
   if (running.task_id) {
-    await logActivity(supabase, user.id, "lançou horas em", formatHours(minutes), running.task_id);
+    await logActivity(supabase, user.id, "lançou", formatHours(minutes), running.task_id);
   }
 
   revalidatePath("/horas");
@@ -90,7 +90,7 @@ export async function logManualTime(input: {
   if (error) throw error;
 
   if (input.taskId) {
-    await logActivity(supabase, user.id, "lançou horas em", formatHours(input.minutes), input.taskId);
+    await logActivity(supabase, user.id, "lançou", formatHours(input.minutes), input.taskId);
   }
 
   revalidatePath("/horas");
