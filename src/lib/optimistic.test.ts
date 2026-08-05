@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { moveItem, reorderWithin, type Columns } from "./optimistic";
+import { moveItem, reorderWithin, findColumnIn, type Columns } from "./optimistic";
 
 type Item = { id: string };
 
@@ -45,5 +45,19 @@ describe("moveItem", () => {
     const before = makeColumns();
     const result = moveItem(before, "inexistente", "done", null);
     expect(result).toEqual(before);
+  });
+});
+
+describe("findColumnIn", () => {
+  it("encontra o item na coluna certa", () => {
+    expect(findColumnIn(makeColumns(), "a")).toBe("todo");
+  });
+
+  it("devolve null para id inexistente", () => {
+    expect(findColumnIn(makeColumns(), "inexistente")).toBeNull();
+  });
+
+  it("devolve a coluna correta quando o item está numa coluna que não é a primeira", () => {
+    expect(findColumnIn(makeColumns(), "c")).toBe("in_progress");
   });
 });

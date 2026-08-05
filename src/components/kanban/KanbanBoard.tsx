@@ -18,7 +18,7 @@ import { useDroppable } from "@dnd-kit/core";
 import { TaskCard } from "./TaskCard";
 import { updateTaskPosition } from "@/lib/actions/tasks";
 import type { TaskWithRelations } from "@/lib/data/tasks";
-import { moveItem, reorderWithin, type Columns, type ColumnId as OptimisticColumnId } from "@/lib/optimistic";
+import { moveItem, reorderWithin, findColumnIn, type Columns, type ColumnId as OptimisticColumnId } from "@/lib/optimistic";
 import { useToast } from "@/components/ui/Toast";
 
 const COLUMNS = [
@@ -140,24 +140,33 @@ export function KanbanBoard({
 
   function handleDragEnd(e: DragEndEvent) {
     const { active, over } = e;
+    const startColumns = dragStartColumns;
     setActiveId(null);
-    if (!over) return;
+    setDragStartColumns(null);
 
-    const activeCol = findColumnOf(String(active.id));
+    if (!over) {
+      // Solto fora de qualquer coluna: desfaz o que handleDragOver já aplicou.
+      if (startColumns) setColumns(startColumns);
+      return;
+    }
+
     const overCol = findColumnOf(String(over.id));
-    if (!activeCol || !overCol) return;
+    if (!overCol) return;
+
+    // A coluna de origem vem do estado do início do arraste, não do atual:
+    // handleDragOver já pode ter movido o card, e ler o estado corrente faria
+    // reorderWithin rodar uma segunda vez sobre o mesmo par, invertendo a posição.
+    const originCol = startColumns ? findColumnIn(startColumns, String(active.id)) : null;
 
     let finalColumns = columns;
-    if (activeCol === overCol && active.id !== over.id) {
-      finalColumns = { ...columns, [activeCol]: reorderWithin(columns[activeCol], String(active.id), String(over.id)) };
+    if (originCol === overCol && active.id !== over.id) {
+      finalColumns = { ...columns, [overCol]: reorderWithin(columns[overCol], String(active.id), String(over.id)) };
       setColumns(finalColumns);
     }
 
-    const destCol = overCol;
-    const orderedIds = finalColumns[destCol].map((t) => t.id);
-    const revertTo = dragStartColumns;
-    updateTaskPosition({ taskId: String(active.id), status: destCol, orderedIdsInColumn: orderedIds }).catch(() => {
-      if (revertTo) setColumns(revertTo);
+    const orderedIds = finalColumns[overCol].map((t) => t.id);
+    updateTaskPosition({ taskId: String(active.id), status: overCol, orderedIdsInColumn: orderedIds }).catch(() => {
+      if (startColumns) setColumns(startColumns);
       notify("error", "Não foi possível mover a tarefa. Ela voltou para a posição anterior.");
       router.refresh();
     });

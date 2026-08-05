@@ -13,6 +13,14 @@ export function reorderWithin<T extends { id: string }>(items: T[], activeId: st
   return next;
 }
 
+/** Coluna que contém `id`, ou `null` se nenhuma contém. */
+export function findColumnIn<T extends { id: string }>(columns: Columns<T>, id: string): ColumnId | null {
+  for (const col of COLUMN_IDS) {
+    if (columns[col].some((item) => item.id === id)) return col;
+  }
+  return null;
+}
+
 export function moveItem<T extends { id: string }>(
   columns: Columns<T>,
   itemId: string,
