@@ -25,34 +25,59 @@ export async function listClientsLite() {
   return data ?? [];
 }
 
+export async function getTaskHistory(taskId: string) {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("activity_log")
+    .select("*, user:profiles(id, full_name, initials)")
+    .eq("task_id", taskId)
+    .order("created_at", { ascending: false })
+    .limit(50);
+  return data ?? [];
+}
+
 export async function getTaskDetail(id: string) {
   const supabase = await createClient();
-  const [{ data: task }, { data: checklist }, { data: comments }, { data: attachments }, { data: timeSpent }] =
-    await Promise.all([
-      supabase
-        .from("tasks")
-        .select(
-          "*, client:clients(id, name, color, code_prefix), assignee:profiles!tasks_assignee_id_fkey(id, full_name, initials)"
-        )
-        .eq("id", id)
-        .single(),
-      supabase
-        .from("task_checklist_items")
-        .select("*, assignee:profiles(id, full_name, initials)")
-        .eq("task_id", id)
-        .order("position"),
-      supabase
-        .from("task_comments")
-        .select("*, author:profiles(id, full_name, initials)")
-        .eq("task_id", id)
-        .order("created_at"),
-      supabase.from("task_attachments").select("*").eq("task_id", id).order("created_at"),
-      supabase.from("time_entries").select("minutes").eq("task_id", id).not("minutes", "is", null),
-    ]);
+  const [
+    { data: task },
+    { data: checklist },
+    { data: comments },
+    { data: attachments },
+    { data: timeSpent },
+    history,
+  ] = await Promise.all([
+    supabase
+      .from("tasks")
+      .select(
+        "*, client:clients(id, name, color, code_prefix), assignee:profiles!tasks_assignee_id_fkey(id, full_name, initials)"
+      )
+      .eq("id", id)
+      .single(),
+    supabase
+      .from("task_checklist_items")
+      .select("*, assignee:profiles(id, full_name, initials)")
+      .eq("task_id", id)
+      .order("position"),
+    supabase
+      .from("task_comments")
+      .select("*, author:profiles(id, full_name, initials)")
+      .eq("task_id", id)
+      .order("created_at"),
+    supabase.from("task_attachments").select("*").eq("task_id", id).order("created_at"),
+    supabase.from("time_entries").select("minutes").eq("task_id", id).not("minutes", "is", null),
+    getTaskHistory(id),
+  ]);
 
   const totalMinutes = (timeSpent ?? []).reduce((sum, t) => sum + (t.minutes ?? 0), 0);
 
-  return { task, checklist: checklist ?? [], comments: comments ?? [], attachments: attachments ?? [], totalMinutes };
+  return {
+    task,
+    checklist: checklist ?? [],
+    comments: comments ?? [],
+    attachments: attachments ?? [],
+    totalMinutes,
+    history,
+  };
 }
 
 async function resolveTaskCodePrefix(supabase: Awaited<ReturnType<typeof createClient>>, clientId: string | null, isInternal: boolean) {

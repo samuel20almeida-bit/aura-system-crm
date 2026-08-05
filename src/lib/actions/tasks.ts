@@ -54,7 +54,7 @@ export async function createTask(input: {
 
   if (error) throw error;
 
-  await logActivity(supabase, user.id, "criou a tarefa", task.title);
+  await logActivity(supabase, user.id, "criou a tarefa", task.title, task.id);
   revalidatePath("/kanban");
   revalidatePath("/inicio");
   return task;
@@ -88,7 +88,13 @@ export async function updateTaskPosition(input: {
 
   if (prevTask && prevTask.status !== input.status && user) {
     const labels: Record<string, string> = { todo: "A fazer", in_progress: "Em andamento", done: "Finalizadas" };
-    await logActivity(supabase, user.id, `moveu ${prevTask.title} para`, labels[input.status] ?? input.status);
+    await logActivity(
+      supabase,
+      user.id,
+      `moveu ${prevTask.title} para`,
+      labels[input.status] ?? input.status,
+      input.taskId
+    );
   }
 
   revalidatePath("/kanban");
@@ -108,8 +114,25 @@ export async function updateTask(
   }>
 ) {
   const supabase = await createClient();
-  const { error } = await supabase.from("tasks").update(patch).eq("id", taskId);
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const { data: task, error } = await supabase.from("tasks").update(patch).eq("id", taskId).select("title").single();
   if (error) throw error;
+
+  if (user && task) {
+    if ("assignee_id" in patch) {
+      await logActivity(supabase, user.id, "trocou o responsável de", task.title, taskId);
+    }
+    if ("due_date" in patch) {
+      await logActivity(supabase, user.id, "mudou o prazo de", task.title, taskId);
+    }
+    if (patch.status === "done") {
+      await logActivity(supabase, user.id, "concluiu", task.title, taskId);
+    }
+  }
+
   revalidatePath("/kanban");
   revalidatePath("/inicio");
 }
@@ -143,8 +166,21 @@ export async function addChecklistItem(taskId: string, title: string) {
 
 export async function toggleChecklistItem(itemId: string, done: boolean) {
   const supabase = await createClient();
-  const { error } = await supabase.from("task_checklist_items").update({ done }).eq("id", itemId);
+  const { data: item, error } = await supabase
+    .from("task_checklist_items")
+    .update({ done })
+    .eq("id", itemId)
+    .select("title, task_id")
+    .single();
   if (error) throw error;
+
+  if (done && item) {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    await logActivity(supabase, user?.id ?? null, "concluiu a subtarefa", item.title, item.task_id);
+  }
+
   revalidatePath("/kanban");
 }
 

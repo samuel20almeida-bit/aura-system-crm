@@ -7,7 +7,7 @@ import { Avatar } from "@/components/ui/Avatar";
 import { Tag } from "@/components/ui/Tag";
 import { Button } from "@/components/ui/Button";
 import { ProgressBar } from "@/components/ui/Card";
-import { formatDate, daysUntil } from "@/lib/format";
+import { formatDate, formatRelative, daysUntil } from "@/lib/format";
 import {
   addChecklistItem,
   addComment,
@@ -31,6 +31,7 @@ type TaskDetail = {
   comments: (Tables<"task_comments"> & { author: { id: string; full_name: string; initials: string } | null })[];
   attachments: Tables<"task_attachments">[];
   totalMinutes: number;
+  history: (Tables<"activity_log"> & { user: { id: string; full_name: string; initials: string } | null })[];
 };
 
 
@@ -329,7 +330,25 @@ export function TaskDetailPanel({ detail, profiles }: { detail: TaskDetail; prof
           </div>
         )}
 
-        {tab === "historico" && <p className="text-[12.5px] text-faint">Sem histórico registrado ainda.</p>}
+        {tab === "historico" && (
+          <div className="flex flex-col gap-3">
+            {detail.history.length === 0 && (
+              <p className="text-[12.5px] text-faint">Nenhum evento registrado ainda.</p>
+            )}
+            {detail.history.map((event) => (
+              <div key={event.id} className="flex gap-2.5">
+                <Avatar initials={event.user?.initials} size="sm" ghost />
+                <div>
+                  <span className="text-[12.5px]">
+                    <b className="font-medium">{event.user?.full_name ?? "Alguém"}</b> {event.verb}
+                    {event.detail ? ` ${event.detail}` : ""}
+                  </span>
+                  <div className="mt-0.5 font-mono text-[11px] text-faint">{formatRelative(event.created_at)}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <form

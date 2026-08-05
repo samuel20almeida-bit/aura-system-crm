@@ -3,6 +3,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { elapsedMinutes } from "@/lib/time-math";
 import { revalidatePath } from "next/cache";
+import { logActivity } from "./activity";
+import { formatHours } from "@/lib/format";
 
 export async function startTimer(taskId: string | null, clientId: string | null) {
   const supabase = await createClient();
@@ -34,7 +36,7 @@ export async function stopRunningTimer(note?: string) {
 
   const { data: running } = await supabase
     .from("time_entries")
-    .select("id, started_at")
+    .select("id, started_at, task_id")
     .eq("user_id", user.id)
     .is("ended_at", null)
     .maybeSingle();
@@ -48,6 +50,10 @@ export async function stopRunningTimer(note?: string) {
     .from("time_entries")
     .update({ ended_at: endedAt.toISOString(), minutes, note: note ?? null })
     .eq("id", running.id);
+
+  if (running.task_id) {
+    await logActivity(supabase, user.id, "lançou horas em", formatHours(minutes), running.task_id);
+  }
 
   revalidatePath("/horas");
   revalidatePath("/kanban");
@@ -82,6 +88,11 @@ export async function logManualTime(input: {
     billable: input.billable,
   });
   if (error) throw error;
+
+  if (input.taskId) {
+    await logActivity(supabase, user.id, "lançou horas em", formatHours(input.minutes), input.taskId);
+  }
+
   revalidatePath("/horas");
   revalidatePath("/inicio");
 }
