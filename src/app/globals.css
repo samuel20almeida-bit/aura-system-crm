@@ -62,3 +62,12 @@ body {
 .animate-toast-in {
   animation: toast-in 180ms ease-out;
 }
+
+@keyframes pulse-soft {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.5; }
+}
+
+.animate-pulse-soft {
+  animation: pulse-soft 1.6s ease-in-out infinite;
+}

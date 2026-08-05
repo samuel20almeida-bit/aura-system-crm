@@ -44,6 +44,7 @@ export function Sidebar({
       <Link
         key={item.href}
         href={item.href}
+        prefetch
         className={clsx(
           "flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] font-medium",
           active ? "bg-accent-tint text-accent" : "text-muted hover:bg-neutral-tint"
