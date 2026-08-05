@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useOptimistic, useState } from "react";
 import Link from "next/link";
 import { useTransition } from "react";
 import { Kpi, Card } from "@/components/ui/Card";
@@ -11,6 +11,7 @@ import { NewClientModal, NewDealModal, NewInvoiceModal } from "./CrmModals";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { markInvoiceStatus, updateDealStage } from "@/lib/actions/crm";
 import type { Tables } from "@/lib/supabase/database.types";
+import { useToast } from "@/components/ui/Toast";
 
 type ClientRow = Tables<"clients"> & { owner: { id: string; full_name: string; initials: string } | null };
 type DealRow = Tables<"deals"> & { client: { id: string; name: string } | null; owner: { id: string; full_name: string; initials: string } | null };
@@ -47,6 +48,18 @@ export function CrmClient({
   const [tab, setTab] = useState<"overview" | "clientes" | "pipeline" | "faturas">("overview");
   const [modal, setModal] = useState<"client" | "deal" | "invoice" | null>(null);
   const [, startTransition] = useTransition();
+  const { notify } = useToast();
+
+  const [optimisticInvoices, setInvoiceStatusOptimistic] = useOptimistic(
+    invoices,
+    (list, { id, status }: { id: string; status: string }) =>
+      list.map((i) => (i.id === id ? { ...i, status } : i))
+  );
+  const [optimisticDeals, setDealStageOptimistic] = useOptimistic(
+    deals,
+    (list, { id, stage }: { id: string; stage: string }) =>
+      list.map((d) => (d.id === id ? { ...d, stage } : d))
+  );
 
   const activeClients = clients.filter((c) => c.status === "active");
   const pipelineValue = deals.filter((d) => d.stage !== "won" && d.stage !== "lost").reduce((s, d) => s + Number(d.value ?? 0), 0);
@@ -145,7 +158,7 @@ export function CrmClient({
       {tab === "pipeline" && (
         <div className="grid flex-1 grid-cols-4 gap-3 overflow-hidden">
           {stages.map((stage) => {
-            const stageDeals = deals.filter((d) => d.stage === stage.id);
+            const stageDeals = optimisticDeals.filter((d) => d.stage === stage.id);
             const value = stageDeals.reduce((s, d) => s + Number(d.value ?? 0), 0);
             return (
               <div key={stage.id} className="flex min-h-0 flex-col gap-2 overflow-y-auto scrollbar-thin rounded-xl border border-neutral-tint-border bg-neutral-tint p-2.75">
@@ -162,7 +175,17 @@ export function CrmClient({
                     </div>
                     <select
                       value={d.stage}
-                      onChange={(e) => startTransition(async () => { await updateDealStage(d.id, e.target.value); })}
+                      onChange={(e) => {
+                        const stage = e.target.value;
+                        startTransition(async () => {
+                          setDealStageOptimistic({ id: d.id, stage });
+                          try {
+                            await updateDealStage(d.id, stage);
+                          } catch {
+                            notify("error", "Não foi possível atualizar a etapa do negócio. Tente novamente.");
+                          }
+                        });
+                      }}
                       className="rounded border border-border bg-bone px-1.5 py-1 text-[11px] text-muted"
                     >
                       {stages.map((s) => (
@@ -188,7 +211,7 @@ export function CrmClient({
             <div>STATUS</div>
           </div>
           <div className="overflow-y-auto scrollbar-thin">
-            {invoices.map((inv) => (
+            {optimisticInvoices.map((inv) => (
               <div key={inv.id} className="grid grid-cols-[1.4fr_1fr_.9fr_.9fr_.8fr] items-center gap-2 border-b border-border-soft py-2.5 text-[13px]">
                 <div className="flex items-center gap-2">
                   <span className="h-2 w-2 rounded-sm" style={{ background: inv.client?.color ?? "#9A9890" }} />
@@ -199,7 +222,17 @@ export function CrmClient({
                 <div>{formatCurrency(Number(inv.amount))}</div>
                 <select
                   value={inv.status}
-                  onChange={(e) => startTransition(async () => { await markInvoiceStatus(inv.id, inv.client_id, e.target.value); })}
+                  onChange={(e) => {
+                    const status = e.target.value;
+                    startTransition(async () => {
+                      setInvoiceStatusOptimistic({ id: inv.id, status });
+                      try {
+                        await markInvoiceStatus(inv.id, inv.client_id, status);
+                      } catch {
+                        notify("error", "Não foi possível atualizar o status da fatura. Tente novamente.");
+                      }
+                    });
+                  }}
                   className="justify-self-start rounded-full border-0 bg-transparent text-[11px] font-medium"
                   style={{ color: inv.status === "paid" ? "#0B6B54" : inv.status === "overdue" ? "#C4574A" : "#5C5A52" }}
                 >
@@ -209,7 +242,7 @@ export function CrmClient({
                 </select>
               </div>
             ))}
-            {invoices.length === 0 && <div className="py-8 text-center text-[13px] text-faint">Nenhuma fatura registrada ainda.</div>}
+            {optimisticInvoices.length === 0 && <div className="py-8 text-center text-[13px] text-faint">Nenhuma fatura registrada ainda.</div>}
           </div>
         </Card>
       )}
