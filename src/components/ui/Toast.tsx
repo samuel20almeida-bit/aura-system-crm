@@ -34,18 +34,23 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       {children}
       <div className="pointer-events-none fixed bottom-5 right-5 z-[60] flex flex-col gap-2">
         {toasts.map((t) => (
-          <ToastItem key={t.id} toast={t} onDismiss={() => dismiss(t.id)} />
+          <ToastItem key={t.id} toast={t} onDismiss={dismiss} />
         ))}
       </div>
     </ToastContext.Provider>
   );
 }
 
-function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: () => void }) {
+// `onDismiss` recebe o id em vez de já vir amarrado a ele: uma função inline
+// (`() => dismiss(t.id)`) teria identidade nova a cada render do provider, e o
+// efeito abaixo reiniciaria o cronômetro de todos os avisos na tela sempre que
+// um novo aviso entrasse. Com `dismiss` memoizado, cada aviso some no seu tempo.
+function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: (id: string) => void }) {
+  const id = toast.id;
   useEffect(() => {
-    const timeout = setTimeout(onDismiss, DISMISS_MS);
+    const timeout = setTimeout(() => onDismiss(id), DISMISS_MS);
     return () => clearTimeout(timeout);
-  }, [onDismiss]);
+  }, [onDismiss, id]);
 
   return (
     <div
@@ -62,14 +67,14 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: () => void }
         <button
           onClick={() => {
             toast.undo?.();
-            onDismiss();
+            onDismiss(id);
           }}
           className="font-mono text-[11px] underline underline-offset-2 hover:opacity-70"
         >
           Desfazer
         </button>
       )}
-      <button onClick={onDismiss} className="ml-1 text-[13px] opacity-50 hover:opacity-100" aria-label="Fechar aviso">
+      <button onClick={() => onDismiss(id)} className="ml-1 text-[13px] opacity-50 hover:opacity-100" aria-label="Fechar aviso">
         ✕
       </button>
     </div>
