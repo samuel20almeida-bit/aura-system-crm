@@ -45,8 +45,8 @@ export function TaskCard({
       {...listeners}
       onClick={onOpen}
       className={clsx(
-        "flex cursor-pointer flex-col gap-2 rounded-[10px] border border-border bg-surface p-2.75 shadow-[0_1px_2px_rgba(30,30,28,.05)]",
-        isDragging && "opacity-40",
+        "flex cursor-pointer flex-col gap-2 rounded-[10px] border border-border bg-surface p-2.75 shadow-[0_1px_2px_rgba(30,30,28,.05)] transition-shadow duration-150 hover:shadow-[0_2px_8px_rgba(30,30,28,.10)]",
+        isDragging && "opacity-40 shadow-[0_8px_24px_rgba(30,30,28,.18)]",
         isDone && "opacity-70"
       )}
     >

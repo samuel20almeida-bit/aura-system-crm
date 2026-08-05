@@ -4,6 +4,7 @@ import { Kpi, Card, ProgressBar } from "@/components/ui/Card";
 import { Avatar } from "@/components/ui/Avatar";
 import { TaskQuickItem } from "@/components/inicio/TaskQuickItem";
 import { InicioActions } from "@/components/inicio/InicioActions";
+import { CountUp } from "@/components/ui/CountUp";
 import { requireProfile } from "@/lib/data/profile";
 import { getDashboardData } from "@/lib/data/dashboard";
 import { listClientsLite } from "@/lib/data/tasks";
@@ -75,7 +76,7 @@ export default async function InicioPage() {
       </div>
 
       <div className="grid grid-cols-4 gap-3">
-        <Kpi label="FATURAMENTO DO MÊS" value={formatCurrency(data.monthRevenue)}>
+        <Kpi label="FATURAMENTO DO MÊS" value={<CountUp value={data.monthRevenue} format="currency" />}>
           {goalPct !== null && (
             <>
               <ProgressBar percent={goalPct} className="mt-0.5" />
@@ -99,7 +100,7 @@ export default async function InicioPage() {
         </Kpi>
         <Kpi
           label="A COBRAR"
-          value={formatCurrency(data.overdueAmount)}
+          value={<CountUp value={data.overdueAmount} format="currency" />}
           valueClassName={data.overdueInvoices.length > 0 ? "text-red" : undefined}
           labelClassName={data.overdueInvoices.length > 0 ? "text-red" : undefined}
           sub={data.overdueInvoices.length > 0 ? `${data.overdueInvoices.length} faturas atrasadas` : "tudo em dia"}
