@@ -1,6 +1,7 @@
 import { requireProfile } from "@/lib/data/profile";
 import { getNavCounts } from "@/lib/data/nav";
 import { getRunningTimer } from "@/lib/data/time";
+import { getNotifications } from "@/lib/data/notifications";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Topbar } from "@/components/layout/Topbar";
 import { ToastProvider } from "@/components/ui/Toast";
@@ -9,6 +10,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const { profile } = await requireProfile();
   const counts = await getNavCounts();
   const timer = await getRunningTimer(profile.id);
+  const notifications = await getNotifications(profile.id);
   const running = timer
     ? {
         id: timer.id,
@@ -23,7 +25,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <div className="flex h-screen w-full bg-bone">
         <Sidebar profile={profile} counts={counts} />
         <div className="flex min-w-0 flex-1 flex-col">
-          <Topbar initials={profile.initials} running={running} />
+          <Topbar initials={profile.initials} running={running} notifications={notifications} />
           <div className="flex min-h-0 flex-1 flex-col overflow-y-auto scrollbar-thin">{children}</div>
         </div>
       </div>

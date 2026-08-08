@@ -5,6 +5,8 @@ import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Avatar } from "@/components/ui/Avatar";
 import { TimerWidget, type RunningTimer } from "@/components/layout/TimerWidget";
+import { NotificationBell } from "@/components/layout/NotificationBell";
+import type { AppNotification } from "@/lib/notifications";
 
 const crumbs: { match: RegExp; label: string }[] = [
   { match: /^\/inicio/, label: "Início" },
@@ -17,7 +19,15 @@ const crumbs: { match: RegExp; label: string }[] = [
 
 type SearchResult = { type: "tarefa" | "cliente"; id: string; title: string; sub: string; href: string };
 
-export function Topbar({ initials, running }: { initials: string; running: RunningTimer | null }) {
+export function Topbar({
+  initials,
+  running,
+  notifications,
+}: {
+  initials: string;
+  running: RunningTimer | null;
+  notifications: AppNotification[];
+}) {
   const pathname = usePathname();
   const router = useRouter();
   const crumb = crumbs.find((c) => c.match.test(pathname))?.label ?? "";
@@ -87,6 +97,8 @@ export function Topbar({ initials, running }: { initials: string; running: Runni
           ⌘K
         </span>
       </button>
+
+      <NotificationBell notifications={notifications} />
 
       <TimerWidget running={running} />
 
