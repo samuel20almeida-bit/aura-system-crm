@@ -2129,7 +2129,9 @@ Em `src/components/layout/Sidebar.tsx`:
 - Exportar `MobileNavToggle({ onClick })`, um botão com ícone de três linhas visível apenas em `md:hidden`.
 - Quando aberta no celular, renderizar um fundo escurecido `fixed inset-0 z-40 bg-ink/20 md:hidden` que fecha ao clique.
 
-Em `src/app/(app)/layout.tsx`, criar um componente cliente fino que segura o estado `open` e conecta `MobileNavToggle` (na `Topbar`) à `Sidebar`.
+Em `src/app/(app)/layout.tsx`, criar um componente cliente fino que segura o estado `open` e conecta `MobileNavToggle` (na `Topbar`) à `Sidebar`. O layout é um Server Component assíncrono que já busca `counts`, `timer` e `notifications` — o invólucro cliente recebe esses dados como props serializáveis e não pode receber função nenhuma do servidor.
+
+**A gaveta fecha ao navegar.** Sem isso, tocar em "Kanban" no celular carrega a página nova com a gaveta ainda aberta por cima dela. Use `usePathname()` e feche quando o caminho mudar.
 
 - [ ] **Step 2: Grades de indicadores empilham**
 
@@ -2175,15 +2177,36 @@ export function useMediaQuery(query: string, serverValue = false): boolean {
 }
 ```
 
-Em `src/components/kanban/KanbanBoard.tsx`, substituir a criação dos sensores por:
+**Como desabilitar o arraste — leia antes de escrever.** A forma óbvia é montar a lista de sensores condicionalmente:
 
 ```tsx
-const isMobile = useMediaQuery("(max-width: 767px)");
-const pointerSensor = useSensor(PointerSensor, { activationConstraint: { distance: 6 } });
+// NÃO FAÇA ISSO — quebra no celular.
 const sensors = useSensors(...(isMobile ? [] : [pointerSensor]));
 ```
 
-O valor de servidor `false` mantém o comportamento de desktop na primeira renderização, e o hook corrige após a hidratação — a escolha certa, porque desktop é onde se arrasta.
+Isso **derruba o Kanban em todo celular**. O `useSensors` do dnd-kit usa os próprios sensores como array de dependências (`node_modules/@dnd-kit/core/dist/core.cjs.development.js:205-212`: `useMemo(..., [...sensors])`). No celular o servidor renderiza com `serverValue = false` (1 sensor) e a hidratação corrige para `true` (0 sensores) — o array de dependências muda de tamanho entre renderizações e o React lança *"The final argument passed to useMemo changed size between renders"*. A tela quebra exatamente no aparelho que a mudança queria atender.
+
+**Faça assim:** a lista de sensores fica constante, e quem é desabilitado é o item arrastável, pela API oficial do dnd-kit.
+
+Em `src/components/kanban/KanbanBoard.tsx`:
+
+```tsx
+const isMobile = useMediaQuery("(max-width: 767px)");
+const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
+```
+
+O `sensors` não muda mais de tamanho. Propague `dragDisabled={isMobile}` por `KanbanBoard → Column → TaskCard`, e em `src/components/kanban/TaskCard.tsx` repasse ao hook que já existe na linha 31:
+
+```tsx
+const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+  id: task.id,
+  disabled: dragDisabled,
+});
+```
+
+`disabled` é suportado pelo `useSortable` e não altera a contagem de hooks. O valor de servidor `false` mantém o desktop arrastável na primeira renderização e o hook corrige depois da hidratação — a escolha certa, porque desktop é onde se arrasta.
+
+O `DragOverlay` continua como está: com o arraste desabilitado no celular ele nunca recebe um item ativo.
 
 - [ ] **Step 5: Ajustar o corpo da página**
 
@@ -2192,9 +2215,11 @@ Em `src/components/layout/PageBody.tsx`, trocar `p-5.5` por `p-4 md:p-5.5` e, no
 - [ ] **Step 6: Verificar**
 
 Run: `npm test && npx tsc --noEmit && npm run lint && npm run build`
-Expected: tudo limpo.
+Expected: tudo limpo — 43 testes (esta tarefa não acrescenta teste; é layout).
 
-No navegador, reduzir a janela para 390px de largura e confirmar: a gaveta abre e fecha, nenhuma tela rola para os lados, os indicadores ficam dois por linha, o Kanban mostra uma coluna com abas, e concluir tarefa / iniciar timer / registrar horas continuam funcionando.
+**Não há navegador neste ambiente.** Não rode `npm run dev`, não tente abrir nada, e **nunca escreva no relatório que viu algo renderizar** — seria falso.
+
+Em vez disso, deixe no relatório a lista do que só o dono do sistema pode conferir num aparelho de verdade, a 390px de largura: a gaveta abre, fecha ao tocar fora e fecha ao navegar; nenhuma tela rola para os lados; os indicadores ficam dois por linha; o Kanban mostra uma coluna com abas e **não** arrasta ao tocar; e concluir tarefa, iniciar timer e registrar horas continuam funcionando.
 
 - [ ] **Step 7: Commit**
 
