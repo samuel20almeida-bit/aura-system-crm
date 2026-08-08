@@ -20,7 +20,7 @@ export function AppShell({
   children,
 }: {
   profile: { full_name: string; role_title: string | null; initials: string };
-  counts: { openTasks: number; overdueInvoices: number };
+  counts: { openTasks: number | null; overdueInvoices: number | null };
   running: RunningTimer | null;
   notifications: AppNotification[];
   children: React.ReactNode;

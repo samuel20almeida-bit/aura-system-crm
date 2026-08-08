@@ -4,6 +4,7 @@ import { PageBody } from "@/components/layout/PageBody";
 import { Kpi, Card } from "@/components/ui/Card";
 import { Tag } from "@/components/ui/Tag";
 import { Avatar } from "@/components/ui/Avatar";
+import { Unavailable } from "@/components/ui/Unavailable";
 import { getClientDetail } from "@/lib/data/crm";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { ClientHeaderActions, ContractsCard, ContactHistoryCard } from "@/components/crm/ClientDetailClient";
@@ -12,7 +13,22 @@ const priorityLabel: Record<string, string> = { high: "Alta", medium: "Média", 
 
 export default async function ClientDetailPage({ params }: { params: Promise<{ clientId: string }> }) {
   const { clientId } = await params;
-  const { client, contracts, invoices, tasks, contacts, runs, totalMinutes, revenueTotal } = await getClientDetail(clientId);
+  const detail = await getClientDetail(clientId);
+
+  // Consulta que falhou não é cliente inexistente: um notFound() aqui afirmaria
+  // que a ficha não existe quando na verdade ninguém conseguiu lê-la.
+  if (detail.unavailable) {
+    return (
+      <PageBody>
+        <div className="text-[12.5px] text-faint">
+          <Link href="/crm" className="hover:text-ink">← Voltar para CRM</Link>
+        </div>
+        <Unavailable title="Não foi possível carregar a ficha deste cliente agora" />
+      </PageBody>
+    );
+  }
+
+  const { client, contracts, invoices, tasks, contacts, runs, totalMinutes, revenueTotal } = detail;
 
   if (!client) notFound();
 

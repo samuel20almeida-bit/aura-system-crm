@@ -34,22 +34,34 @@ export async function stopRunningTimer(note?: string) {
   } = await supabase.auth.getUser();
   if (!user) return;
 
-  const { data: running } = await supabase
+  // Ordenar e limitar pelo mesmo motivo do sino (ver src/lib/data/notifications.ts):
+  // se alguma vez sobrarem duas entradas abertas, um maybeSingle() cru devolve
+  // erro — e era justamente aí, com os dados já quebrados, que parar o timer
+  // ficava impossível. Com a mais recente primeiro, cada clique em "parar"
+  // fecha uma entrada e o estado volta ao normal.
+  const { data: running, error: readError } = await supabase
     .from("time_entries")
     .select("id, started_at, task_id")
     .eq("user_id", user.id)
     .is("ended_at", null)
+    .order("started_at", { ascending: false })
+    .limit(1)
     .maybeSingle();
+  if (readError) throw readError;
 
   if (!running) return;
 
   const endedAt = new Date();
   const minutes = elapsedMinutes(running.started_at, endedAt);
 
-  await supabase
+  // Sem esta verificação o encerramento falhava calado: o startTimer seguinte
+  // inseria assim mesmo, sobravam duas linhas com ended_at nulo e as horas
+  // paravam de ser registradas sem uma única mensagem.
+  const { error: updateError } = await supabase
     .from("time_entries")
     .update({ ended_at: endedAt.toISOString(), minutes, note: note ?? null })
     .eq("id", running.id);
+  if (updateError) throw updateError;
 
   if (running.task_id) {
     await logActivity(supabase, user.id, "lançou", formatHours(minutes), running.task_id);

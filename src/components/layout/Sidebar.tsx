@@ -35,7 +35,8 @@ export function Sidebar({
   onClose,
 }: {
   profile: { full_name: string; role_title: string | null; initials: string };
-  counts: { openTasks: number; overdueInvoices: number };
+  /** `null` num contador significa "não deu para ler" — nunca zero. */
+  counts: { openTasks: number | null; overdueInvoices: number | null };
   open: boolean;
   onClose: () => void;
 }) {
@@ -64,15 +65,25 @@ export function Sidebar({
       >
         <Icon />
         {item.label}
-        {!!count && (
+        {count === null ? (
+          // Um "0" aqui seria uma afirmação; "—" é a ausência de resposta.
           <span
-            className={clsx(
-              "ml-auto font-mono text-[10px] font-semibold",
-              item.countKey === "overdueInvoices" ? "text-red" : active ? "text-accent" : "text-faint"
-            )}
+            className="ml-auto font-mono text-[10px] font-semibold text-faint"
+            title="Não foi possível ler este número agora"
           >
-            {count}
+            —
           </span>
+        ) : (
+          !!count && (
+            <span
+              className={clsx(
+                "ml-auto font-mono text-[10px] font-semibold",
+                item.countKey === "overdueInvoices" ? "text-red" : active ? "text-accent" : "text-faint"
+              )}
+            >
+              {count}
+            </span>
+          )
         )}
       </Link>
     );

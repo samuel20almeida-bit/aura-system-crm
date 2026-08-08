@@ -5,6 +5,7 @@ import { Avatar } from "@/components/ui/Avatar";
 import { TaskQuickItem } from "@/components/inicio/TaskQuickItem";
 import { InicioActions } from "@/components/inicio/InicioActions";
 import { CountUp } from "@/components/ui/CountUp";
+import { Unavailable } from "@/components/ui/Unavailable";
 import { requireProfile } from "@/lib/data/profile";
 import { getDashboardData } from "@/lib/data/dashboard";
 import { listClientsLite } from "@/lib/data/tasks";
@@ -39,10 +40,12 @@ export default async function InicioPage() {
   }).format(now);
   const dateLabelCap = dateLabel.charAt(0).toUpperCase() + dateLabel.slice(1);
   const monthlyGoal = data.revenueGoal ? Number(data.revenueGoal.target) / 3 : null;
-  const goalPct = monthlyGoal ? (data.monthRevenue / monthlyGoal) * 100 : null;
+  const goalPct = monthlyGoal && data.monthRevenue !== null ? (data.monthRevenue / monthlyGoal) * 100 : null;
+  // Um número que não pôde ser lido aparece como "—". Zero é uma afirmação.
+  const DASH = "—";
 
   const needsAttention = [
-    ...data.overdueInvoices.slice(0, 2).map((inv) => ({
+    ...(data.overdueInvoices ?? []).slice(0, 2).map((inv) => ({
       key: `inv-${inv.id}`,
       color: "#C4574A",
       title: `${inv.client?.name ?? "Cliente"} · fatura vencida`,
@@ -50,7 +53,7 @@ export default async function InicioPage() {
       href: `/crm/${inv.client_id}`,
       action: "Ver fatura →",
     })),
-    ...data.endingContracts.slice(0, 2).map((c) => ({
+    ...(data.endingContracts ?? []).slice(0, 2).map((c) => ({
       key: `ct-${c.id}`,
       color: "#D8B24A",
       title: `Contrato ${c.client?.name ?? ""} vence em breve`,
@@ -67,7 +70,7 @@ export default async function InicioPage() {
           <h1 className="text-[21px] font-medium">{greeting(currentHourInAppTz(now))}, {profile.full_name.split(" ")[0]}</h1>
           <div className="mt-0.5 text-[12.5px] text-muted">
             {dateLabelCap} · Semana {isoWeekInAppTz(now)}
-            {data.openTasksThisWeek > 0 && (
+            {data.openTasksThisWeek !== null && data.openTasksThisWeek > 0 && (
               <> · <span className="accent-italic">{data.openTasksThisWeek} entregas até sexta</span></>
             )}
           </div>
@@ -75,8 +78,13 @@ export default async function InicioPage() {
         <InicioActions clients={clients} profiles={profiles} tasks={tasksLite} />
       </div>
 
+      {data.unavailable && <Unavailable title="Alguns números não puderam ser carregados" />}
+
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <Kpi label="FATURAMENTO DO MÊS" value={<CountUp value={data.monthRevenue} format="currency" />}>
+        <Kpi
+          label="FATURAMENTO DO MÊS"
+          value={data.monthRevenue === null ? DASH : <CountUp value={data.monthRevenue} format="currency" />}
+        >
           {goalPct !== null && (
             <>
               <ProgressBar percent={goalPct} className="mt-0.5" />
@@ -84,26 +92,47 @@ export default async function InicioPage() {
             </>
           )}
         </Kpi>
-        <Kpi label="MINHAS TAREFAS" value={data.myTasksToday + data.myTasksWeek}>
-          <div className="flex gap-1.5">
-            {data.myTasksToday > 0 && <span className="rounded-full bg-red-tint px-2 py-0.5 text-[11px] text-red">{data.myTasksToday} hoje</span>}
-            {data.myTasksWeek > 0 && <span className="rounded-full bg-neutral-tint px-2 py-0.5 text-[11px] text-muted">{data.myTasksWeek} na semana</span>}
-            {data.myTasksToday === 0 && data.myTasksWeek === 0 && <span className="font-mono text-[11px] text-faint">tudo em dia</span>}
-          </div>
+        <Kpi
+          label="MINHAS TAREFAS"
+          value={data.myTasksToday === null || data.myTasksWeek === null ? DASH : data.myTasksToday + data.myTasksWeek}
+        >
+          {data.myTasksToday !== null && data.myTasksWeek !== null && (
+            <div className="flex gap-1.5">
+              {data.myTasksToday > 0 && <span className="rounded-full bg-red-tint px-2 py-0.5 text-[11px] text-red">{data.myTasksToday} hoje</span>}
+              {data.myTasksWeek > 0 && <span className="rounded-full bg-neutral-tint px-2 py-0.5 text-[11px] text-muted">{data.myTasksWeek} na semana</span>}
+              {data.myTasksToday === 0 && data.myTasksWeek === 0 && <span className="font-mono text-[11px] text-faint">tudo em dia</span>}
+            </div>
+          )}
         </Kpi>
         <Kpi
           label="HORAS DA SEMANA"
-          value={<>{data.myWeekHours.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}h <span className="text-[13px] font-normal text-muted">/ {profile.weekly_capacity_hours}h</span></>}
+          value={
+            data.myWeekHours === null ? (
+              DASH
+            ) : (
+              <>{data.myWeekHours.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}h <span className="text-[13px] font-normal text-muted">/ {profile.weekly_capacity_hours}h</span></>
+            )
+          }
         >
-          <ProgressBar percent={(data.myWeekHours / profile.weekly_capacity_hours) * 100} className="mt-0.5" />
-          <span className="font-mono text-[11px] text-muted">{Math.round(data.myWeekBillablePct)}% faturáveis</span>
+          {data.myWeekHours !== null && data.myWeekBillablePct !== null && (
+            <>
+              <ProgressBar percent={(data.myWeekHours / profile.weekly_capacity_hours) * 100} className="mt-0.5" />
+              <span className="font-mono text-[11px] text-muted">{Math.round(data.myWeekBillablePct)}% faturáveis</span>
+            </>
+          )}
         </Kpi>
         <Kpi
           label="A COBRAR"
-          value={<CountUp value={data.overdueAmount} format="currency" />}
-          valueClassName={data.overdueInvoices.length > 0 ? "text-red" : undefined}
-          labelClassName={data.overdueInvoices.length > 0 ? "text-red" : undefined}
-          sub={data.overdueInvoices.length > 0 ? `${data.overdueInvoices.length} faturas atrasadas` : "tudo em dia"}
+          value={data.overdueAmount === null ? DASH : <CountUp value={data.overdueAmount} format="currency" />}
+          valueClassName={data.overdueInvoices && data.overdueInvoices.length > 0 ? "text-red" : undefined}
+          labelClassName={data.overdueInvoices && data.overdueInvoices.length > 0 ? "text-red" : undefined}
+          sub={
+            data.overdueInvoices === null
+              ? undefined
+              : data.overdueInvoices.length > 0
+                ? `${data.overdueInvoices.length} faturas atrasadas`
+                : "tudo em dia"
+          }
         />
       </div>
 
@@ -114,10 +143,16 @@ export default async function InicioPage() {
             <Link href="/kanban" className="font-mono text-[11px] text-muted hover:text-ink">ver todas →</Link>
           </div>
           <div>
-            {data.myTasks.map((t) => (
-              <TaskQuickItem key={t.id} task={t} />
-            ))}
-            {data.myTasks.length === 0 && <div className="py-3 text-center text-[12.5px] text-faint">Nenhuma tarefa pendente atribuída a você.</div>}
+            {data.myTasks === null ? (
+              <div className="py-3 text-center text-[12.5px] text-faint">Não foi possível carregar suas tarefas.</div>
+            ) : (
+              <>
+                {data.myTasks.map((t) => (
+                  <TaskQuickItem key={t.id} task={t} />
+                ))}
+                {data.myTasks.length === 0 && <div className="py-3 text-center text-[12.5px] text-faint">Nenhuma tarefa pendente atribuída a você.</div>}
+              </>
+            )}
           </div>
 
           <div className="mt-1 flex items-center justify-between">
@@ -125,7 +160,10 @@ export default async function InicioPage() {
             <span className="font-mono text-[11px] text-muted">semana {isoWeekInAppTz(now)}</span>
           </div>
           <div className="flex flex-col gap-2.5">
-            {data.capacity.map(({ profile: p, hours, target }) => (
+            {data.capacity === null && (
+              <div className="text-[12.5px] text-faint">Não foi possível carregar a capacidade da equipe.</div>
+            )}
+            {(data.capacity ?? []).map(({ profile: p, hours, target }) => (
               <div key={p.id} className="grid grid-cols-[26px_76px_1fr_46px] items-center gap-2.5 text-[13px]">
                 <Avatar initials={p.initials} size="sm" />
                 <span className="truncate">{p.full_name.split(" ")[0]}</span>
@@ -154,7 +192,8 @@ export default async function InicioPage() {
           <Card className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-hidden p-4">
             <span className="label">ATIVIDADE RECENTE</span>
             <div className="flex flex-col gap-2.5 overflow-y-auto scrollbar-thin text-[12.5px]">
-              {data.activity.map((a) => (
+              {data.activity === null && <div className="text-faint">Não foi possível carregar a atividade recente.</div>}
+              {(data.activity ?? []).map((a) => (
                 <div key={a.id} className="flex gap-2.5">
                   <Avatar initials={a.user?.initials} size="sm" ghost />
                   <div>
@@ -165,7 +204,7 @@ export default async function InicioPage() {
                   </div>
                 </div>
               ))}
-              {data.activity.length === 0 && <div className="text-faint">Nenhuma atividade ainda.</div>}
+              {data.activity !== null && data.activity.length === 0 && <div className="text-faint">Nenhuma atividade ainda.</div>}
             </div>
           </Card>
         </div>
