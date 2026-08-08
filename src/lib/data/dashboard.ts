@@ -26,7 +26,6 @@ export async function getDashboardData(userId: string) {
     weekEntriesRes,
     unpaidInvoicesRes,
     paidInvoicesRes,
-    endingContractsRes,
     revenueGoalRes,
     activityRes,
   ] = await Promise.all([
@@ -40,7 +39,6 @@ export async function getDashboardData(userId: string) {
     supabase.from("time_entries").select("user_id, minutes, billable").gte("started_at", weekStart.toISOString()).lt("started_at", weekEnd.toISOString()).not("minutes", "is", null),
     supabase.from("invoices").select("*, client:clients(id, name)").in("status", UNPAID_INVOICE_STATUSES).order("due_date"),
     supabase.from("invoices").select("amount").eq("status", "paid").gte("paid_at", monthStart.toISOString().slice(0, 10)).lt("paid_at", monthEnd.toISOString().slice(0, 10)),
-    supabase.from("contracts").select("*, client:clients(id, name)").eq("status", "active").not("end_date", "is", null).lte("end_date", addDaysToDateStr(todayStr, 30)).gte("end_date", todayStr),
     // "%fatur%" casa com mais de uma meta ("Faturamento", "Faturar mais"...).
     // Sem ordenar e limitar, o maybeSingle() devolvia erro e o percentual da
     // meta sumia da /início sem dizer por quê. A ordem é a mesma da /metas.
@@ -76,7 +74,6 @@ export async function getDashboardData(userId: string) {
     weekEntriesRes,
     unpaidInvoicesRes,
     paidInvoicesRes,
-    endingContractsRes,
     revenueGoalRes,
     activityRes,
     openTasksWeekRes,
@@ -129,7 +126,6 @@ export async function getDashboardData(userId: string) {
     revenueGoal: revenueGoalRes.error ? null : revenueGoalRes.data,
     overdueInvoices,
     overdueAmount,
-    endingContracts: endingContractsRes.error ? null : endingContractsRes.data ?? [],
     activity: activityRes.error ? null : activityRes.data ?? [],
     openTasksThisWeek: openTasksWeekRes.error ? null : openTasksWeekRes.count ?? 0,
     /** Ao menos uma consulta falhou — a página avisa em vez de fingir normalidade. */

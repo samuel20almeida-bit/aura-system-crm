@@ -28,6 +28,20 @@ export type NotificationInput = {
 /** Um timer aberto por mais tempo que isto foi provavelmente esquecido. */
 export const FORGOTTEN_TIMER_MS = 8 * 3600 * 1000;
 
+/**
+ * O sino e o card "PRECISA DE VOCÊ" da /início são duas apresentações da mesma
+ * lista. Enquanto tinham escopos diferentes, a /início podia dizer "Tudo em dia
+ * por aqui." com seis tarefas atrasadas no sino, um centímetro acima. A frase e
+ * as cores moram aqui para que não voltem a divergir.
+ */
+export const ALL_CLEAR = "Tudo em dia por aqui.";
+
+export const TONE_BG: Record<AppNotification["tone"], string> = {
+  red: "bg-red",
+  amber: "bg-amber",
+  neutral: "bg-faint",
+};
+
 const TONE_ORDER: Record<AppNotification["tone"], number> = { red: 0, amber: 1, neutral: 2 };
 
 export function buildNotifications(

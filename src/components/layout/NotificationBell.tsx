@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import type { AppNotification } from "@/lib/notifications";
+import { ALL_CLEAR, TONE_BG, type AppNotification } from "@/lib/notifications";
 
 function toneDot(tone: AppNotification["tone"]): string {
-  return tone === "red" ? "bg-red" : tone === "amber" ? "bg-amber" : "bg-faint";
+  return TONE_BG[tone];
 }
 
 /** Tom mais urgente da lista — o ponto do sino não pode ser âmbar se só há avisos neutros. */
@@ -47,7 +47,7 @@ export function NotificationBell({ notifications }: { notifications: AppNotifica
             </div>
             <div className="max-h-80 overflow-y-auto scrollbar-thin">
               {notifications.length === 0 && (
-                <div className="px-3.5 py-6 text-center text-[12.5px] text-faint">Tudo em dia por aqui.</div>
+                <div className="px-3.5 py-6 text-center text-[12.5px] text-faint">{ALL_CLEAR}</div>
               )}
               {notifications.map((n) => {
                 const rowClass =

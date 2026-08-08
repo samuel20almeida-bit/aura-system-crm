@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { addFileAttachment, addLinkAttachment, removeAttachment } from "@/lib/actions/tasks";
 import { useToast } from "@/components/ui/Toast";
+import { normalizeLinkUrl } from "@/lib/links";
 import type { Tables } from "@/lib/supabase/database.types";
 
 const MAX_MB = 25;
@@ -57,6 +58,9 @@ export function Attachments({
         notify("success", "Arquivo anexado.");
         router.refresh();
       } catch {
+        // Sem isto o objeto ficava no bucket sem nenhuma linha apontando para
+        // ele: invisível na interface, ocupando espaço para sempre.
+        await supabase.storage.from("task-attachments").remove([path]);
         notify("error", "Não foi possível registrar o anexo.");
       }
     });
@@ -71,14 +75,22 @@ export function Attachments({
             key={a.id}
             className="group inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5 text-xs text-muted"
           >
-            <a href={a.url ?? "#"} target="_blank" rel="noopener noreferrer" className="hover:text-accent">
+            {/* Um nome longo sem espaços não quebra linha e estourava a largura
+                do painel — daí max-w + truncate, com o nome inteiro no title. */}
+            <a
+              href={a.url ?? "#"}
+              target="_blank"
+              rel="noopener noreferrer"
+              title={a.filename}
+              className="max-w-[220px] truncate hover:text-accent"
+            >
               {a.filename}
             </a>
             <button
               onClick={() =>
                 startTransition(async () => {
                   try {
-                    await removeAttachment(a.id, a.storage_path);
+                    await removeAttachment(a.id);
                     router.refresh();
                   } catch {
                     notify("error", "Não foi possível remover o anexo.");
@@ -122,10 +134,16 @@ export function Attachments({
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            if (!linkUrl.trim()) return;
+            // "figma.com/file/abc" — o que o Chrome mostra na barra — virava um
+            // caminho relativo no href e o clique dava 404 sem nenhum aviso.
+            const normalized = normalizeLinkUrl(linkUrl);
+            if (!normalized.ok) {
+              notify("error", normalized.message);
+              return;
+            }
             startTransition(async () => {
               try {
-                await addLinkAttachment(taskId, linkName.trim() || linkUrl.trim(), linkUrl.trim());
+                await addLinkAttachment(taskId, linkName.trim() || normalized.url, normalized.url);
                 setLinkUrl("");
                 setLinkName("");
                 setLinkOpen(false);
@@ -148,7 +166,7 @@ export function Attachments({
           <input
             value={linkUrl}
             onChange={(e) => setLinkUrl(e.target.value)}
-            placeholder="https://figma.com/…"
+            placeholder="figma.com/… ou https://…"
             className="flex-1 rounded-lg border border-border bg-bone px-2 py-1.5 text-xs outline-none focus:border-accent"
           />
           <button type="submit" disabled={pending} className="rounded-lg bg-accent px-3 text-xs text-bone">

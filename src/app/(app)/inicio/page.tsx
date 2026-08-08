@@ -8,10 +8,12 @@ import { CountUp } from "@/components/ui/CountUp";
 import { Unavailable } from "@/components/ui/Unavailable";
 import { requireProfile } from "@/lib/data/profile";
 import { getDashboardData } from "@/lib/data/dashboard";
+import { getNotifications } from "@/lib/data/notifications";
 import { listClientsLite } from "@/lib/data/tasks";
 import { listProfiles } from "@/lib/data/profile";
 import { createClient } from "@/lib/supabase/server";
-import { formatCurrency, formatDate, formatRelative } from "@/lib/format";
+import { ALL_CLEAR, TONE_BG } from "@/lib/notifications";
+import { formatRelative } from "@/lib/format";
 import { APP_TIMEZONE, currentHourInAppTz, isoWeekInAppTz } from "@/lib/timezone";
 
 function greeting(hour: number) {
@@ -24,8 +26,9 @@ export default async function InicioPage() {
   const { profile } = await requireProfile();
   const now = new Date();
 
-  const [data, clients, profiles, supabase] = await Promise.all([
+  const [data, notifications, clients, profiles, supabase] = await Promise.all([
     getDashboardData(profile.id),
+    getNotifications(profile.id),
     listClientsLite(),
     listProfiles(),
     createClient(),
@@ -44,24 +47,10 @@ export default async function InicioPage() {
   // Um número que não pôde ser lido aparece como "—". Zero é uma afirmação.
   const DASH = "—";
 
-  const needsAttention = [
-    ...(data.overdueInvoices ?? []).slice(0, 2).map((inv) => ({
-      key: `inv-${inv.id}`,
-      color: "#C4574A",
-      title: `${inv.client?.name ?? "Cliente"} · fatura vencida`,
-      sub: `${formatCurrency(Number(inv.amount))} · venc. ${formatDate(inv.due_date)}`,
-      href: `/crm/${inv.client_id}`,
-      action: "Ver fatura →",
-    })),
-    ...(data.endingContracts ?? []).slice(0, 2).map((c) => ({
-      key: `ct-${c.id}`,
-      color: "#D8B24A",
-      title: `Contrato ${c.client?.name ?? ""} vence em breve`,
-      sub: `${c.value ? formatCurrency(Number(c.value)) + " · " : ""}até ${formatDate(c.end_date!)}`,
-      href: `/crm/${c.client_id}`,
-      action: "Ver cliente →",
-    })),
-  ];
+  // O card mostra os primeiros; o resto continua no sino, contado em voz alta.
+  const NEEDS_YOU_LIMIT = 4;
+  const needsYou = notifications.slice(0, NEEDS_YOU_LIMIT);
+  const needsYouRest = notifications.length - needsYou.length;
 
   return (
     <PageBody>
@@ -175,19 +164,39 @@ export default async function InicioPage() {
         </Card>
 
         <div className="flex min-h-0 flex-col gap-3">
+          {/* Mesma fonte do sino (buildNotifications), duas apresentações. Antes
+              eram duas listas com o mesmo título e a mesma frase de vazio: o
+              card cobria 2 categorias, o sino 5, e o card cortava em 2 sem
+              avisar — dava para ler "Tudo em dia por aqui." com seis tarefas
+              atrasadas no sino, logo acima. */}
           <Card className="flex flex-col gap-2.5 p-4">
             <span className="label">PRECISA DE VOCÊ</span>
-            {needsAttention.map((item) => (
-              <Link key={item.key} href={item.href} className="flex items-start gap-2.5 hover:opacity-80">
-                <span className="w-[3px] self-stretch rounded" style={{ background: item.color }} />
-                <div>
-                  <div className="text-[13px] font-medium">{item.title}</div>
-                  <div className="font-mono text-[11px] text-muted">{item.sub}</div>
-                  <div className="mt-1 font-mono text-[11px] text-accent">{item.action}</div>
+            {needsYou.length === 0 && <div className="text-[12.5px] text-faint">{ALL_CLEAR}</div>}
+            {needsYou.map((n) => {
+              const body = (
+                <>
+                  <span className={"w-[3px] flex-none self-stretch rounded " + TONE_BG[n.tone]} />
+                  <div className="min-w-0">
+                    <div className="truncate text-[13px] font-medium">{n.title}</div>
+                    <div className="font-mono text-[11px] text-muted">{n.detail}</div>
+                  </div>
+                </>
+              );
+              return n.href ? (
+                <Link key={n.id} href={n.href} className="flex items-start gap-2.5 hover:opacity-80">
+                  {body}
+                </Link>
+              ) : (
+                <div key={n.id} className="flex items-start gap-2.5">
+                  {body}
                 </div>
-              </Link>
-            ))}
-            {needsAttention.length === 0 && <div className="text-[12.5px] text-faint">Tudo em dia por aqui.</div>}
+              );
+            })}
+            {needsYouRest > 0 && (
+              <span className="font-mono text-[11px] text-faint">
+                +{needsYouRest} {needsYouRest === 1 ? "outro aviso" : "outros avisos"} no sino
+              </span>
+            )}
           </Card>
           <Card className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-hidden p-4">
             <span className="label">ATIVIDADE RECENTE</span>
