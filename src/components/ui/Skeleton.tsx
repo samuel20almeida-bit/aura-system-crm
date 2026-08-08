@@ -4,9 +4,13 @@ export function Skeleton({ className }: { className?: string }) {
   return <div className={clsx("rounded bg-[#EDEAE2] animate-pulse-soft", className)} />;
 }
 
+// As grades abaixo copiam as das páginas que estes esqueletos precedem — é o
+// ponto de um esqueleto: ocupar o mesmo espaço que o conteúdo real vai ocupar.
+// Fixas em 4 e 3 colunas, elas escapavam pela direita a 390px e a primeira
+// pintura de toda navegação no celular saltava para o empilhado logo depois.
 export function SkeletonKpiRow({ count = 4 }: { count?: number }) {
   return (
-    <div className="grid grid-cols-4 gap-3">
+    <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
       {Array.from({ length: count }).map((_, i) => (
         <div key={i} className="flex flex-col gap-2 rounded-xl border border-border bg-surface p-4">
           <Skeleton className="h-2.5 w-24" />
@@ -39,9 +43,17 @@ export function SkeletonTable({ rows = 6, cols = 5 }: { rows?: number; cols?: nu
 
 export function SkeletonCards({ count = 3 }: { count?: number }) {
   return (
-    <div className="grid flex-1 grid-cols-3 gap-3.5">
+    <div className="grid flex-1 grid-cols-1 gap-3.5 md:grid-cols-3">
       {Array.from({ length: count }).map((_, col) => (
-        <div key={col} className="flex flex-col gap-2.25 rounded-xl border border-neutral-tint-border bg-neutral-tint p-2.75">
+        // No celular o Kanban mostra uma coluna por vez (KanbanBoard.tsx):
+        // empilhar as três aqui reservaria espaço que a página não usa.
+        <div
+          key={col}
+          className={clsx(
+            "flex-col gap-2.25 rounded-xl border border-neutral-tint-border bg-neutral-tint p-2.75 md:flex",
+            col === 0 ? "flex" : "hidden"
+          )}
+        >
           <Skeleton className="h-2.5 w-20" />
           {Array.from({ length: 3 }).map((_, i) => (
             <div key={i} className="flex flex-col gap-2 rounded-[10px] border border-border bg-surface p-2.75">

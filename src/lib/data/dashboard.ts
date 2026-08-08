@@ -1,17 +1,12 @@
 import { createClient } from "@/lib/supabase/server";
 import { isInvoiceOverdue, UNPAID_INVOICE_STATUSES } from "@/lib/invoices";
 import {
+  addDaysToDateStr,
   currentQuarterInAppTz,
   startOfMonthInAppTz,
   startOfWeekInAppTz,
   todayInAppTz,
 } from "@/lib/timezone";
-
-function addDaysToDateStr(dateStr: string, days: number): string {
-  const [y, m, d] = dateStr.split("-").map(Number);
-  const result = new Date(Date.UTC(y, m - 1, d + days));
-  return result.toISOString().slice(0, 10);
-}
 
 export async function getDashboardData(userId: string) {
   const supabase = await createClient();

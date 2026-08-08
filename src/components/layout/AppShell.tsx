@@ -28,7 +28,9 @@ export function AppShell({
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="flex h-screen w-full bg-bone">
+    // h-dvh, não h-screen: no iOS 100vh inclui a barra de endereços, e o fim
+    // do painel rolável ficava embaixo do chrome do navegador.
+    <div className="flex h-dvh w-full bg-bone">
       <Sidebar profile={profile} counts={counts} open={open} onClose={() => setOpen(false)} />
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar

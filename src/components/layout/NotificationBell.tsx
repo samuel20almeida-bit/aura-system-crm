@@ -35,7 +35,13 @@ export function NotificationBell({ notifications }: { notifications: AppNotifica
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-7 z-50 w-80 overflow-hidden rounded-xl border border-border bg-surface shadow-xl animate-fade-in">
+          {/* No celular o painel se ancora na janela, não no botão: com um timer
+              rodando o TimerWidget empurra o sino para dentro da barra, e um
+              painel de 320px preso ao botão saía pela borda ESQUERDA — que não
+              gera rolagem, então a parte de fora ficava inalcançável. Um max-w
+              sozinho não bastaria: a largura encolheria, mas a âncora continua
+              longe demais da direita. */}
+          <div className="fixed inset-x-2 top-14 z-50 overflow-hidden rounded-xl border border-border bg-surface shadow-xl animate-fade-in md:absolute md:inset-x-auto md:right-0 md:top-7 md:w-80">
             <div className="border-b border-border px-3.5 py-2.5">
               <span className="label">PRECISA DE VOCÊ</span>
             </div>

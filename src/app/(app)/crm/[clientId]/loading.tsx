@@ -12,7 +12,7 @@ export default function Loading() {
         </div>
       </div>
       <SkeletonKpiRow />
-      <div className="grid flex-1 grid-cols-[1.6fr_1fr] gap-3.5">
+      <div className="grid flex-1 grid-cols-1 gap-3.5 md:grid-cols-[1.6fr_1fr]">
         <div className="flex flex-col gap-3.5">
           {Array.from({ length: 3 }).map((_, i) => (
             <div key={i} className="rounded-xl border border-border bg-surface p-4">

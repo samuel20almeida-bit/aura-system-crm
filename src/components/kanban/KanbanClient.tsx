@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { Avatar } from "@/components/ui/Avatar";
 import { Tag } from "@/components/ui/Tag";
 import { formatDate } from "@/lib/format";
+import { addDaysToDateStr, todayInAppTz } from "@/lib/timezone";
 import type { TaskWithRelations } from "@/lib/data/tasks";
 import type { Tables } from "@/lib/supabase/database.types";
 import type { ColumnId } from "@/lib/optimistic";
@@ -51,12 +52,17 @@ export function KanbanClient({
   }, [tasks, scope, clientFilter, assigneeFilter, priorityFilter]);
 
   const activeCount = filtered.filter((t) => t.status !== "done").length;
-  // eslint-disable-next-line react-hooks/purity -- snapshot "now" once for the due-this-week filter
-  const todayMs = useMemo(() => Date.now(), []);
+  // "Hoje" é o dia em São Paulo e a comparação fica no calendário. Com
+  // new Date(t.due_date).getTime() a data crua virava meia-noite UTC — 21h do
+  // dia anterior aqui — e este contador contradizia o sino e os próprios
+  // cartões, que a Task 9 já havia corrigido.
+  // useMemo fotografa "hoje" uma vez: sem isso o valor poderia mudar na virada
+  // da meia-noite entre dois renders da mesma sessão.
+  const today = useMemo(() => todayInAppTz(), []);
+  const weekLimit = addDaysToDateStr(today, 7);
   const dueThisWeek = filtered.filter((t) => {
     if (!t.due_date || t.status === "done") return false;
-    const days = (new Date(t.due_date).getTime() - todayMs) / 86400000;
-    return days >= 0 && days <= 7;
+    return t.due_date >= today && t.due_date <= weekLimit;
   }).length;
 
   function openTask(id: string) {

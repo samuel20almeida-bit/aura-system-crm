@@ -12,7 +12,7 @@ export default function Loading() {
         <Skeleton className="h-9 w-72" />
       </div>
       <SkeletonKpiRow />
-      <div className="grid flex-1 grid-cols-[1.75fr_1fr] gap-3.5">
+      <div className="grid flex-1 grid-cols-1 gap-3.5 md:grid-cols-[1.75fr_1fr]">
         <SkeletonTable rows={5} cols={5} />
         <div className="flex flex-col gap-3.5">
           <div className="rounded-xl border border-border bg-surface p-4">

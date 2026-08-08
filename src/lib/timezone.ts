@@ -22,6 +22,18 @@ export function todayInAppTz(): string {
   ).padStart(2, "0")}`;
 }
 
+/**
+ * Adds whole days to a plain calendar date ("YYYY-MM-DD") and returns another
+ * plain calendar date. No clock and no offset involved: comparing due dates has
+ * to stay on the calendar. `new Date(dueDate).getTime()` reads the string as
+ * midnight UTC, which is 21h of the previous day in São Paulo — the very
+ * contradiction Task 9 removed from TaskCard and TaskQuickItem.
+ */
+export function addDaysToDateStr(dateStr: string, days: number): string {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
+}
+
 /** Start of the ISO week (Monday) containing `date`, in America/Sao_Paulo, as a real UTC instant. */
 export function startOfWeekInAppTz(date: Date = new Date()): Date {
   const d = shiftToAppTz(date);
