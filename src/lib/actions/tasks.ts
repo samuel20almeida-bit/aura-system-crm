@@ -207,9 +207,31 @@ export async function addComment(taskId: string, body: string) {
   revalidatePath("/kanban");
 }
 
-export async function addAttachment(taskId: string, filename: string, url: string | null) {
+export async function addLinkAttachment(taskId: string, filename: string, url: string) {
   const supabase = await createClient();
-  const { error } = await supabase.from("task_attachments").insert({ task_id: taskId, filename, url });
+  const { error } = await supabase
+    .from("task_attachments")
+    .insert({ task_id: taskId, filename, url, storage_path: null });
+  if (error) throw error;
+  revalidatePath("/kanban");
+}
+
+export async function addFileAttachment(taskId: string, filename: string, storagePath: string) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("task_attachments")
+    .insert({ task_id: taskId, filename, url: null, storage_path: storagePath });
+  if (error) throw error;
+  revalidatePath("/kanban");
+}
+
+export async function removeAttachment(attachmentId: string, storagePath: string | null) {
+  const supabase = await createClient();
+  if (storagePath) {
+    const { error: storageError } = await supabase.storage.from("task-attachments").remove([storagePath]);
+    if (storageError) throw storageError;
+  }
+  const { error } = await supabase.from("task_attachments").delete().eq("id", attachmentId);
   if (error) throw error;
   revalidatePath("/kanban");
 }

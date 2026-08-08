@@ -70,11 +70,30 @@ export async function getTaskDetail(id: string) {
 
   const totalMinutes = (timeSpent ?? []).reduce((sum, t) => sum + (t.minutes ?? 0), 0);
 
+  const attachmentRows = attachments ?? [];
+  const storagePaths = attachmentRows
+    .map((a) => a.storage_path)
+    .filter((p): p is string => Boolean(p));
+
+  const signedByPath = new Map<string, string>();
+  if (storagePaths.length > 0) {
+    const { data: signed } = await supabase.storage
+      .from("task-attachments")
+      .createSignedUrls(storagePaths, 60 * 60);
+    for (const item of signed ?? []) {
+      if (item.path && item.signedUrl) signedByPath.set(item.path, item.signedUrl);
+    }
+  }
+
+  const resolvedAttachments = attachmentRows.map((a) =>
+    a.storage_path ? { ...a, url: signedByPath.get(a.storage_path) ?? null } : a
+  );
+
   return {
     task,
     checklist: checklist ?? [],
     comments: comments ?? [],
-    attachments: attachments ?? [],
+    attachments: resolvedAttachments,
     totalMinutes,
     history,
   };

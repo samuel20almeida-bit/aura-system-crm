@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useOptimistic, useState, useTransition } from "react";
 import { Slideover } from "@/components/ui/Overlay";
+import { Attachments } from "@/components/kanban/Attachments";
 import { Avatar } from "@/components/ui/Avatar";
 import { Tag } from "@/components/ui/Tag";
 import { Button } from "@/components/ui/Button";
@@ -307,6 +308,8 @@ export function TaskDetailPanel({ detail, profiles }: { detail: TaskDetail; prof
                 </form>
               </div>
             </div>
+
+            <Attachments taskId={t.id} attachments={detail.attachments} />
           </>
         )}
 

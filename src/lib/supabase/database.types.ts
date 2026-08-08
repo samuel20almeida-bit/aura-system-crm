@@ -565,6 +565,7 @@ export type Database = {
           created_at: string
           filename: string
           id: string
+          storage_path: string | null
           task_id: string
           url: string | null
         }
@@ -572,6 +573,7 @@ export type Database = {
           created_at?: string
           filename: string
           id?: string
+          storage_path?: string | null
           task_id: string
           url?: string | null
         }
@@ -579,6 +581,7 @@ export type Database = {
           created_at?: string
           filename?: string
           id?: string
+          storage_path?: string | null
           task_id?: string
           url?: string | null
         }
