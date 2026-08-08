@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import clsx from "clsx";
 import {
   DndContext,
   DragOverlay,
@@ -20,6 +21,7 @@ import { updateTaskPosition } from "@/lib/actions/tasks";
 import type { TaskWithRelations } from "@/lib/data/tasks";
 import { moveItem, reorderWithin, findColumnIn, type Columns, type ColumnId as OptimisticColumnId } from "@/lib/optimistic";
 import { useToast } from "@/components/ui/Toast";
+import { useMediaQuery } from "@/lib/use-media-query";
 
 const COLUMNS = [
   { id: "todo", label: "A FAZER" },
@@ -49,6 +51,7 @@ function Column({
   checklistCounts,
   onOpen,
   runningTaskId,
+  dragDisabled,
 }: {
   id: ColumnId;
   label: string;
@@ -56,6 +59,7 @@ function Column({
   checklistCounts: Record<string, { done: number; total: number }>;
   onOpen: (id: string) => void;
   runningTaskId?: string | null;
+  dragDisabled?: boolean;
 }) {
   const { setNodeRef } = useDroppable({ id });
   return (
@@ -73,6 +77,7 @@ function Column({
               checklistSummary={checklistSummaryFor(task.id, checklistCounts)}
               onOpen={() => onOpen(task.id)}
               isRunning={task.id === runningTaskId}
+              dragDisabled={dragDisabled}
             />
           ))}
           {tasks.length === 0 && (
@@ -91,11 +96,13 @@ export function KanbanBoard({
   checklistCounts,
   onOpenTask,
   runningTaskId,
+  mobileColumn,
 }: {
   tasks: TaskWithRelations[];
   checklistCounts: Record<string, { done: number; total: number }>;
   onOpenTask: (id: string) => void;
   runningTaskId?: string | null;
+  mobileColumn: ColumnId;
 }) {
   const [prevTasks, setPrevTasks] = useState(tasks);
   const [columns, setColumns] = useState<ColumnsState>(() => groupTasks(tasks));
@@ -109,6 +116,14 @@ export function KanbanBoard({
     setColumns(groupTasks(tasks));
   }
 
+  // A lista de sensores NUNCA muda de tamanho entre renderizações — o
+  // useSensors do dnd-kit usa os sensores como array de dependências de um
+  // useMemo (node_modules/@dnd-kit/core/dist/core.cjs.development.js:205-212).
+  // Trocar a lista condicionalmente por isMobile quebraria o Kanban em todo
+  // celular assim que a hidratação corrigisse o valor do servidor. Quem é
+  // desabilitado no celular é o item arrastável (useSortable/disabled),
+  // propagado abaixo por dragDisabled — não os sensores.
+  const isMobile = useMediaQuery("(max-width: 767px)");
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
   const activeTask = useMemo(() => {
@@ -185,9 +200,15 @@ export function KanbanBoard({
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
     >
-      <div className="grid flex-1 grid-cols-3 gap-3.5 overflow-hidden">
+      <div className="grid flex-1 grid-cols-1 gap-3.5 overflow-hidden md:grid-cols-3">
         {COLUMNS.map((col) => (
-          <div key={col.id} className="flex min-h-0 flex-col overflow-y-auto scrollbar-thin">
+          <div
+            key={col.id}
+            className={clsx(
+              "min-h-0 flex-col overflow-y-auto scrollbar-thin md:flex",
+              col.id === mobileColumn ? "flex" : "hidden"
+            )}
+          >
             <Column
               id={col.id}
               label={col.label}
@@ -195,6 +216,7 @@ export function KanbanBoard({
               checklistCounts={checklistCounts}
               onOpen={onOpenTask}
               runningTaskId={runningTaskId}
+              dragDisabled={isMobile}
             />
           </div>
         ))}

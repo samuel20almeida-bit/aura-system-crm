@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect } from "react";
 import clsx from "clsx";
 import { AuraLogo } from "@/components/ui/AuraLogo";
 import { Avatar } from "@/components/ui/Avatar";
@@ -30,11 +31,22 @@ const businessItems: NavItem[] = [
 export function Sidebar({
   profile,
   counts,
+  open,
+  onClose,
 }: {
   profile: { full_name: string; role_title: string | null; initials: string };
   counts: { openTasks: number; overdueInvoices: number };
+  open: boolean;
+  onClose: () => void;
 }) {
   const pathname = usePathname();
+
+  // A gaveta fecha ao navegar: sem isso, tocar num item do menu no celular
+  // carrega a página nova com a gaveta ainda aberta por cima dela.
+  useEffect(() => {
+    onClose();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- só o caminho deve disparar o fechamento
+  }, [pathname]);
 
   const renderItem = (item: NavItem) => {
     const active = pathname === item.href || pathname.startsWith(item.href + "/");
@@ -67,50 +79,85 @@ export function Sidebar({
   };
 
   return (
-    <div className="flex h-full w-[236px] flex-none flex-col border-r border-border bg-surface py-4.5">
-      <div className="flex items-center justify-between px-4.5 pb-1.5">
-        <div className="flex items-center gap-2">
-          <AuraLogo />
-          <span className="text-[17px] font-semibold">aura</span>
-        </div>
-      </div>
-      <div className="mx-3 mt-2.5 mb-1 flex items-center gap-2 rounded-lg border border-border bg-bone px-2.5 py-1.5 text-xs font-medium text-muted">
-        <span className="flex h-4 w-4 items-center justify-center rounded bg-accent-tint font-mono text-[9px] font-semibold text-accent">
-          A
-        </span>
-        Aura Studio
-      </div>
-
-      <div className="mt-2 flex flex-col gap-0.5 px-3">
-        <span className="px-2.5 pb-1.5 pt-4 font-mono text-[9.5px] font-semibold tracking-[0.09em] text-faint">
-          TRABALHO
-        </span>
-        {workItems.map(renderItem)}
-      </div>
-      <div className="flex flex-col gap-0.5 px-3">
-        <span className="px-2.5 pb-1.5 pt-4 font-mono text-[9.5px] font-semibold tracking-[0.09em] text-faint">
-          NEGÓCIO
-        </span>
-        {businessItems.map(renderItem)}
-      </div>
-
-      <form action={signOut} className="mx-3 mt-auto flex items-center gap-2.5 border-t border-border pt-3.5">
-        <Avatar initials={profile.initials} />
-        <div className="min-w-0">
-          <div className="truncate text-[12.5px] font-medium">{profile.full_name}</div>
-          <div className="truncate font-mono text-[11px] text-muted">
-            {profile.role_title || "Fundador(a)"}
+    <>
+      {open && (
+        <div
+          className="fixed inset-0 z-40 bg-ink/20 md:hidden"
+          onClick={onClose}
+          aria-hidden="true"
+        />
+      )}
+      <div
+        className={clsx(
+          "fixed inset-y-0 left-0 z-50 flex h-full w-[236px] flex-none flex-col border-r border-border bg-surface py-4.5 transition-transform duration-200 md:static md:translate-x-0",
+          open ? "translate-x-0" : "-translate-x-full"
+        )}
+      >
+        <div className="flex items-center justify-between px-4.5 pb-1.5">
+          <div className="flex items-center gap-2">
+            <AuraLogo />
+            <span className="text-[17px] font-semibold">aura</span>
           </div>
         </div>
-        <button
-          type="submit"
-          title="Sair"
-          className="ml-auto flex text-muted hover:text-ink"
-        >
-          <LogoutIcon />
-        </button>
-      </form>
-    </div>
+        <div className="mx-3 mt-2.5 mb-1 flex items-center gap-2 rounded-lg border border-border bg-bone px-2.5 py-1.5 text-xs font-medium text-muted">
+          <span className="flex h-4 w-4 items-center justify-center rounded bg-accent-tint font-mono text-[9px] font-semibold text-accent">
+            A
+          </span>
+          Aura Studio
+        </div>
+
+        <div className="mt-2 flex flex-col gap-0.5 px-3">
+          <span className="px-2.5 pb-1.5 pt-4 font-mono text-[9.5px] font-semibold tracking-[0.09em] text-faint">
+            TRABALHO
+          </span>
+          {workItems.map(renderItem)}
+        </div>
+        <div className="flex flex-col gap-0.5 px-3">
+          <span className="px-2.5 pb-1.5 pt-4 font-mono text-[9.5px] font-semibold tracking-[0.09em] text-faint">
+            NEGÓCIO
+          </span>
+          {businessItems.map(renderItem)}
+        </div>
+
+        <form action={signOut} className="mx-3 mt-auto flex items-center gap-2.5 border-t border-border pt-3.5">
+          <Avatar initials={profile.initials} />
+          <div className="min-w-0">
+            <div className="truncate text-[12.5px] font-medium">{profile.full_name}</div>
+            <div className="truncate font-mono text-[11px] text-muted">
+              {profile.role_title || "Fundador(a)"}
+            </div>
+          </div>
+          <button
+            type="submit"
+            title="Sair"
+            className="ml-auto flex text-muted hover:text-ink"
+          >
+            <LogoutIcon />
+          </button>
+        </form>
+      </div>
+    </>
+  );
+}
+
+export function MobileNavToggle({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label="Abrir menu"
+      className="flex text-muted hover:text-ink md:hidden"
+    >
+      <MenuIcon />
+    </button>
+  );
+}
+
+function MenuIcon() {
+  return (
+    <svg width="17" height="17" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3">
+      <path d="M2.5 4.5h11M2.5 8h11M2.5 11.5h11" />
+    </svg>
   );
 }
 

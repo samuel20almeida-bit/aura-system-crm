@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Avatar } from "@/components/ui/Avatar";
 import { TimerWidget, type RunningTimer } from "@/components/layout/TimerWidget";
 import { NotificationBell } from "@/components/layout/NotificationBell";
+import { MobileNavToggle } from "@/components/layout/Sidebar";
 import type { AppNotification } from "@/lib/notifications";
 
 const crumbs: { match: RegExp; label: string }[] = [
@@ -23,10 +24,12 @@ export function Topbar({
   initials,
   running,
   notifications,
+  onMenuClick,
 }: {
   initials: string;
   running: RunningTimer | null;
   notifications: AppNotification[];
+  onMenuClick: () => void;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -80,8 +83,9 @@ export function Topbar({
   const displayResults = query.trim() ? results : [];
 
   return (
-    <div className="flex h-[54px] flex-none items-center gap-3.5 border-b border-border bg-surface px-5.5">
-      <div className="text-xs text-faint">
+    <div className="flex h-[54px] flex-none items-center gap-3 border-b border-border bg-surface px-4 md:gap-3.5 md:px-5.5">
+      <MobileNavToggle onClick={onMenuClick} />
+      <div className="hidden text-xs text-faint md:block">
         Aura Studio {crumb && <>/ <b className="font-medium text-ink">{crumb}</b></>}
       </div>
 
@@ -90,7 +94,7 @@ export function Topbar({
           setOpen(true);
           setTimeout(() => inputRef.current?.focus(), 0);
         }}
-        className="ml-auto flex max-w-[320px] flex-1 items-center gap-2 rounded-lg border border-border bg-bone px-2.5 py-1.5 text-left text-[12.5px] text-faint"
+        className="ml-auto hidden max-w-[320px] flex-1 items-center gap-2 rounded-lg border border-border bg-bone px-2.5 py-1.5 text-left text-[12.5px] text-faint md:flex"
       >
         Buscar tarefas, clientes…
         <span className="ml-auto rounded border border-border bg-surface px-1.5 py-0.5 font-mono text-[9.5px] text-faint">
@@ -98,11 +102,13 @@ export function Topbar({
         </span>
       </button>
 
-      <NotificationBell notifications={notifications} />
+      <div className="ml-auto flex items-center gap-3 md:ml-0 md:contents">
+        <NotificationBell notifications={notifications} />
 
-      <TimerWidget running={running} />
+        <TimerWidget running={running} />
 
-      <Avatar initials={initials} />
+        <Avatar initials={initials} />
+      </div>
 
       {open && (
         <div

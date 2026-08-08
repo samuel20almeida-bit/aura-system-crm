@@ -62,7 +62,7 @@ export default async function InicioPage() {
 
   return (
     <PageBody>
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div>
           <h1 className="text-[21px] font-medium">{greeting(currentHourInAppTz(now))}, {profile.full_name.split(" ")[0]}</h1>
           <div className="mt-0.5 text-[12.5px] text-muted">
@@ -75,7 +75,7 @@ export default async function InicioPage() {
         <InicioActions clients={clients} profiles={profiles} tasks={tasksLite} />
       </div>
 
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <Kpi label="FATURAMENTO DO MÊS" value={<CountUp value={data.monthRevenue} format="currency" />}>
           {goalPct !== null && (
             <>
@@ -107,7 +107,7 @@ export default async function InicioPage() {
         />
       </div>
 
-      <div className="grid flex-1 grid-cols-[1.55fr_1fr] gap-4 overflow-hidden">
+      <div className="grid flex-1 grid-cols-1 gap-4 overflow-hidden md:grid-cols-[1.55fr_1fr]">
         <Card className="flex flex-col gap-2.5 overflow-hidden p-4">
           <div className="flex items-center justify-between">
             <span className="label">MINHAS TAREFAS DE HOJE</span>

@@ -17,7 +17,7 @@ export function ClientHeaderActions({ clientId }: { clientId: string }) {
   const [pending, startTransition] = useTransition();
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex flex-wrap items-center gap-2">
       <Button variant="ghost" onClick={() => setModal("contact")}>Registrar contato</Button>
       <Button onClick={() => setModal("invoice")}>Nova fatura</Button>
 

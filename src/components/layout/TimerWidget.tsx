@@ -37,13 +37,13 @@ export function TimerWidget({ running }: { running: RunningTimer | null }) {
   return (
     <div
       className={
-        "flex items-center gap-2.5 rounded-lg border px-2.5 py-1.5 " +
+        "flex items-center gap-1.5 rounded-lg border px-1.5 py-1 md:gap-2.5 md:px-2.5 md:py-1.5 " +
         (forgotten ? "border-red-tint-border bg-red-tint" : "border-accent-tint-border bg-accent-tint")
       }
       title={forgotten ? "Timer rodando há mais de 8 horas — provavelmente esquecido" : label}
     >
       <span className={"h-1.5 w-1.5 flex-none rounded-full animate-pulse-soft " + (forgotten ? "bg-red" : "bg-accent")} />
-      <span className={"max-w-[140px] truncate text-[12px] " + (forgotten ? "text-red" : "text-accent")}>{label}</span>
+      <span className={"max-w-[70px] truncate text-[12px] md:max-w-[140px] " + (forgotten ? "text-red" : "text-accent")}>{label}</span>
       <span className={"font-mono text-[12px] font-semibold " + (forgotten ? "text-red" : "text-accent")}>
         {formatDuration(Math.floor(elapsedMs / 1000))}
       </span>

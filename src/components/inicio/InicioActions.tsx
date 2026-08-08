@@ -20,7 +20,7 @@ export function InicioActions({
   const [modal, setModal] = useState<"task" | "hours" | null>(null);
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex flex-wrap items-center gap-2">
       <Button variant="ghost" onClick={() => setModal("hours")}>Registrar horas</Button>
       <Button onClick={() => setModal("task")}>+ Nova tarefa</Button>
       {modal === "task" && <NewTaskModal clients={clients} profiles={profiles} onClose={() => setModal(null)} />}

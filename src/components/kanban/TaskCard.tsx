@@ -22,14 +22,17 @@ export function TaskCard({
   checklistSummary,
   onOpen,
   isRunning,
+  dragDisabled,
 }: {
   task: TaskWithRelations;
   checklistSummary?: { done: number; total: number } | null;
   onOpen: () => void;
   isRunning?: boolean;
+  dragDisabled?: boolean;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: task.id,
+    disabled: dragDisabled,
   });
 
   const style = {
