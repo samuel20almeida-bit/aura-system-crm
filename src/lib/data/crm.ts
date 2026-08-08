@@ -1,13 +1,20 @@
 import { createClient } from "@/lib/supabase/server";
 import { isInvoiceOverdue } from "@/lib/invoices";
-import { todayInAppTz } from "@/lib/timezone";
+import { todayInAppTz, yearMonthInAppTz } from "@/lib/timezone";
+
+function monthBounds() {
+  const { year, month0 } = yearMonthInAppTz();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return {
+    monthStart: `${year}-${pad(month0 + 1)}-01`,
+    monthEnd: month0 === 11 ? `${year + 1}-01-01` : `${year}-${pad(month0 + 2)}-01`,
+  };
+}
 
 export async function getCrmData() {
   const supabase = await createClient();
-  const now = new Date();
   const today = todayInAppTz();
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
-  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString().slice(0, 10);
+  const { monthStart, monthEnd } = monthBounds();
 
   const [{ data: clients }, { data: deals }, { data: invoices }, { data: contracts }] = await Promise.all([
     supabase.from("clients").select("*, owner:profiles(id, full_name, initials)").order("name"),
@@ -24,8 +31,13 @@ export async function getCrmData() {
   // A coluna de status da tabela de faturas continua mostrando o valor guardado.
   const overdue = (invoices ?? []).filter((i) => isInvoiceOverdue(i.status, i.due_date, today));
   const overdueAmount = overdue.reduce((s, i) => s + Number(i.amount), 0);
-  const allActiveAmount = (invoices ?? [])
-    .filter((i) => i.due_date >= monthStart.slice(0, 7))
+  // Denominador: a carteira em aberto inteira. As faturas vencidas são um
+  // subconjunto dela, então o percentual não passa de 100%. Enquanto o
+  // numerador vinha do status marcado à mão isso não aparecia; derivando o
+  // atraso da data, um denominador recortado por mês produzia inadimplência
+  // de 500% assim que uma fatura de um mês anterior vencesse.
+  const openAmount = (invoices ?? [])
+    .filter((i) => i.status !== "paid")
     .reduce((s, i) => s + Number(i.amount), 0);
   const ticketMedio = clients && clients.length > 0 && monthRevenue > 0 ? monthRevenue / paidThisMonth.length : 0;
 
@@ -37,7 +49,7 @@ export async function getCrmData() {
     monthRevenue,
     overdueAmount,
     overdueCount: overdue.length,
-    inadimplenciaPct: allActiveAmount > 0 ? (overdueAmount / allActiveAmount) * 100 : 0,
+    inadimplenciaPct: openAmount > 0 ? (overdueAmount / openAmount) * 100 : 0,
     ticketMedio,
   };
 }
