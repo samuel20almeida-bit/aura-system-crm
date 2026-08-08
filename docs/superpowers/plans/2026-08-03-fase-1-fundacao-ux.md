@@ -1794,13 +1794,15 @@ Torna alcançável a capacidade que hoje só existe no backend.
 - Create: `supabase/migrations/0008_attachments_storage.sql`
 - Create: `src/components/kanban/Attachments.tsx`
 - Modify: `src/lib/actions/tasks.ts`
+- Modify: `src/lib/data/tasks.ts`
 - Modify: `src/lib/supabase/database.types.ts`
 - Modify: `src/components/kanban/TaskDetailPanel.tsx`
 
 **Interfaces:**
-- Consumes: `addAttachment(taskId, filename, url)` já existente em `src/lib/actions/tasks.ts`.
+- Substitui: `addAttachment(taskId, filename, url)` em `src/lib/actions/tasks.ts`, que não tem chamador nenhum.
 - Produces:
   - `addLinkAttachment(taskId: string, filename: string, url: string): Promise<void>`
+  - `addFileAttachment(taskId: string, filename: string, storagePath: string): Promise<void>`
   - `removeAttachment(attachmentId: string, storagePath: string | null): Promise<void>`
   - `<Attachments taskId attachments />`
 
@@ -1816,15 +1818,20 @@ insert into storage.buckets (id, name, public)
 values ('task-attachments', 'task-attachments', false)
 on conflict (id) do nothing;
 
+drop policy if exists "aura_read_attachments" on storage.objects;
 create policy "aura_read_attachments" on storage.objects
   for select using (bucket_id = 'task-attachments' and auth.uid() is not null);
 
+drop policy if exists "aura_write_attachments" on storage.objects;
 create policy "aura_write_attachments" on storage.objects
   for insert with check (bucket_id = 'task-attachments' and auth.uid() is not null);
 
+drop policy if exists "aura_delete_attachments" on storage.objects;
 create policy "aura_delete_attachments" on storage.objects
   for delete using (bucket_id = 'task-attachments' and auth.uid() is not null);
 ```
+
+O bucket é **privado** (`public = false`) de propósito: briefing de cliente e contrato não podem ficar numa URL adivinhável. Isso decide todo o resto da tarefa — veja o Step 4.
 
 - [ ] **Step 2: Aplicar a migration**
 
@@ -1838,7 +1845,11 @@ Em `src/lib/supabase/database.types.ts`, no bloco `task_attachments`, acrescenta
 
 - [ ] **Step 4: Escrever as três ações**
 
-Em `src/lib/actions/tasks.ts`, substituir `addAttachment` pelas três abaixo. Escrevê-las **antes** do componente, para que ele possa importá-las estaticamente:
+`addAttachment` não tem nenhum chamador hoje (confirmado: só a própria definição em `src/lib/actions/tasks.ts:210`), então pode ser substituída sem quebrar nada.
+
+**A regra que governa este passo:** num bucket privado, `getPublicUrl` devolve uma URL que não abre. Arquivo enviado **não guarda URL nenhuma** — guarda só o `storage_path`, e o link de abrir é assinado na hora da leitura (Step 4b). A coluna `url` passa a significar "link colado pelo usuário", e nada mais.
+
+Em `src/lib/actions/tasks.ts`, substituir `addAttachment` por estas três:
 
 ```ts
 export async function addLinkAttachment(taskId: string, filename: string, url: string) {
@@ -1850,11 +1861,11 @@ export async function addLinkAttachment(taskId: string, filename: string, url: s
   revalidatePath("/kanban");
 }
 
-export async function addFileAttachment(taskId: string, filename: string, url: string, storagePath: string) {
+export async function addFileAttachment(taskId: string, filename: string, storagePath: string) {
   const supabase = await createClient();
   const { error } = await supabase
     .from("task_attachments")
-    .insert({ task_id: taskId, filename, url, storage_path: storagePath });
+    .insert({ task_id: taskId, filename, url: null, storage_path: storagePath });
   if (error) throw error;
   revalidatePath("/kanban");
 }
@@ -1862,13 +1873,45 @@ export async function addFileAttachment(taskId: string, filename: string, url: s
 export async function removeAttachment(attachmentId: string, storagePath: string | null) {
   const supabase = await createClient();
   if (storagePath) {
-    await supabase.storage.from("task-attachments").remove([storagePath]);
+    const { error: storageError } = await supabase.storage.from("task-attachments").remove([storagePath]);
+    if (storageError) throw storageError;
   }
   const { error } = await supabase.from("task_attachments").delete().eq("id", attachmentId);
   if (error) throw error;
   revalidatePath("/kanban");
 }
 ```
+
+Apagar o arquivo **antes** da linha é deliberado: se o storage falhar, a linha continua lá e o usuário vê o anexo e pode tentar de novo. Na ordem inversa, uma falha deixaria um arquivo órfão que ninguém mais consegue alcançar nem remover.
+
+- [ ] **Step 4b: Assinar as URLs na leitura**
+
+Em `src/lib/data/tasks.ts`, dentro de `getTaskDetail`, depois do `Promise.all`: para os anexos que têm `storage_path`, gerar uma URL assinada de 1 hora e devolvê-la no campo `url`. O formato da linha não muda — quem consome continua lendo `a.url`.
+
+```ts
+const attachmentRows = attachments ?? [];
+const storagePaths = attachmentRows
+  .map((a) => a.storage_path)
+  .filter((p): p is string => Boolean(p));
+
+const signedByPath = new Map<string, string>();
+if (storagePaths.length > 0) {
+  const { data: signed } = await supabase.storage
+    .from("task-attachments")
+    .createSignedUrls(storagePaths, 60 * 60);
+  for (const item of signed ?? []) {
+    if (item.path && item.signedUrl) signedByPath.set(item.path, item.signedUrl);
+  }
+}
+
+const resolvedAttachments = attachmentRows.map((a) =>
+  a.storage_path ? { ...a, url: signedByPath.get(a.storage_path) ?? null } : a
+);
+```
+
+Devolver `resolvedAttachments` no lugar de `attachments ?? []`.
+
+Uma assinatura que não puder ser gerada vira `url: null` — o anexo aparece na lista com o nome, sem link. É o comportamento certo: some o link, não some o anexo.
 
 - [ ] **Step 5: Criar a interface de anexos**
 
@@ -1883,6 +1926,20 @@ import { createClient } from "@/lib/supabase/client";
 import { addFileAttachment, addLinkAttachment, removeAttachment } from "@/lib/actions/tasks";
 import { useToast } from "@/components/ui/Toast";
 import type { Tables } from "@/lib/supabase/database.types";
+
+const MAX_MB = 25;
+const MAX_BYTES = MAX_MB * 1024 * 1024;
+
+/** A chave do storage aceita um alfabeto estreito: acento e espaço de um nome brasileiro
+ *  ("Proposta – Ação final.pdf") quebram o upload. O nome original fica na coluna filename. */
+function storageSafeName(name: string) {
+  const clean = name
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9._-]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return clean || "arquivo";
+}
 
 export function Attachments({
   taskId,
@@ -1901,19 +1958,22 @@ export function Attachments({
   const fileInput = useRef<HTMLInputElement>(null);
 
   async function upload(file: File) {
+    if (file.size > MAX_BYTES) {
+      notify("error", `"${file.name}" tem mais de ${MAX_MB} MB. Suba num link e cole aqui.`);
+      return;
+    }
     setUploading(true);
     const supabase = createClient();
-    const path = `${taskId}/${crypto.randomUUID()}-${file.name}`;
+    const path = `${taskId}/${crypto.randomUUID()}-${storageSafeName(file.name)}`;
     const { error } = await supabase.storage.from("task-attachments").upload(path, file);
     setUploading(false);
     if (error) {
       notify("error", "Não foi possível enviar o arquivo.");
       return;
     }
-    const { data } = supabase.storage.from("task-attachments").getPublicUrl(path);
     startTransition(async () => {
       try {
-        await addFileAttachment(taskId, file.name, data.publicUrl, path);
+        await addFileAttachment(taskId, file.name, path);
         notify("success", "Arquivo anexado.");
         router.refresh();
       } catch {
@@ -2028,9 +2088,11 @@ Em `src/components/kanban/TaskDetailPanel.tsx`, importar `Attachments` e renderi
 - [ ] **Step 7: Verificar**
 
 Run: `npm test && npx tsc --noEmit && npm run lint && npm run build`
-Expected: tudo limpo.
+Expected: tudo limpo — 34 testes passando (esta tarefa não acrescenta teste; a lógica nova é toda I/O).
 
-No navegador: anexar um PDF pequeno e um link do Figma numa tarefa, recarregar a página, e confirmar que ambos persistem e abrem.
+**Não há navegador nem rede para o Supabase neste ambiente.** Não rode `npm run dev`, não tente abrir nada, e nunca escreva no relatório que viu um anexo funcionando. As ferramentas MCP do Supabase alcançam o banco por outro caminho e funcionam — use-as para confirmar a migration (Step 2) e para conferir que a coluna `storage_path` existe em `public.task_attachments`.
+
+Deixe registrado no relatório, como pendência para o dono do sistema testar no navegador depois: enviar um PDF, colar um link, recarregar, e confirmar que os dois abrem.
 
 - [ ] **Step 8: Commit**
 
