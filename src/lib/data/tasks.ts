@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { buildSequentialCodes, highestCodeNumber } from "@/lib/task-codes";
 
 export async function listTasks() {
   const supabase = await createClient();
@@ -24,34 +25,78 @@ export async function listClientsLite() {
   return data ?? [];
 }
 
+export async function getTaskHistory(taskId: string) {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("activity_log")
+    .select("*, user:profiles(id, full_name, initials)")
+    .eq("task_id", taskId)
+    .order("created_at", { ascending: false })
+    .limit(50);
+  return data ?? [];
+}
+
 export async function getTaskDetail(id: string) {
   const supabase = await createClient();
-  const [{ data: task }, { data: checklist }, { data: comments }, { data: attachments }, { data: timeSpent }] =
-    await Promise.all([
-      supabase
-        .from("tasks")
-        .select(
-          "*, client:clients(id, name, color, code_prefix), assignee:profiles!tasks_assignee_id_fkey(id, full_name, initials)"
-        )
-        .eq("id", id)
-        .single(),
-      supabase
-        .from("task_checklist_items")
-        .select("*, assignee:profiles(id, full_name, initials)")
-        .eq("task_id", id)
-        .order("position"),
-      supabase
-        .from("task_comments")
-        .select("*, author:profiles(id, full_name, initials)")
-        .eq("task_id", id)
-        .order("created_at"),
-      supabase.from("task_attachments").select("*").eq("task_id", id).order("created_at"),
-      supabase.from("time_entries").select("minutes").eq("task_id", id).not("minutes", "is", null),
-    ]);
+  const [
+    { data: task },
+    { data: checklist },
+    { data: comments },
+    { data: attachments },
+    { data: timeSpent },
+    history,
+  ] = await Promise.all([
+    supabase
+      .from("tasks")
+      .select(
+        "*, client:clients(id, name, color, code_prefix), assignee:profiles!tasks_assignee_id_fkey(id, full_name, initials)"
+      )
+      .eq("id", id)
+      .single(),
+    supabase
+      .from("task_checklist_items")
+      .select("*, assignee:profiles(id, full_name, initials)")
+      .eq("task_id", id)
+      .order("position"),
+    supabase
+      .from("task_comments")
+      .select("*, author:profiles(id, full_name, initials)")
+      .eq("task_id", id)
+      .order("created_at"),
+    supabase.from("task_attachments").select("*").eq("task_id", id).order("created_at"),
+    supabase.from("time_entries").select("minutes").eq("task_id", id).not("minutes", "is", null),
+    getTaskHistory(id),
+  ]);
 
   const totalMinutes = (timeSpent ?? []).reduce((sum, t) => sum + (t.minutes ?? 0), 0);
 
-  return { task, checklist: checklist ?? [], comments: comments ?? [], attachments: attachments ?? [], totalMinutes };
+  const attachmentRows = attachments ?? [];
+  const storagePaths = attachmentRows
+    .map((a) => a.storage_path)
+    .filter((p): p is string => Boolean(p));
+
+  const signedByPath = new Map<string, string>();
+  if (storagePaths.length > 0) {
+    const { data: signed } = await supabase.storage
+      .from("task-attachments")
+      .createSignedUrls(storagePaths, 60 * 60);
+    for (const item of signed ?? []) {
+      if (item.path && item.signedUrl) signedByPath.set(item.path, item.signedUrl);
+    }
+  }
+
+  const resolvedAttachments = attachmentRows.map((a) =>
+    a.storage_path ? { ...a, url: signedByPath.get(a.storage_path) ?? null } : a
+  );
+
+  return {
+    task,
+    checklist: checklist ?? [],
+    comments: comments ?? [],
+    attachments: resolvedAttachments,
+    totalMinutes,
+    history,
+  };
 }
 
 async function resolveTaskCodePrefix(supabase: Awaited<ReturnType<typeof createClient>>, clientId: string | null, isInternal: boolean) {
@@ -66,26 +111,18 @@ async function highestTaskCodeNumber(supabase: Awaited<ReturnType<typeof createC
     .select("code")
     .ilike("code", `${prefix}-%`)
     .order("code", { ascending: false });
-
-  let max = 0;
-  for (const row of data ?? []) {
-    const n = parseInt(row.code.split("-")[1] ?? "0", 10);
-    if (!isNaN(n) && n > max) max = n;
-  }
-  return max;
+  return highestCodeNumber((data ?? []).map((row) => row.code));
 }
 
 export async function nextTaskCode(clientId: string | null, isInternal: boolean) {
   const supabase = await createClient();
   const prefix = await resolveTaskCodePrefix(supabase, clientId, isInternal);
-  const max = await highestTaskCodeNumber(supabase, prefix);
-  return `${prefix}-${String(max + 1).padStart(2, "0")}`;
+  return buildSequentialCodes(prefix, (await highestTaskCodeNumber(supabase, prefix)) + 1, 1)[0];
 }
 
 /** Generates `count` sequential task codes for the same prefix in one shot (e.g. for a playbook run). */
 export async function nextTaskCodes(clientId: string | null, isInternal: boolean, count: number) {
   const supabase = await createClient();
   const prefix = await resolveTaskCodePrefix(supabase, clientId, isInternal);
-  const start = (await highestTaskCodeNumber(supabase, prefix)) + 1;
-  return Array.from({ length: count }, (_, i) => `${prefix}-${String(start + i).padStart(2, "0")}`);
+  return buildSequentialCodes(prefix, (await highestTaskCodeNumber(supabase, prefix)) + 1, count);
 }

@@ -1,6 +1,6 @@
 export function PageBody({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-4 p-5.5">{children}</div>
+    <div className="flex min-h-0 flex-1 flex-col gap-4 p-4 md:p-5.5">{children}</div>
   );
 }
 
@@ -14,12 +14,12 @@ export function PageHeader({
   actions?: React.ReactNode;
 }) {
   return (
-    <div className="flex items-start justify-between gap-4">
+    <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
       <div>
         <h1 className="text-[21px] font-medium">{title}</h1>
         {sub && <div className="mt-0.5 text-[12.5px] text-muted">{sub}</div>}
       </div>
-      {actions && <div className="flex items-center gap-2">{actions}</div>}
+      {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
     </div>
   );
 }

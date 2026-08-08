@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useOptimistic, useState } from "react";
 import Link from "next/link";
 import { useTransition } from "react";
 import { Kpi, Card } from "@/components/ui/Card";
@@ -11,6 +11,7 @@ import { NewClientModal, NewDealModal, NewInvoiceModal } from "./CrmModals";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { markInvoiceStatus, updateDealStage } from "@/lib/actions/crm";
 import type { Tables } from "@/lib/supabase/database.types";
+import { useToast } from "@/components/ui/Toast";
 
 type ClientRow = Tables<"clients"> & { owner: { id: string; full_name: string; initials: string } | null };
 type DealRow = Tables<"deals"> & { client: { id: string; name: string } | null; owner: { id: string; full_name: string; initials: string } | null };
@@ -47,27 +48,39 @@ export function CrmClient({
   const [tab, setTab] = useState<"overview" | "clientes" | "pipeline" | "faturas">("overview");
   const [modal, setModal] = useState<"client" | "deal" | "invoice" | null>(null);
   const [, startTransition] = useTransition();
+  const { notify } = useToast();
+
+  const [optimisticInvoices, setInvoiceStatusOptimistic] = useOptimistic(
+    invoices,
+    (list, { id, status }: { id: string; status: string }) =>
+      list.map((i) => (i.id === id ? { ...i, status } : i))
+  );
+  const [optimisticDeals, setDealStageOptimistic] = useOptimistic(
+    deals,
+    (list, { id, stage }: { id: string; stage: string }) =>
+      list.map((d) => (d.id === id ? { ...d, stage } : d))
+  );
 
   const activeClients = clients.filter((c) => c.status === "active");
   const pipelineValue = deals.filter((d) => d.stage !== "won" && d.stage !== "lost").reduce((s, d) => s + Number(d.value ?? 0), 0);
 
   return (
     <>
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div>
           <h1 className="text-[21px] font-medium">CRM</h1>
           <div className="mt-0.5 text-[12.5px] text-muted">
             {activeClients.length} clientes ativos · {deals.filter((d) => d.stage !== "won" && d.stage !== "lost").length} oportunidades no pipeline
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {tab === "pipeline" && <Button variant="ghost" onClick={() => setModal("deal")}>+ Novo negócio</Button>}
           {tab === "faturas" && <Button variant="ghost" onClick={() => setModal("invoice")}>+ Nova fatura</Button>}
           <Button onClick={() => setModal("client")}>+ Novo cliente</Button>
         </div>
       </div>
 
-      <div className="flex gap-4.5 border-b border-border">
+      <div className="flex gap-4.5 overflow-x-auto border-b border-border">
         {(["overview", "clientes", "pipeline", "faturas"] as const).map((tb) => (
           <button
             key={tb}
@@ -81,7 +94,7 @@ export function CrmClient({
 
       {tab === "overview" && (
         <div className="flex flex-1 flex-col gap-4 overflow-y-auto scrollbar-thin">
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
             <Kpi label="FATURAMENTO (MÊS)" value={formatCurrency(monthRevenue)} />
             <Kpi label="TICKET MÉDIO" value={ticketMedio > 0 ? formatCurrency(Math.round(ticketMedio)) : "—"} />
             <Kpi label="PIPELINE ABERTO" value={formatCurrency(pipelineValue)} />
@@ -119,7 +132,7 @@ export function CrmClient({
 
       {tab === "clientes" && (
         <Card className="flex-1 overflow-hidden p-4">
-          <div className="grid grid-cols-[1.6fr_1fr_.9fr_1fr] gap-2 border-b border-border pb-2 font-mono text-[9.5px] font-semibold tracking-wide text-faint">
+          <div className="hidden grid-cols-[1.6fr_1fr_.9fr_1fr] gap-2 border-b border-border pb-2 font-mono text-[9.5px] font-semibold tracking-wide text-faint md:grid">
             <div>CLIENTE</div>
             <div>SEGMENTO</div>
             <div>STATUS</div>
@@ -127,14 +140,27 @@ export function CrmClient({
           </div>
           <div className="overflow-y-auto scrollbar-thin">
             {clients.map((c) => (
-              <Link key={c.id} href={`/crm/${c.id}`} className="grid grid-cols-[1.6fr_1fr_.9fr_1fr] items-center gap-2 border-b border-border-soft py-2.5 text-[13px] hover:bg-neutral-tint">
+              <Link
+                key={c.id}
+                href={`/crm/${c.id}`}
+                className="flex flex-col gap-1 border-b border-border-soft py-2.5 text-[13px] hover:bg-neutral-tint md:grid md:grid-cols-[1.6fr_1fr_.9fr_1fr] md:items-center md:gap-2"
+              >
                 <div className="flex items-center gap-2">
                   <span className="h-2 w-2 rounded-sm" style={{ background: c.color }} />
                   {c.name}
                 </div>
-                <div className="text-muted">{c.segment ?? "—"}</div>
-                <Tag tone={c.status === "active" ? "accent" : "neutral"}>{c.status === "active" ? "Ativo" : "Inativo"}</Tag>
-                <div className="font-mono text-muted">{c.client_since ? formatDate(c.client_since) : "—"}</div>
+                <div className="text-muted">
+                  <span className="mr-1 text-faint md:hidden">Segmento:</span>
+                  {c.segment ?? "—"}
+                </div>
+                <div>
+                  <span className="mr-1 text-faint md:hidden">Status:</span>
+                  <Tag tone={c.status === "active" ? "accent" : "neutral"}>{c.status === "active" ? "Ativo" : "Inativo"}</Tag>
+                </div>
+                <div className="font-mono text-muted">
+                  <span className="mr-1 text-faint md:hidden">Desde:</span>
+                  {c.client_since ? formatDate(c.client_since) : "—"}
+                </div>
               </Link>
             ))}
             {clients.length === 0 && <div className="py-8 text-center text-[13px] text-faint">Nenhum cliente cadastrado ainda.</div>}
@@ -145,7 +171,7 @@ export function CrmClient({
       {tab === "pipeline" && (
         <div className="grid flex-1 grid-cols-4 gap-3 overflow-hidden">
           {stages.map((stage) => {
-            const stageDeals = deals.filter((d) => d.stage === stage.id);
+            const stageDeals = optimisticDeals.filter((d) => d.stage === stage.id);
             const value = stageDeals.reduce((s, d) => s + Number(d.value ?? 0), 0);
             return (
               <div key={stage.id} className="flex min-h-0 flex-col gap-2 overflow-y-auto scrollbar-thin rounded-xl border border-neutral-tint-border bg-neutral-tint p-2.75">
@@ -162,7 +188,17 @@ export function CrmClient({
                     </div>
                     <select
                       value={d.stage}
-                      onChange={(e) => startTransition(async () => { await updateDealStage(d.id, e.target.value); })}
+                      onChange={(e) => {
+                        const stage = e.target.value;
+                        startTransition(async () => {
+                          setDealStageOptimistic({ id: d.id, stage });
+                          try {
+                            await updateDealStage(d.id, stage);
+                          } catch {
+                            notify("error", "Não foi possível atualizar a etapa do negócio. Tente novamente.");
+                          }
+                        });
+                      }}
                       className="rounded border border-border bg-bone px-1.5 py-1 text-[11px] text-muted"
                     >
                       {stages.map((s) => (
@@ -180,7 +216,7 @@ export function CrmClient({
 
       {tab === "faturas" && (
         <Card className="flex-1 overflow-hidden p-4">
-          <div className="grid grid-cols-[1.4fr_1fr_.9fr_.9fr_.8fr] gap-2 border-b border-border pb-2 font-mono text-[9.5px] font-semibold tracking-wide text-faint">
+          <div className="hidden grid-cols-[1.4fr_1fr_.9fr_.9fr_.8fr] gap-2 border-b border-border pb-2 font-mono text-[9.5px] font-semibold tracking-wide text-faint md:grid">
             <div>CLIENTE</div>
             <div>REFERÊNCIA</div>
             <div>VENCIMENTO</div>
@@ -188,28 +224,53 @@ export function CrmClient({
             <div>STATUS</div>
           </div>
           <div className="overflow-y-auto scrollbar-thin">
-            {invoices.map((inv) => (
-              <div key={inv.id} className="grid grid-cols-[1.4fr_1fr_.9fr_.9fr_.8fr] items-center gap-2 border-b border-border-soft py-2.5 text-[13px]">
+            {optimisticInvoices.map((inv) => (
+              <div
+                key={inv.id}
+                className="flex flex-col gap-1 border-b border-border-soft py-2.5 text-[13px] md:grid md:grid-cols-[1.4fr_1fr_.9fr_.9fr_.8fr] md:items-center md:gap-2"
+              >
                 <div className="flex items-center gap-2">
                   <span className="h-2 w-2 rounded-sm" style={{ background: inv.client?.color ?? "#9A9890" }} />
                   {inv.client?.name ?? "—"}
                 </div>
-                <div className="text-muted">{inv.reference_period}</div>
-                <div className="font-mono text-muted">{formatDate(inv.due_date)}</div>
-                <div>{formatCurrency(Number(inv.amount))}</div>
-                <select
-                  value={inv.status}
-                  onChange={(e) => startTransition(async () => { await markInvoiceStatus(inv.id, inv.client_id, e.target.value); })}
-                  className="justify-self-start rounded-full border-0 bg-transparent text-[11px] font-medium"
-                  style={{ color: inv.status === "paid" ? "#0B6B54" : inv.status === "overdue" ? "#C4574A" : "#5C5A52" }}
-                >
-                  <option value="pending">Pendente</option>
-                  <option value="paid">Paga</option>
-                  <option value="overdue">Atrasada</option>
-                </select>
+                <div className="text-muted">
+                  <span className="mr-1 text-faint md:hidden">Referência:</span>
+                  {inv.reference_period}
+                </div>
+                <div className="font-mono text-muted">
+                  <span className="mr-1 font-sans text-faint md:hidden">Vencimento:</span>
+                  {formatDate(inv.due_date)}
+                </div>
+                <div>
+                  <span className="mr-1 text-faint md:hidden">Valor:</span>
+                  {formatCurrency(Number(inv.amount))}
+                </div>
+                <div className="flex items-center">
+                  <span className="mr-1 text-faint md:hidden">Status:</span>
+                  <select
+                    value={inv.status}
+                    onChange={(e) => {
+                      const status = e.target.value;
+                      startTransition(async () => {
+                        setInvoiceStatusOptimistic({ id: inv.id, status });
+                        try {
+                          await markInvoiceStatus(inv.id, inv.client_id, status);
+                        } catch {
+                          notify("error", "Não foi possível atualizar o status da fatura. Tente novamente.");
+                        }
+                      });
+                    }}
+                    className="justify-self-start rounded-full border-0 bg-transparent text-[11px] font-medium"
+                    style={{ color: inv.status === "paid" ? "#0B6B54" : inv.status === "overdue" ? "#C4574A" : "#5C5A52" }}
+                  >
+                    <option value="pending">Pendente</option>
+                    <option value="paid">Paga</option>
+                    <option value="overdue">Atrasada</option>
+                  </select>
+                </div>
               </div>
             ))}
-            {invoices.length === 0 && <div className="py-8 text-center text-[13px] text-faint">Nenhuma fatura registrada ainda.</div>}
+            {optimisticInvoices.length === 0 && <div className="py-8 text-center text-[13px] text-faint">Nenhuma fatura registrada ainda.</div>}
           </div>
         </Card>
       )}

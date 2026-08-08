@@ -8,23 +8,28 @@ import { Button } from "@/components/ui/Button";
 import { Avatar } from "@/components/ui/Avatar";
 import { Tag } from "@/components/ui/Tag";
 import { formatDate } from "@/lib/format";
+import { addDaysToDateStr, todayInAppTz } from "@/lib/timezone";
 import type { TaskWithRelations } from "@/lib/data/tasks";
 import type { Tables } from "@/lib/supabase/database.types";
+import type { ColumnId } from "@/lib/optimistic";
 
 type ClientLite = { id: string; name: string; color: string; code_prefix: string };
 
 const statusLabel: Record<string, string> = { todo: "A fazer", in_progress: "Em andamento", done: "Finalizada" };
+const mobileColumns: ColumnId[] = ["todo", "in_progress", "done"];
 
 export function KanbanClient({
   tasks,
   clients,
   profiles,
   checklistCounts,
+  runningTaskId,
 }: {
   tasks: TaskWithRelations[];
   clients: ClientLite[];
   profiles: Tables<"profiles">[];
   checklistCounts: Record<string, { done: number; total: number }>;
+  runningTaskId?: string | null;
 }) {
   const router = useRouter();
   const [view, setView] = useState<"board" | "list">("board");
@@ -33,6 +38,7 @@ export function KanbanClient({
   const [assigneeFilter, setAssigneeFilter] = useState("");
   const [priorityFilter, setPriorityFilter] = useState("");
   const [showNewTask, setShowNewTask] = useState(false);
+  const [mobileColumn, setMobileColumn] = useState<ColumnId>("todo");
 
   const filtered = useMemo(() => {
     return tasks.filter((t) => {
@@ -46,12 +52,17 @@ export function KanbanClient({
   }, [tasks, scope, clientFilter, assigneeFilter, priorityFilter]);
 
   const activeCount = filtered.filter((t) => t.status !== "done").length;
-  // eslint-disable-next-line react-hooks/purity -- snapshot "now" once for the due-this-week filter
-  const todayMs = useMemo(() => Date.now(), []);
+  // "Hoje" é o dia em São Paulo e a comparação fica no calendário. Com
+  // new Date(t.due_date).getTime() a data crua virava meia-noite UTC — 21h do
+  // dia anterior aqui — e este contador contradizia o sino e os próprios
+  // cartões, que a Task 9 já havia corrigido.
+  // useMemo fotografa "hoje" uma vez: sem isso o valor poderia mudar na virada
+  // da meia-noite entre dois renders da mesma sessão.
+  const today = useMemo(() => todayInAppTz(), []);
+  const weekLimit = addDaysToDateStr(today, 7);
   const dueThisWeek = filtered.filter((t) => {
     if (!t.due_date || t.status === "done") return false;
-    const days = (new Date(t.due_date).getTime() - todayMs) / 86400000;
-    return days >= 0 && days <= 7;
+    return t.due_date >= today && t.due_date <= weekLimit;
   }).length;
 
   function openTask(id: string) {
@@ -60,14 +71,14 @@ export function KanbanClient({
 
   return (
     <>
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div>
           <h1 className="text-[21px] font-medium">Kanban</h1>
           <div className="mt-0.5 text-[12.5px] text-muted">
             {activeCount} tarefas ativas · {dueThisWeek} vencendo esta semana
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <div className="flex overflow-hidden rounded-lg border border-border bg-surface text-[12px] font-medium">
             {(["board", "list"] as const).map((v) => (
               <button
@@ -136,7 +147,28 @@ export function KanbanClient({
       </div>
 
       {view === "board" ? (
-        <KanbanBoard tasks={filtered} checklistCounts={checklistCounts} onOpenTask={openTask} />
+        <>
+          <div className="flex overflow-hidden rounded-lg border border-border bg-surface text-[12px] font-medium md:hidden">
+            {mobileColumns.map((c) => (
+              <button
+                key={c}
+                onClick={() => setMobileColumn(c)}
+                className={`flex-1 border-r border-border px-3 py-1.75 last:border-r-0 ${
+                  mobileColumn === c ? "bg-ink text-bone" : "text-muted"
+                }`}
+              >
+                {statusLabel[c]}
+              </button>
+            ))}
+          </div>
+          <KanbanBoard
+            tasks={filtered}
+            checklistCounts={checklistCounts}
+            onOpenTask={openTask}
+            runningTaskId={runningTaskId}
+            mobileColumn={mobileColumn}
+          />
+        </>
       ) : (
         <div className="flex-1 overflow-y-auto scrollbar-thin rounded-xl border border-border bg-surface">
           <div className="grid grid-cols-[1.6fr_1fr_1fr_.8fr_80px] gap-2 border-b border-border px-3 py-2 font-mono text-[9.5px] font-semibold tracking-wide text-faint">

@@ -7,6 +7,7 @@ import { Tag } from "@/components/ui/Tag";
 import { Avatar } from "@/components/ui/Avatar";
 import { ProgressBar } from "@/components/ui/Card";
 import { formatDate } from "@/lib/format";
+import { todayInAppTz } from "@/lib/timezone";
 import type { TaskWithRelations } from "@/lib/data/tasks";
 
 const priorityTone: Record<string, "red" | "neutral"> = {
@@ -20,13 +21,18 @@ export function TaskCard({
   task,
   checklistSummary,
   onOpen,
+  isRunning,
+  dragDisabled,
 }: {
   task: TaskWithRelations;
   checklistSummary?: { done: number; total: number } | null;
   onOpen: () => void;
+  isRunning?: boolean;
+  dragDisabled?: boolean;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: task.id,
+    disabled: dragDisabled,
   });
 
   const style = {
@@ -35,7 +41,9 @@ export function TaskCard({
   };
 
   const isDone = task.status === "done";
-  const overdue = task.due_date && new Date(task.due_date) < new Date(new Date().toDateString()) && !isDone;
+  // Mesma comparação que o sino faz: "hoje" é o dia em São Paulo, não o dia
+  // local da máquina de quem abre o Kanban.
+  const overdue = task.due_date && task.due_date < todayInAppTz() && !isDone;
 
   return (
     <div
@@ -45,8 +53,8 @@ export function TaskCard({
       {...listeners}
       onClick={onOpen}
       className={clsx(
-        "flex cursor-pointer flex-col gap-2 rounded-[10px] border border-border bg-surface p-2.75 shadow-[0_1px_2px_rgba(30,30,28,.05)]",
-        isDragging && "opacity-40",
+        "flex cursor-pointer flex-col gap-2 rounded-[10px] border border-border bg-surface p-2.75 shadow-[0_1px_2px_rgba(30,30,28,.05)] transition-shadow duration-150 hover:shadow-[0_2px_8px_rgba(30,30,28,.10)]",
+        isDragging && "opacity-40 shadow-[0_8px_24px_rgba(30,30,28,.18)]",
         isDone && "opacity-70"
       )}
     >
@@ -54,7 +62,12 @@ export function TaskCard({
         <Tag tone={priorityTone[task.priority]} dot>
           {priorityLabel[task.priority]}
         </Tag>
-        <span className="font-mono text-[11px] text-muted">{task.code}</span>
+        <span className="flex items-center gap-1.5 font-mono text-[11px] text-muted">
+          {task.code}
+          {isRunning && (
+            <span className="h-1.5 w-1.5 rounded-full bg-accent animate-pulse-soft" title="Timer rodando" />
+          )}
+        </span>
       </div>
       <div className={clsx("text-[13px] font-medium", isDone && "line-through")}>{task.title}</div>
       {task.client && (

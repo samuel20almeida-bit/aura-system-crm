@@ -362,18 +362,23 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       {children}
       <div className="pointer-events-none fixed bottom-5 right-5 z-[60] flex flex-col gap-2">
         {toasts.map((t) => (
-          <ToastItem key={t.id} toast={t} onDismiss={() => dismiss(t.id)} />
+          <ToastItem key={t.id} toast={t} onDismiss={dismiss} />
         ))}
       </div>
     </ToastContext.Provider>
   );
 }
 
-function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: () => void }) {
+// `onDismiss` recebe o id em vez de já vir amarrado a ele: uma função inline
+// (`() => dismiss(t.id)`) teria identidade nova a cada render do provider, e o
+// efeito abaixo reiniciaria o cronômetro de todos os avisos na tela sempre que
+// um novo aviso entrasse. Com `dismiss` memoizado, cada aviso some no seu tempo.
+function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: (id: string) => void }) {
+  const id = toast.id;
   useEffect(() => {
-    const timeout = setTimeout(onDismiss, DISMISS_MS);
+    const timeout = setTimeout(() => onDismiss(id), DISMISS_MS);
     return () => clearTimeout(timeout);
-  }, [onDismiss]);
+  }, [onDismiss, id]);
 
   return (
     <div
@@ -390,14 +395,14 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: () => void }
         <button
           onClick={() => {
             toast.undo?.();
-            onDismiss();
+            onDismiss(id);
           }}
           className="font-mono text-[11px] underline underline-offset-2 hover:opacity-70"
         >
           Desfazer
         </button>
       )}
-      <button onClick={onDismiss} className="ml-1 text-[13px] opacity-50 hover:opacity-100" aria-label="Fechar aviso">
+      <button onClick={() => onDismiss(id)} className="ml-1 text-[13px] opacity-50 hover:opacity-100" aria-label="Fechar aviso">
         ✕
       </button>
     </div>
@@ -889,7 +894,10 @@ const DURATION_MS = 240;
 
 /** Anima de 0 até `value` uma única vez. `format` controla a exibição. */
 export function CountUp({ value, format }: { value: number; format: (n: number) => string }) {
-  const [shown, setShown] = useState(value);
+  // Começa em 0, não em `value`: iniciar com o valor final faria o primeiro
+  // paint mostrar o número certo e o efeito o jogaria de volta para perto de
+  // zero no primeiro quadro — o KPI piscaria correto, zeraria e recontaria.
+  const [shown, setShown] = useState(0);
 
   useEffect(() => {
     if (typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
@@ -1233,7 +1241,7 @@ Em `src/lib/actions/tasks.ts`, acrescentar chamadas a `logActivity` com o `taskI
 - `updateTask`: após o update bem-sucedido, registrar o campo alterado. Para `assignee_id`, verbo `"trocou o responsável de"`; para `due_date`, `"mudou o prazo de"`; para `status` igual a `"done"`, `"concluiu"`. Passar o título da tarefa como `detail` e `taskId` como quinto argumento.
 - `toggleChecklistItem`: quando `done` for verdadeiro, registrar `"concluiu a subtarefa"` com o título do item; buscar `task_id` do item para passar adiante.
 
-Em `src/lib/actions/time.ts`, em `stopRunningTimer` e `logManualTime`, registrar `"lançou horas em"` com a quantidade em `detail` e o `task_id` da entrada.
+Em `src/lib/actions/time.ts`, em `stopRunningTimer` e `logManualTime`, registrar `"lançou"` com a quantidade em `detail` (o painel monta `{nome} {verbo} {detalhe}`, então "lançou" + "1,5h" lê como "Julia lançou 1,5h"; com "lançou horas em" a frase ficaria "lançou horas em 1,5h", que não faz sentido) e o `task_id` da entrada.
 
 - [ ] **Step 6: Buscar o histórico**
 
@@ -1786,13 +1794,15 @@ Torna alcançável a capacidade que hoje só existe no backend.
 - Create: `supabase/migrations/0008_attachments_storage.sql`
 - Create: `src/components/kanban/Attachments.tsx`
 - Modify: `src/lib/actions/tasks.ts`
+- Modify: `src/lib/data/tasks.ts`
 - Modify: `src/lib/supabase/database.types.ts`
 - Modify: `src/components/kanban/TaskDetailPanel.tsx`
 
 **Interfaces:**
-- Consumes: `addAttachment(taskId, filename, url)` já existente em `src/lib/actions/tasks.ts`.
+- Substitui: `addAttachment(taskId, filename, url)` em `src/lib/actions/tasks.ts`, que não tem chamador nenhum.
 - Produces:
   - `addLinkAttachment(taskId: string, filename: string, url: string): Promise<void>`
+  - `addFileAttachment(taskId: string, filename: string, storagePath: string): Promise<void>`
   - `removeAttachment(attachmentId: string, storagePath: string | null): Promise<void>`
   - `<Attachments taskId attachments />`
 
@@ -1808,15 +1818,20 @@ insert into storage.buckets (id, name, public)
 values ('task-attachments', 'task-attachments', false)
 on conflict (id) do nothing;
 
+drop policy if exists "aura_read_attachments" on storage.objects;
 create policy "aura_read_attachments" on storage.objects
   for select using (bucket_id = 'task-attachments' and auth.uid() is not null);
 
+drop policy if exists "aura_write_attachments" on storage.objects;
 create policy "aura_write_attachments" on storage.objects
   for insert with check (bucket_id = 'task-attachments' and auth.uid() is not null);
 
+drop policy if exists "aura_delete_attachments" on storage.objects;
 create policy "aura_delete_attachments" on storage.objects
   for delete using (bucket_id = 'task-attachments' and auth.uid() is not null);
 ```
+
+O bucket é **privado** (`public = false`) de propósito: briefing de cliente e contrato não podem ficar numa URL adivinhável. Isso decide todo o resto da tarefa — veja o Step 4.
 
 - [ ] **Step 2: Aplicar a migration**
 
@@ -1830,7 +1845,11 @@ Em `src/lib/supabase/database.types.ts`, no bloco `task_attachments`, acrescenta
 
 - [ ] **Step 4: Escrever as três ações**
 
-Em `src/lib/actions/tasks.ts`, substituir `addAttachment` pelas três abaixo. Escrevê-las **antes** do componente, para que ele possa importá-las estaticamente:
+`addAttachment` não tem nenhum chamador hoje (confirmado: só a própria definição em `src/lib/actions/tasks.ts:210`), então pode ser substituída sem quebrar nada.
+
+**A regra que governa este passo:** num bucket privado, `getPublicUrl` devolve uma URL que não abre. Arquivo enviado **não guarda URL nenhuma** — guarda só o `storage_path`, e o link de abrir é assinado na hora da leitura (Step 4b). A coluna `url` passa a significar "link colado pelo usuário", e nada mais.
+
+Em `src/lib/actions/tasks.ts`, substituir `addAttachment` por estas três:
 
 ```ts
 export async function addLinkAttachment(taskId: string, filename: string, url: string) {
@@ -1842,11 +1861,11 @@ export async function addLinkAttachment(taskId: string, filename: string, url: s
   revalidatePath("/kanban");
 }
 
-export async function addFileAttachment(taskId: string, filename: string, url: string, storagePath: string) {
+export async function addFileAttachment(taskId: string, filename: string, storagePath: string) {
   const supabase = await createClient();
   const { error } = await supabase
     .from("task_attachments")
-    .insert({ task_id: taskId, filename, url, storage_path: storagePath });
+    .insert({ task_id: taskId, filename, url: null, storage_path: storagePath });
   if (error) throw error;
   revalidatePath("/kanban");
 }
@@ -1854,13 +1873,45 @@ export async function addFileAttachment(taskId: string, filename: string, url: s
 export async function removeAttachment(attachmentId: string, storagePath: string | null) {
   const supabase = await createClient();
   if (storagePath) {
-    await supabase.storage.from("task-attachments").remove([storagePath]);
+    const { error: storageError } = await supabase.storage.from("task-attachments").remove([storagePath]);
+    if (storageError) throw storageError;
   }
   const { error } = await supabase.from("task_attachments").delete().eq("id", attachmentId);
   if (error) throw error;
   revalidatePath("/kanban");
 }
 ```
+
+Apagar o arquivo **antes** da linha é deliberado: se o storage falhar, a linha continua lá e o usuário vê o anexo e pode tentar de novo. Na ordem inversa, uma falha deixaria um arquivo órfão que ninguém mais consegue alcançar nem remover.
+
+- [ ] **Step 4b: Assinar as URLs na leitura**
+
+Em `src/lib/data/tasks.ts`, dentro de `getTaskDetail`, depois do `Promise.all`: para os anexos que têm `storage_path`, gerar uma URL assinada de 1 hora e devolvê-la no campo `url`. O formato da linha não muda — quem consome continua lendo `a.url`.
+
+```ts
+const attachmentRows = attachments ?? [];
+const storagePaths = attachmentRows
+  .map((a) => a.storage_path)
+  .filter((p): p is string => Boolean(p));
+
+const signedByPath = new Map<string, string>();
+if (storagePaths.length > 0) {
+  const { data: signed } = await supabase.storage
+    .from("task-attachments")
+    .createSignedUrls(storagePaths, 60 * 60);
+  for (const item of signed ?? []) {
+    if (item.path && item.signedUrl) signedByPath.set(item.path, item.signedUrl);
+  }
+}
+
+const resolvedAttachments = attachmentRows.map((a) =>
+  a.storage_path ? { ...a, url: signedByPath.get(a.storage_path) ?? null } : a
+);
+```
+
+Devolver `resolvedAttachments` no lugar de `attachments ?? []`.
+
+Uma assinatura que não puder ser gerada vira `url: null` — o anexo aparece na lista com o nome, sem link. É o comportamento certo: some o link, não some o anexo.
 
 - [ ] **Step 5: Criar a interface de anexos**
 
@@ -1875,6 +1926,20 @@ import { createClient } from "@/lib/supabase/client";
 import { addFileAttachment, addLinkAttachment, removeAttachment } from "@/lib/actions/tasks";
 import { useToast } from "@/components/ui/Toast";
 import type { Tables } from "@/lib/supabase/database.types";
+
+const MAX_MB = 25;
+const MAX_BYTES = MAX_MB * 1024 * 1024;
+
+/** A chave do storage aceita um alfabeto estreito: acento e espaço de um nome brasileiro
+ *  ("Proposta – Ação final.pdf") quebram o upload. O nome original fica na coluna filename. */
+function storageSafeName(name: string) {
+  const clean = name
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9._-]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return clean || "arquivo";
+}
 
 export function Attachments({
   taskId,
@@ -1893,19 +1958,22 @@ export function Attachments({
   const fileInput = useRef<HTMLInputElement>(null);
 
   async function upload(file: File) {
+    if (file.size > MAX_BYTES) {
+      notify("error", `"${file.name}" tem mais de ${MAX_MB} MB. Suba num link e cole aqui.`);
+      return;
+    }
     setUploading(true);
     const supabase = createClient();
-    const path = `${taskId}/${crypto.randomUUID()}-${file.name}`;
+    const path = `${taskId}/${crypto.randomUUID()}-${storageSafeName(file.name)}`;
     const { error } = await supabase.storage.from("task-attachments").upload(path, file);
     setUploading(false);
     if (error) {
       notify("error", "Não foi possível enviar o arquivo.");
       return;
     }
-    const { data } = supabase.storage.from("task-attachments").getPublicUrl(path);
     startTransition(async () => {
       try {
-        await addFileAttachment(taskId, file.name, data.publicUrl, path);
+        await addFileAttachment(taskId, file.name, path);
         notify("success", "Arquivo anexado.");
         router.refresh();
       } catch {
@@ -2020,9 +2088,11 @@ Em `src/components/kanban/TaskDetailPanel.tsx`, importar `Attachments` e renderi
 - [ ] **Step 7: Verificar**
 
 Run: `npm test && npx tsc --noEmit && npm run lint && npm run build`
-Expected: tudo limpo.
+Expected: tudo limpo — 34 testes passando (esta tarefa não acrescenta teste; a lógica nova é toda I/O).
 
-No navegador: anexar um PDF pequeno e um link do Figma numa tarefa, recarregar a página, e confirmar que ambos persistem e abrem.
+**Não há navegador nem rede para o Supabase neste ambiente.** Não rode `npm run dev`, não tente abrir nada, e nunca escreva no relatório que viu um anexo funcionando. As ferramentas MCP do Supabase alcançam o banco por outro caminho e funcionam — use-as para confirmar a migration (Step 2) e para conferir que a coluna `storage_path` existe em `public.task_attachments`.
+
+Deixe registrado no relatório, como pendência para o dono do sistema testar no navegador depois: enviar um PDF, colar um link, recarregar, e confirmar que os dois abrem.
 
 - [ ] **Step 8: Commit**
 
@@ -2059,7 +2129,9 @@ Em `src/components/layout/Sidebar.tsx`:
 - Exportar `MobileNavToggle({ onClick })`, um botão com ícone de três linhas visível apenas em `md:hidden`.
 - Quando aberta no celular, renderizar um fundo escurecido `fixed inset-0 z-40 bg-ink/20 md:hidden` que fecha ao clique.
 
-Em `src/app/(app)/layout.tsx`, criar um componente cliente fino que segura o estado `open` e conecta `MobileNavToggle` (na `Topbar`) à `Sidebar`.
+Em `src/app/(app)/layout.tsx`, criar um componente cliente fino que segura o estado `open` e conecta `MobileNavToggle` (na `Topbar`) à `Sidebar`. O layout é um Server Component assíncrono que já busca `counts`, `timer` e `notifications` — o invólucro cliente recebe esses dados como props serializáveis e não pode receber função nenhuma do servidor.
+
+**A gaveta fecha ao navegar.** Sem isso, tocar em "Kanban" no celular carrega a página nova com a gaveta ainda aberta por cima dela. Use `usePathname()` e feche quando o caminho mudar.
 
 - [ ] **Step 2: Grades de indicadores empilham**
 
@@ -2077,7 +2149,64 @@ Aplicar o mesmo padrão à tabela "POR CLIENTE" em `src/app/(app)/horas/page.tsx
 
 Em `src/components/kanban/KanbanClient.tsx`, adicionar um estado `mobileColumn: ColumnId` com abas visíveis apenas em `md:hidden`. Passar `mobileColumn` ao `KanbanBoard`, que no celular renderiza somente a coluna correspondente (`grid-cols-1 md:grid-cols-3`, escondendo as outras com `hidden md:flex`).
 
-Desabilitar os sensores de arraste abaixo de `md` — no `KanbanBoard`, usar `useSensors()` sem sensores quando `window.matchMedia("(max-width: 767px)").matches`, calculado num `useState` inicializado por função para não quebrar a renderização no servidor.
+Desabilitar os sensores de arraste abaixo de `md`, já que arrastar no celular sequestra a rolagem da página. Ler o tamanho da tela exige cuidado: `window` não existe durante a renderização no servidor, e um inicializador de `useState` **também roda lá**. Usar `useSyncExternalStore`, que é a forma que o React oferece para ler estado do navegador com um valor de servidor explícito.
+
+Criar `src/lib/use-media-query.ts`:
+
+```ts
+"use client";
+
+import { useCallback, useSyncExternalStore } from "react";
+
+/** `true` quando a consulta casa. No servidor devolve `serverValue`, sem tocar em `window`. */
+export function useMediaQuery(query: string, serverValue = false): boolean {
+  const subscribe = useCallback(
+    (onChange: () => void) => {
+      const list = window.matchMedia(query);
+      list.addEventListener("change", onChange);
+      return () => list.removeEventListener("change", onChange);
+    },
+    [query]
+  );
+
+  return useSyncExternalStore(
+    subscribe,
+    () => window.matchMedia(query).matches,
+    () => serverValue
+  );
+}
+```
+
+**Como desabilitar o arraste — leia antes de escrever.** A forma óbvia é montar a lista de sensores condicionalmente:
+
+```tsx
+// NÃO FAÇA ISSO — quebra no celular.
+const sensors = useSensors(...(isMobile ? [] : [pointerSensor]));
+```
+
+Isso **derruba o Kanban em todo celular**. O `useSensors` do dnd-kit usa os próprios sensores como array de dependências (`node_modules/@dnd-kit/core/dist/core.cjs.development.js:205-212`: `useMemo(..., [...sensors])`). No celular o servidor renderiza com `serverValue = false` (1 sensor) e a hidratação corrige para `true` (0 sensores) — o array de dependências muda de tamanho entre renderizações e o React lança *"The final argument passed to useMemo changed size between renders"*. A tela quebra exatamente no aparelho que a mudança queria atender.
+
+**Faça assim:** a lista de sensores fica constante, e quem é desabilitado é o item arrastável, pela API oficial do dnd-kit.
+
+Em `src/components/kanban/KanbanBoard.tsx`:
+
+```tsx
+const isMobile = useMediaQuery("(max-width: 767px)");
+const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
+```
+
+O `sensors` não muda mais de tamanho. Propague `dragDisabled={isMobile}` por `KanbanBoard → Column → TaskCard`, e em `src/components/kanban/TaskCard.tsx` repasse ao hook que já existe na linha 31:
+
+```tsx
+const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+  id: task.id,
+  disabled: dragDisabled,
+});
+```
+
+`disabled` é suportado pelo `useSortable` e não altera a contagem de hooks. O valor de servidor `false` mantém o desktop arrastável na primeira renderização e o hook corrige depois da hidratação — a escolha certa, porque desktop é onde se arrasta.
+
+O `DragOverlay` continua como está: com o arraste desabilitado no celular ele nunca recebe um item ativo.
 
 - [ ] **Step 5: Ajustar o corpo da página**
 
@@ -2086,9 +2215,11 @@ Em `src/components/layout/PageBody.tsx`, trocar `p-5.5` por `p-4 md:p-5.5` e, no
 - [ ] **Step 6: Verificar**
 
 Run: `npm test && npx tsc --noEmit && npm run lint && npm run build`
-Expected: tudo limpo.
+Expected: tudo limpo — 43 testes (esta tarefa não acrescenta teste; é layout).
 
-No navegador, reduzir a janela para 390px de largura e confirmar: a gaveta abre e fecha, nenhuma tela rola para os lados, os indicadores ficam dois por linha, o Kanban mostra uma coluna com abas, e concluir tarefa / iniciar timer / registrar horas continuam funcionando.
+**Não há navegador neste ambiente.** Não rode `npm run dev`, não tente abrir nada, e **nunca escreva no relatório que viu algo renderizar** — seria falso.
+
+Em vez disso, deixe no relatório a lista do que só o dono do sistema pode conferir num aparelho de verdade, a 390px de largura: a gaveta abre, fecha ao tocar fora e fecha ao navegar; nenhuma tela rola para os lados; os indicadores ficam dois por linha; o Kanban mostra uma coluna com abas e **não** arrasta ao tocar; e concluir tarefa, iniciar timer e registrar horas continuam funcionando.
 
 - [ ] **Step 7: Commit**
 

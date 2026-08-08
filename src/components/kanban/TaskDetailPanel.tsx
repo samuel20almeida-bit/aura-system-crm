@@ -1,13 +1,14 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useOptimistic, useState, useTransition } from "react";
 import { Slideover } from "@/components/ui/Overlay";
+import { Attachments } from "@/components/kanban/Attachments";
 import { Avatar } from "@/components/ui/Avatar";
 import { Tag } from "@/components/ui/Tag";
 import { Button } from "@/components/ui/Button";
 import { ProgressBar } from "@/components/ui/Card";
-import { formatDate, daysUntil } from "@/lib/format";
+import { formatDate, formatRelative, daysUntil } from "@/lib/format";
 import {
   addChecklistItem,
   addComment,
@@ -18,6 +19,7 @@ import {
 } from "@/lib/actions/tasks";
 import { startTimer } from "@/lib/actions/time";
 import type { Tables } from "@/lib/supabase/database.types";
+import { useToast } from "@/components/ui/Toast";
 
 type Profile = Tables<"profiles">;
 
@@ -30,11 +32,13 @@ type TaskDetail = {
   comments: (Tables<"task_comments"> & { author: { id: string; full_name: string; initials: string } | null })[];
   attachments: Tables<"task_attachments">[];
   totalMinutes: number;
+  history: (Tables<"activity_log"> & { user: { id: string; full_name: string; initials: string } | null })[];
 };
 
 
 export function TaskDetailPanel({ detail, profiles }: { detail: TaskDetail; profiles: Profile[] }) {
   const router = useRouter();
+  const { notify } = useToast();
   const [tab, setTab] = useState<"detalhes" | "comentarios" | "historico">("detalhes");
   const [newItem, setNewItem] = useState("");
   const [newComment, setNewComment] = useState("");
@@ -44,9 +48,15 @@ export function TaskDetailPanel({ detail, profiles }: { detail: TaskDetail; prof
     router.push("/kanban");
   }
 
+  const [optimisticChecklist, toggleOptimistic] = useOptimistic(
+    detail.checklist,
+    (list, { id, done }: { id: string; done: boolean }) =>
+      list.map((item) => (item.id === id ? { ...item, done } : item))
+  );
+
   if (!detail.task) return null;
   const t = detail.task;
-  const doneCount = detail.checklist.filter((i) => i.done).length;
+  const doneCount = optimisticChecklist.filter((i) => i.done).length;
   const overdue = t.due_date && daysUntil(t.due_date) < 0 && t.status !== "done";
   const days = t.due_date ? daysUntil(t.due_date) : null;
 
@@ -227,23 +237,28 @@ export function TaskDetailPanel({ detail, profiles }: { detail: TaskDetail; prof
               <div className="mb-2 flex items-center gap-2">
                 <span className="label">SUBTAREFAS</span>
                 <span className="font-mono text-[11px] text-muted">
-                  {doneCount}/{detail.checklist.length}
+                  {doneCount}/{optimisticChecklist.length}
                 </span>
-                {detail.checklist.length > 0 && (
+                {optimisticChecklist.length > 0 && (
                   <ProgressBar
-                    percent={(doneCount / detail.checklist.length) * 100}
+                    percent={(doneCount / optimisticChecklist.length) * 100}
                     className="max-w-[110px] flex-1"
                   />
                 )}
               </div>
               <div className="flex flex-col gap-2">
-                {detail.checklist.map((item) => (
+                {optimisticChecklist.map((item) => (
                   <div key={item.id} className="group flex items-center gap-2.5 text-[13px]">
                     <button
                       onClick={() =>
                         startTransition(async () => {
-                          await toggleChecklistItem(item.id, !item.done);
-                          router.refresh();
+                          toggleOptimistic({ id: item.id, done: !item.done });
+                          try {
+                            await toggleChecklistItem(item.id, !item.done);
+                            router.refresh();
+                          } catch {
+                            notify("error", "Não foi possível atualizar a subtarefa. Tente novamente.");
+                          }
                         })
                       }
                       className={
@@ -262,7 +277,7 @@ export function TaskDetailPanel({ detail, profiles }: { detail: TaskDetail; prof
                             await deleteChecklistItem(item.id);
                             router.refresh();
                           } catch {
-                            alert("Não foi possível remover a subtarefa. Tente novamente.");
+                            notify("error", "Não foi possível remover a subtarefa. Tente novamente.");
                           }
                         })
                       }
@@ -293,6 +308,8 @@ export function TaskDetailPanel({ detail, profiles }: { detail: TaskDetail; prof
                 </form>
               </div>
             </div>
+
+            <Attachments taskId={t.id} attachments={detail.attachments} />
           </>
         )}
 
@@ -316,7 +333,25 @@ export function TaskDetailPanel({ detail, profiles }: { detail: TaskDetail; prof
           </div>
         )}
 
-        {tab === "historico" && <p className="text-[12.5px] text-faint">Sem histórico registrado ainda.</p>}
+        {tab === "historico" && (
+          <div className="flex flex-col gap-3">
+            {detail.history.length === 0 && (
+              <p className="text-[12.5px] text-faint">Nenhum evento registrado ainda.</p>
+            )}
+            {detail.history.map((event) => (
+              <div key={event.id} className="flex gap-2.5">
+                <Avatar initials={event.user?.initials} size="sm" ghost />
+                <div>
+                  <span className="text-[12.5px]">
+                    <b className="font-medium">{event.user?.full_name ?? "Alguém"}</b> {event.verb}
+                    {event.detail ? ` ${event.detail}` : ""}
+                  </span>
+                  <div className="mt-0.5 font-mono text-[11px] text-faint">{formatRelative(event.created_at)}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <form

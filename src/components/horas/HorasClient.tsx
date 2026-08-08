@@ -27,7 +27,7 @@ export function HorasActions({
 
   return (
     <>
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <div className="flex items-center gap-1 rounded-full border border-border bg-surface px-1 py-1 text-xs text-muted">
           <Link href={prevMonthHref} className="rounded-full px-1.5 py-0.5 hover:bg-neutral-tint">◀</Link>
           <span className="px-1 font-medium text-ink">{monthLabel}</span>

@@ -88,7 +88,7 @@ export default async function HorasPage({
 
   return (
     <PageBody>
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div>
           <h1 className="text-[21px] font-medium">Horas &amp; rentabilidade</h1>
           <div className="mt-0.5 text-[12.5px] text-muted">
@@ -112,7 +112,7 @@ export default async function HorasPage({
         />
       )}
 
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <Kpi label="HORAS NO MÊS" value={`${totalHours.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}h`} />
         <Kpi
           label="FATURÁVEIS"
@@ -125,12 +125,12 @@ export default async function HorasPage({
         <Kpi label="RECEITA FATURADA" value={formatCurrency(totalRevenue)} />
       </div>
 
-      <div className="grid flex-1 grid-cols-[1.75fr_1fr] gap-3.5 overflow-hidden">
+      <div className="grid flex-1 grid-cols-1 gap-3.5 overflow-hidden md:grid-cols-[1.75fr_1fr]">
         <Card className="flex flex-col gap-2 overflow-hidden p-4">
           <div className="flex items-center gap-2">
             <span className="label">POR CLIENTE</span>
           </div>
-          <div className="grid grid-cols-[1.3fr_.7fr_.7fr_.9fr_1.1fr] gap-2 border-b border-border pb-2 font-mono text-[9.5px] font-semibold tracking-wide text-faint">
+          <div className="hidden grid-cols-[1.3fr_.7fr_.7fr_.9fr_1.1fr] gap-2 border-b border-border pb-2 font-mono text-[9.5px] font-semibold tracking-wide text-faint md:grid">
             <div>CLIENTE</div>
             <div>HORAS</div>
             <div>ORÇADO</div>
@@ -139,15 +139,34 @@ export default async function HorasPage({
           </div>
           <div className="flex-1 overflow-y-auto scrollbar-thin">
             {clientRows.map((c) => (
-              <div key={c.name} className="grid grid-cols-[1.3fr_.7fr_.7fr_.9fr_1.1fr] items-center gap-2 border-b border-border-soft py-2.5 text-[13px]">
+              <div
+                key={c.name}
+                className="flex flex-col gap-1 border-b border-border-soft py-2.5 text-[13px] md:grid md:grid-cols-[1.3fr_.7fr_.7fr_.9fr_1.1fr] md:items-center md:gap-2"
+              >
                 <div className="flex items-center gap-2 truncate">
                   <span className="h-2 w-2 flex-none rounded-sm" style={{ background: c.color }} />
                   {c.name}
                 </div>
-                <div className="font-mono">{(c.minutes / 60).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}h</div>
-                <div className="font-mono text-muted">{c.budget > 0 ? `${c.budget}h` : "—"}</div>
-                <div>{c.revenue > 0 ? formatCurrency(c.revenue) : "—"}</div>
-                <ProgressBar percent={c.budget > 0 ? (c.minutes / 60 / c.budget) * 100 : 0} danger={c.budget > 0 && c.minutes / 60 > c.budget} />
+                <div className="font-mono">
+                  <span className="mr-1 text-faint md:hidden">Horas:</span>
+                  {(c.minutes / 60).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}h
+                </div>
+                <div className="font-mono text-muted">
+                  <span className="mr-1 text-faint md:hidden">Orçado:</span>
+                  {c.budget > 0 ? `${c.budget}h` : "—"}
+                </div>
+                <div>
+                  <span className="mr-1 text-faint md:hidden">Receita:</span>
+                  {c.revenue > 0 ? formatCurrency(c.revenue) : "—"}
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-faint md:hidden">Consumo:</span>
+                  <ProgressBar
+                    percent={c.budget > 0 ? (c.minutes / 60 / c.budget) * 100 : 0}
+                    danger={c.budget > 0 && c.minutes / 60 > c.budget}
+                    className="flex-1 md:flex-none"
+                  />
+                </div>
               </div>
             ))}
             {clientRows.length === 0 && (

@@ -56,7 +56,7 @@ export function ProgressBar({
   return (
     <div className={clsx("h-1.5 overflow-hidden rounded bg-[#EDEAE2]", className)}>
       <div
-        className={clsx("h-full rounded", danger ? "bg-red" : "bg-accent")}
+        className={clsx("h-full rounded transition-[width] duration-200 ease-out", danger ? "bg-red" : "bg-accent")}
         style={{ width: `${clamped}%` }}
       />
     </div>

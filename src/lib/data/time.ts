@@ -2,12 +2,23 @@ import { createClient } from "@/lib/supabase/server";
 
 export async function getRunningTimer(userId: string) {
   const supabase = await createClient();
-  const { data } = await supabase
+  // Mesma ordenação do sino e do stopRunningTimer: a entrada aberta mais
+  // recente. Sem .limit(1), duas entradas abertas faziam o maybeSingle()
+  // devolver erro, o erro era descartado e o TimerWidget sumia da barra.
+  const { data, error } = await supabase
     .from("time_entries")
     .select("*, task:tasks(id, title, code), client:clients(id, name, color)")
     .eq("user_id", userId)
     .is("ended_at", null)
+    .order("started_at", { ascending: false })
+    .limit(1)
     .maybeSingle();
+  // Esta função alimenta o layout: lançar aqui derrubaria todas as páginas.
+  // O sino é quem avisa o usuário de que o banco não respondeu.
+  if (error) {
+    console.error("[timer] falha ao consultar o timer em andamento:", error);
+    return null;
+  }
   return data;
 }
 

@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import clsx from "clsx";
 import {
   DndContext,
   DragOverlay,
@@ -18,15 +19,18 @@ import { useDroppable } from "@dnd-kit/core";
 import { TaskCard } from "./TaskCard";
 import { updateTaskPosition } from "@/lib/actions/tasks";
 import type { TaskWithRelations } from "@/lib/data/tasks";
+import { moveItem, reorderWithin, findColumnIn, type Columns, type ColumnId as OptimisticColumnId } from "@/lib/optimistic";
+import { useToast } from "@/components/ui/Toast";
+import { useMediaQuery } from "@/lib/use-media-query";
 
 const COLUMNS = [
   { id: "todo", label: "A FAZER" },
   { id: "in_progress", label: "EM ANDAMENTO" },
   { id: "done", label: "FINALIZADAS" },
-] as const;
+] as const satisfies { id: OptimisticColumnId; label: string }[];
 
-type ColumnId = (typeof COLUMNS)[number]["id"];
-type ColumnsState = Record<ColumnId, TaskWithRelations[]>;
+type ColumnId = OptimisticColumnId;
+type ColumnsState = Columns<TaskWithRelations>;
 
 function groupTasks(tasks: TaskWithRelations[]): ColumnsState {
   return {
@@ -46,12 +50,16 @@ function Column({
   tasks,
   checklistCounts,
   onOpen,
+  runningTaskId,
+  dragDisabled,
 }: {
   id: ColumnId;
   label: string;
   tasks: TaskWithRelations[];
   checklistCounts: Record<string, { done: number; total: number }>;
   onOpen: (id: string) => void;
+  runningTaskId?: string | null;
+  dragDisabled?: boolean;
 }) {
   const { setNodeRef } = useDroppable({ id });
   return (
@@ -68,6 +76,8 @@ function Column({
               task={task}
               checklistSummary={checklistSummaryFor(task.id, checklistCounts)}
               onOpen={() => onOpen(task.id)}
+              isRunning={task.id === runningTaskId}
+              dragDisabled={dragDisabled}
             />
           ))}
           {tasks.length === 0 && (
@@ -85,29 +95,35 @@ export function KanbanBoard({
   tasks,
   checklistCounts,
   onOpenTask,
+  runningTaskId,
+  mobileColumn,
 }: {
   tasks: TaskWithRelations[];
   checklistCounts: Record<string, { done: number; total: number }>;
   onOpenTask: (id: string) => void;
+  runningTaskId?: string | null;
+  mobileColumn: ColumnId;
 }) {
   const [prevTasks, setPrevTasks] = useState(tasks);
   const [columns, setColumns] = useState<ColumnsState>(() => groupTasks(tasks));
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [dragError, setDragError] = useState<string | null>(null);
   const [dragStartColumns, setDragStartColumns] = useState<ColumnsState | null>(null);
   const router = useRouter();
+  const { notify } = useToast();
 
   if (tasks !== prevTasks) {
     setPrevTasks(tasks);
     setColumns(groupTasks(tasks));
   }
 
-  useEffect(() => {
-    if (!dragError) return;
-    const timeout = setTimeout(() => setDragError(null), 4000);
-    return () => clearTimeout(timeout);
-  }, [dragError]);
-
+  // A lista de sensores NUNCA muda de tamanho entre renderizações — o
+  // useSensors do dnd-kit usa os sensores como array de dependências de um
+  // useMemo (node_modules/@dnd-kit/core/dist/core.cjs.development.js:205-212).
+  // Trocar a lista condicionalmente por isMobile quebraria o Kanban em todo
+  // celular assim que a hidratação corrigisse o valor do servidor. Quem é
+  // desabilitado no celular é o item arrastável (useSortable/disabled),
+  // propagado abaixo por dragDisabled — não os sensores.
+  const isMobile = useMediaQuery("(max-width: 767px)");
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
   const activeTask = useMemo(() => {
@@ -130,7 +146,6 @@ export function KanbanBoard({
   function handleDragStart(e: DragStartEvent) {
     setActiveId(String(e.active.id));
     setDragStartColumns(columns);
-    setDragError(null);
   }
 
   function handleDragOver(e: DragOverEvent) {
@@ -140,63 +155,44 @@ export function KanbanBoard({
     const overCol = findColumnOf(String(over.id));
     if (!activeCol || !overCol || activeCol === overCol) return;
 
-    setColumns((prev) => {
-      const activeItems = prev[activeCol];
-      const activeIndex = activeItems.findIndex((t) => t.id === active.id);
-      if (activeIndex === -1) return prev;
-      const [moved] = activeItems.slice(activeIndex, activeIndex + 1);
-      const newActiveItems = activeItems.filter((t) => t.id !== active.id);
-      const overItems = prev[overCol];
-      const overIndex = overItems.findIndex((t) => t.id === over.id);
-      const insertAt = overIndex === -1 ? overItems.length : overIndex;
-      const newOverItems = [...overItems.slice(0, insertAt), moved, ...overItems.slice(insertAt)];
-      return { ...prev, [activeCol]: newActiveItems, [overCol]: newOverItems };
-    });
+    setColumns((prev) => moveItem(prev, String(active.id), overCol, String(over.id)));
   }
 
   function handleDragEnd(e: DragEndEvent) {
     const { active, over } = e;
+    const startColumns = dragStartColumns;
     setActiveId(null);
-    if (!over) return;
+    setDragStartColumns(null);
 
-    const activeCol = findColumnOf(String(active.id));
-    const overCol = findColumnOf(String(over.id));
-    if (!activeCol || !overCol) return;
-
-    let finalColumns = columns;
-    if (activeCol === overCol && active.id !== over.id) {
-      const items = columns[activeCol];
-      const oldIndex = items.findIndex((t) => t.id === active.id);
-      const newIndex = items.findIndex((t) => t.id === over.id);
-      if (oldIndex !== -1 && newIndex !== -1) {
-        const reordered = [...items];
-        const [moved] = reordered.splice(oldIndex, 1);
-        reordered.splice(newIndex, 0, moved);
-        finalColumns = { ...columns, [activeCol]: reordered };
-        setColumns(finalColumns);
-      }
+    if (!over) {
+      // Solto fora de qualquer coluna: desfaz o que handleDragOver já aplicou.
+      if (startColumns) setColumns(startColumns);
+      return;
     }
 
-    const destCol = overCol;
-    const orderedIds = finalColumns[destCol].map((t) => t.id);
-    const revertTo = dragStartColumns;
-    updateTaskPosition({ taskId: String(active.id), status: destCol, orderedIdsInColumn: orderedIds }).catch(() => {
-      if (revertTo) setColumns(revertTo);
-      setDragError("Não foi possível mover a tarefa. Tente novamente.");
+    const overCol = findColumnOf(String(over.id));
+    if (!overCol) return;
+
+    // A coluna de origem vem do estado do início do arraste, não do atual:
+    // handleDragOver já pode ter movido o card, e ler o estado corrente faria
+    // reorderWithin rodar uma segunda vez sobre o mesmo par, invertendo a posição.
+    const originCol = startColumns ? findColumnIn(startColumns, String(active.id)) : null;
+
+    let finalColumns = columns;
+    if (originCol === overCol && active.id !== over.id) {
+      finalColumns = { ...columns, [overCol]: reorderWithin(columns[overCol], String(active.id), String(over.id)) };
+      setColumns(finalColumns);
+    }
+
+    const orderedIds = finalColumns[overCol].map((t) => t.id);
+    updateTaskPosition({ taskId: String(active.id), status: overCol, orderedIdsInColumn: orderedIds }).catch(() => {
+      if (startColumns) setColumns(startColumns);
+      notify("error", "Não foi possível mover a tarefa. Ela voltou para a posição anterior.");
       router.refresh();
     });
   }
 
   return (
-    <>
-      {dragError && (
-        <div
-          role="alert"
-          className="fixed right-5 top-16 z-50 rounded-lg border border-red-tint-border bg-red-tint px-3.5 py-2.5 text-[13px] text-red shadow-lg"
-        >
-          {dragError}
-        </div>
-      )}
     <DndContext
       sensors={sensors}
       collisionDetection={closestCorners}
@@ -204,25 +200,37 @@ export function KanbanBoard({
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
     >
-      <div className="grid flex-1 grid-cols-3 gap-3.5 overflow-hidden">
+      <div className="grid flex-1 grid-cols-1 gap-3.5 overflow-hidden md:grid-cols-3">
         {COLUMNS.map((col) => (
-          <div key={col.id} className="flex min-h-0 flex-col overflow-y-auto scrollbar-thin">
+          <div
+            key={col.id}
+            className={clsx(
+              "min-h-0 flex-col overflow-y-auto scrollbar-thin md:flex",
+              col.id === mobileColumn ? "flex" : "hidden"
+            )}
+          >
             <Column
               id={col.id}
               label={col.label}
               tasks={columns[col.id]}
               checklistCounts={checklistCounts}
               onOpen={onOpenTask}
+              runningTaskId={runningTaskId}
+              dragDisabled={isMobile}
             />
           </div>
         ))}
       </div>
       <DragOverlay>
         {activeTask ? (
-          <TaskCard task={activeTask} checklistSummary={checklistSummaryFor(activeTask.id, checklistCounts)} onOpen={() => {}} />
+          <TaskCard
+            task={activeTask}
+            checklistSummary={checklistSummaryFor(activeTask.id, checklistCounts)}
+            onOpen={() => {}}
+            isRunning={activeTask.id === runningTaskId}
+          />
         ) : null}
       </DragOverlay>
     </DndContext>
-    </>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useOptimistic, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Card, ProgressBar } from "@/components/ui/Card";
 import { Tag } from "@/components/ui/Tag";
@@ -9,6 +9,7 @@ import { Modal } from "@/components/ui/Overlay";
 import { Field, Input, Select } from "@/components/ui/Field";
 import { createGoal, deleteGoal, updateGoalProgress } from "@/lib/actions/goals";
 import type { GoalRow } from "@/lib/data/goals";
+import { useToast } from "@/components/ui/Toast";
 
 function formatValue(value: number, unit: string) {
   if (unit === "currency") return `R$ ${value.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}`;
@@ -19,10 +20,12 @@ function formatValue(value: number, unit: string) {
 
 function GoalRowItem({ goal }: { goal: GoalRow }) {
   const router = useRouter();
+  const { notify } = useToast();
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(String(goal.current));
   const [pending, startTransition] = useTransition();
-  const pct = goal.target > 0 ? (goal.current / goal.target) * 100 : 0;
+  const [optimisticCurrent, setOptimisticCurrent] = useOptimistic(goal.current);
+  const pct = goal.target > 0 ? (optimisticCurrent / goal.target) * 100 : 0;
 
   return (
     <div className="group flex flex-col gap-1.5">
@@ -32,10 +35,16 @@ function GoalRowItem({ goal }: { goal: GoalRow }) {
           <form
             onSubmit={(e) => {
               e.preventDefault();
+              const parsed = Number(value.replace(",", ".")) || 0;
               startTransition(async () => {
-                await updateGoalProgress(goal.id, Number(value.replace(",", ".")) || 0);
-                setEditing(false);
-                router.refresh();
+                setOptimisticCurrent(parsed);
+                try {
+                  await updateGoalProgress(goal.id, parsed);
+                  setEditing(false);
+                  router.refresh();
+                } catch {
+                  notify("error", "Não foi possível atualizar o progresso da meta. Tente novamente.");
+                }
               });
             }}
             className="flex items-center gap-1"
@@ -51,7 +60,7 @@ function GoalRowItem({ goal }: { goal: GoalRow }) {
           </form>
         ) : (
           <button onClick={() => setEditing(true)} className="font-mono text-[13px] hover:text-accent">
-            {formatValue(goal.current, goal.unit)}
+            {formatValue(optimisticCurrent, goal.unit)}
             <span className="text-faint"> / {formatValue(goal.target, goal.unit)}</span>
           </button>
         )}
@@ -70,7 +79,7 @@ function GoalRowItem({ goal }: { goal: GoalRow }) {
                 await deleteGoal(goal.id);
                 router.refresh();
               } catch {
-                alert("Não foi possível excluir a meta. Tente novamente.");
+                notify("error", "Não foi possível excluir a meta. Tente novamente.");
               }
             })
           }

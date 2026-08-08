@@ -4,6 +4,7 @@ import { PageBody } from "@/components/layout/PageBody";
 import { Kpi, Card } from "@/components/ui/Card";
 import { Tag } from "@/components/ui/Tag";
 import { Avatar } from "@/components/ui/Avatar";
+import { Unavailable } from "@/components/ui/Unavailable";
 import { getClientDetail } from "@/lib/data/crm";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { ClientHeaderActions, ContractsCard, ContactHistoryCard } from "@/components/crm/ClientDetailClient";
@@ -12,7 +13,22 @@ const priorityLabel: Record<string, string> = { high: "Alta", medium: "Média", 
 
 export default async function ClientDetailPage({ params }: { params: Promise<{ clientId: string }> }) {
   const { clientId } = await params;
-  const { client, contracts, invoices, tasks, contacts, runs, totalMinutes, revenueTotal } = await getClientDetail(clientId);
+  const detail = await getClientDetail(clientId);
+
+  // Consulta que falhou não é cliente inexistente: um notFound() aqui afirmaria
+  // que a ficha não existe quando na verdade ninguém conseguiu lê-la.
+  if (detail.unavailable) {
+    return (
+      <PageBody>
+        <div className="text-[12.5px] text-faint">
+          <Link href="/crm" className="hover:text-ink">← Voltar para CRM</Link>
+        </div>
+        <Unavailable title="Não foi possível carregar a ficha deste cliente agora" />
+      </PageBody>
+    );
+  }
+
+  const { client, contracts, invoices, tasks, contacts, runs, totalMinutes, revenueTotal } = detail;
 
   if (!client) notFound();
 
@@ -21,7 +37,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ c
 
   return (
     <PageBody>
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div className="flex items-center gap-3.5">
           <span
             className="flex h-10.5 w-10.5 items-center justify-center rounded-[10px] text-sm font-semibold"
@@ -45,14 +61,14 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ c
         <Link href="/crm" className="hover:text-ink">← Voltar para CRM</Link>
       </div>
 
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <Kpi label="RECEITA ACUMULADA" value={formatCurrency(revenueTotal)} />
         <Kpi label="CONTRATOS ATIVOS" value={contracts.filter((c) => c.status === "active").length} />
         <Kpi label="TAREFAS ATIVAS" value={activeTasks.length} />
         <Kpi label="HORAS REGISTRADAS" value={`${(totalMinutes / 60).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}h`} />
       </div>
 
-      <div className="grid flex-1 grid-cols-[1.6fr_1fr] gap-3.5 overflow-hidden">
+      <div className="grid flex-1 grid-cols-1 gap-3.5 overflow-hidden md:grid-cols-[1.6fr_1fr]">
         <div className="flex min-h-0 flex-col gap-3.5 overflow-y-auto scrollbar-thin">
           <Card className="flex flex-col gap-2 p-4">
             <div className="flex items-center gap-2">

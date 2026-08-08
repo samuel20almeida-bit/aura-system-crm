@@ -17,6 +17,7 @@ export type Database = {
           created_at: string
           detail: string | null
           id: string
+          task_id: string | null
           user_id: string | null
           verb: string
         }
@@ -24,6 +25,7 @@ export type Database = {
           created_at?: string
           detail?: string | null
           id?: string
+          task_id?: string | null
           user_id?: string | null
           verb: string
         }
@@ -31,10 +33,18 @@ export type Database = {
           created_at?: string
           detail?: string | null
           id?: string
+          task_id?: string | null
           user_id?: string | null
           verb?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "activity_log_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "activity_log_user_id_fkey"
             columns: ["user_id"]
@@ -555,6 +565,7 @@ export type Database = {
           created_at: string
           filename: string
           id: string
+          storage_path: string | null
           task_id: string
           url: string | null
         }
@@ -562,6 +573,7 @@ export type Database = {
           created_at?: string
           filename: string
           id?: string
+          storage_path?: string | null
           task_id: string
           url?: string | null
         }
@@ -569,6 +581,7 @@ export type Database = {
           created_at?: string
           filename?: string
           id?: string
+          storage_path?: string | null
           task_id?: string
           url?: string | null
         }

@@ -11,6 +11,7 @@ import { Modal } from "@/components/ui/Overlay";
 import { Field, Input, Select, Textarea } from "@/components/ui/Field";
 import { createCategory, createPlaybook, runPlaybook, toggleRunStep } from "@/lib/actions/playbooks";
 import { formatDate } from "@/lib/format";
+import { useToast } from "@/components/ui/Toast";
 
 type Category = { id: string; name: string; count: number };
 type PlaybookListItem = {
@@ -43,6 +44,7 @@ export function PlaybooksBody({
   clients: { id: string; name: string }[];
 }) {
   const router = useRouter();
+  const { notify } = useToast();
   const [pending, startTransition] = useTransition();
   const [showNewCategory, setShowNewCategory] = useState(false);
   const [showNewPlaybook, setShowNewPlaybook] = useState(false);
@@ -167,7 +169,7 @@ export function PlaybooksBody({
                                       await toggleRunStep(rs.id, !rs.done);
                                       router.refresh();
                                     } catch {
-                                      alert("Não foi possível atualizar a etapa. Tente novamente.");
+                                      notify("error", "Não foi possível atualizar a etapa. Tente novamente.");
                                     }
                                   })
                                 }

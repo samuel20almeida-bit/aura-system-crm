@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { logActivity } from "./activity";
 import { nextTaskCode } from "@/lib/data/tasks";
+import { normalizeLinkUrl } from "@/lib/links";
 
 export async function createTask(input: {
   title: string;
@@ -54,7 +55,7 @@ export async function createTask(input: {
 
   if (error) throw error;
 
-  await logActivity(supabase, user.id, "criou a tarefa", task.title);
+  await logActivity(supabase, user.id, "criou a tarefa", task.title, task.id);
   revalidatePath("/kanban");
   revalidatePath("/inicio");
   return task;
@@ -88,7 +89,13 @@ export async function updateTaskPosition(input: {
 
   if (prevTask && prevTask.status !== input.status && user) {
     const labels: Record<string, string> = { todo: "A fazer", in_progress: "Em andamento", done: "Finalizadas" };
-    await logActivity(supabase, user.id, `moveu ${prevTask.title} para`, labels[input.status] ?? input.status);
+    await logActivity(
+      supabase,
+      user.id,
+      `moveu ${prevTask.title} para`,
+      labels[input.status] ?? input.status,
+      input.taskId
+    );
   }
 
   revalidatePath("/kanban");
@@ -108,8 +115,25 @@ export async function updateTask(
   }>
 ) {
   const supabase = await createClient();
-  const { error } = await supabase.from("tasks").update(patch).eq("id", taskId);
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const { data: task, error } = await supabase.from("tasks").update(patch).eq("id", taskId).select("title").single();
   if (error) throw error;
+
+  if (user && task) {
+    if ("assignee_id" in patch) {
+      await logActivity(supabase, user.id, "trocou o responsável de", task.title, taskId);
+    }
+    if ("due_date" in patch) {
+      await logActivity(supabase, user.id, "mudou o prazo de", task.title, taskId);
+    }
+    if (patch.status === "done") {
+      await logActivity(supabase, user.id, "concluiu", task.title, taskId);
+    }
+  }
+
   revalidatePath("/kanban");
   revalidatePath("/inicio");
 }
@@ -143,8 +167,21 @@ export async function addChecklistItem(taskId: string, title: string) {
 
 export async function toggleChecklistItem(itemId: string, done: boolean) {
   const supabase = await createClient();
-  const { error } = await supabase.from("task_checklist_items").update({ done }).eq("id", itemId);
+  const { data: item, error } = await supabase
+    .from("task_checklist_items")
+    .update({ done })
+    .eq("id", itemId)
+    .select("title, task_id")
+    .single();
   if (error) throw error;
+
+  if (done && item) {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    await logActivity(supabase, user?.id ?? null, "concluiu a subtarefa", item.title, item.task_id);
+  }
+
   revalidatePath("/kanban");
 }
 
@@ -171,9 +208,60 @@ export async function addComment(taskId: string, body: string) {
   revalidatePath("/kanban");
 }
 
-export async function addAttachment(taskId: string, filename: string, url: string | null) {
+export async function addLinkAttachment(taskId: string, filename: string, url: string) {
   const supabase = await createClient();
-  const { error } = await supabase.from("task_attachments").insert({ task_id: taskId, filename, url });
+  // A tela também normaliza, mas Server Action é endpoint HTTP: o que fica
+  // gravado é o que o servidor validou. Ver src/lib/links.ts.
+  const normalized = normalizeLinkUrl(url);
+  if (!normalized.ok) throw new Error(normalized.message);
+
+  const { error } = await supabase
+    .from("task_attachments")
+    .insert({ task_id: taskId, filename, url: normalized.url, storage_path: null });
   if (error) throw error;
+  revalidatePath("/kanban");
+}
+
+export async function addFileAttachment(taskId: string, filename: string, storagePath: string) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("task_attachments")
+    .insert({ task_id: taskId, filename, url: null, storage_path: storagePath });
+  if (error) throw error;
+  revalidatePath("/kanban");
+}
+
+export async function removeAttachment(attachmentId: string) {
+  const supabase = await createClient();
+
+  // O caminho no storage vem do banco, nunca do cliente: Server Action é
+  // endpoint HTTP, e um par (id, caminho) dessincronizado apagaria o arquivo
+  // de outro anexo.
+  const { data: row, error: readError } = await supabase
+    .from("task_attachments")
+    .select("storage_path")
+    .eq("id", attachmentId)
+    .maybeSingle();
+  if (readError) throw readError;
+  if (!row) return; // já removido por outra aba
+
+  // A linha primeiro, o objeto depois. Na ordem inversa, um delete que falhasse
+  // depois de um remove() bem-sucedido deixaria a linha apontando para um
+  // objeto morto: o anexo continuaria na lista, clicável, com url nula e
+  // href="#" — some ao clicar, some do bucket, e mesmo assim aparece.
+  const { error } = await supabase.from("task_attachments").delete().eq("id", attachmentId);
+  if (error) throw error;
+
+  if (row.storage_path) {
+    const { error: storageError } = await supabase.storage.from("task-attachments").remove([row.storage_path]);
+    // Aqui não dá para lançar: a linha já foi apagada e o anexo REALMENTE saiu
+    // da lista. Um erro na tela diria que a remoção falhou quando ela deu
+    // certo. O que sobra é um objeto órfão invisível, registrado no console
+    // para quem for limpar o bucket.
+    if (storageError) {
+      console.error("[anexos] objeto órfão no bucket:", row.storage_path, storageError);
+    }
+  }
+
   revalidatePath("/kanban");
 }

@@ -12,7 +12,18 @@ async function uniquePrefix(name: string) {
   const base = slugPrefix(name) || "CLI";
   for (let i = 0; i < 30; i++) {
     const candidate = i === 0 ? base : `${base}${i}`;
-    const { data } = await supabase.from("clients").select("id").ilike("code_prefix", candidate).maybeSingle();
+    // Sem conferir o erro, uma consulta que falha devolve data nulo e o código
+    // concluía que o prefixo estava LIVRE — gravando um code_prefix duplicado.
+    // Como os códigos de tarefa derivam do prefixo, dois clientes passariam a
+    // gerar códigos colidentes. .limit(1) evita que o próprio duplicado
+    // (se já existir um) faça o maybeSingle() estourar.
+    const { data, error } = await supabase
+      .from("clients")
+      .select("id")
+      .ilike("code_prefix", candidate)
+      .limit(1)
+      .maybeSingle();
+    if (error) throw error;
     if (!data) return candidate;
   }
   return `${base}${Date.now() % 1000}`;
