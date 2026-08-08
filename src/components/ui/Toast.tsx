@@ -56,7 +56,7 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: (id: string)
     <div
       role="status"
       className={clsx(
-        "pointer-events-auto flex items-center gap-3 rounded-lg border px-3.5 py-2.5 text-[13px] shadow-lg motion-safe:animate-toast-in",
+        "pointer-events-auto flex items-center gap-3 rounded-lg border px-3.5 py-2.5 text-[13px] shadow-lg animate-toast-in",
         toast.tone === "success" && "border-accent-tint-border bg-accent-tint text-accent",
         toast.tone === "error" && "border-red-tint-border bg-red-tint text-red",
         toast.tone === "info" && "border-border bg-surface text-ink"

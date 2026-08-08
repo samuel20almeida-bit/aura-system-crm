@@ -7,6 +7,7 @@ import { Tag } from "@/components/ui/Tag";
 import { Avatar } from "@/components/ui/Avatar";
 import { ProgressBar } from "@/components/ui/Card";
 import { formatDate } from "@/lib/format";
+import { todayInAppTz } from "@/lib/timezone";
 import type { TaskWithRelations } from "@/lib/data/tasks";
 
 const priorityTone: Record<string, "red" | "neutral"> = {
@@ -37,7 +38,9 @@ export function TaskCard({
   };
 
   const isDone = task.status === "done";
-  const overdue = task.due_date && new Date(task.due_date) < new Date(new Date().toDateString()) && !isDone;
+  // Mesma comparação que o sino faz: "hoje" é o dia em São Paulo, não o dia
+  // local da máquina de quem abre o Kanban.
+  const overdue = task.due_date && task.due_date < todayInAppTz() && !isDone;
 
   return (
     <div
@@ -59,7 +62,7 @@ export function TaskCard({
         <span className="flex items-center gap-1.5 font-mono text-[11px] text-muted">
           {task.code}
           {isRunning && (
-            <span className="h-1.5 w-1.5 rounded-full bg-accent motion-safe:animate-pulse-soft" title="Timer rodando" />
+            <span className="h-1.5 w-1.5 rounded-full bg-accent animate-pulse-soft" title="Timer rodando" />
           )}
         </span>
       </div>

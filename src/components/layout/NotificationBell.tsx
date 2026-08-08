@@ -4,9 +4,19 @@ import { useState } from "react";
 import Link from "next/link";
 import type { AppNotification } from "@/lib/notifications";
 
+function toneDot(tone: AppNotification["tone"]): string {
+  return tone === "red" ? "bg-red" : tone === "amber" ? "bg-amber" : "bg-faint";
+}
+
+/** Tom mais urgente da lista — o ponto do sino não pode ser âmbar se só há avisos neutros. */
+function highestTone(notifications: AppNotification[]): AppNotification["tone"] {
+  if (notifications.some((n) => n.tone === "red")) return "red";
+  if (notifications.some((n) => n.tone === "amber")) return "amber";
+  return "neutral";
+}
+
 export function NotificationBell({ notifications }: { notifications: AppNotification[] }) {
   const [open, setOpen] = useState(false);
-  const urgent = notifications.some((n) => n.tone === "red");
 
   return (
     <div className="relative flex">
@@ -16,14 +26,16 @@ export function NotificationBell({ notifications }: { notifications: AppNotifica
           <path d="M6.6 12.6a1.5 1.5 0 0 0 2.8 0" />
         </svg>
         {notifications.length > 0 && (
-          <span className={"absolute -right-0.5 -top-0.5 h-1.5 w-1.5 rounded-full " + (urgent ? "bg-red" : "bg-amber")} />
+          <span
+            className={"absolute -right-0.5 -top-0.5 h-1.5 w-1.5 rounded-full " + toneDot(highestTone(notifications))}
+          />
         )}
       </button>
 
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-7 z-50 w-80 overflow-hidden rounded-xl border border-border bg-surface shadow-xl motion-safe:animate-fade-in">
+          <div className="absolute right-0 top-7 z-50 w-80 overflow-hidden rounded-xl border border-border bg-surface shadow-xl animate-fade-in">
             <div className="border-b border-border px-3.5 py-2.5">
               <span className="label">PRECISA DE VOCÊ</span>
             </div>
@@ -31,25 +43,34 @@ export function NotificationBell({ notifications }: { notifications: AppNotifica
               {notifications.length === 0 && (
                 <div className="px-3.5 py-6 text-center text-[12.5px] text-faint">Tudo em dia por aqui.</div>
               )}
-              {notifications.map((n) => (
-                <Link
-                  key={n.id}
-                  href={n.href}
-                  onClick={() => setOpen(false)}
-                  className="flex items-start gap-2.5 border-b border-border-soft px-3.5 py-2.5 last:border-b-0 hover:bg-neutral-tint"
-                >
-                  <span
-                    className={
-                      "mt-1 h-1.5 w-1.5 flex-none rounded-full " +
-                      (n.tone === "red" ? "bg-red" : n.tone === "amber" ? "bg-amber" : "bg-faint")
-                    }
-                  />
-                  <div className="min-w-0">
-                    <div className="truncate text-[13px] font-medium">{n.title}</div>
-                    <div className="font-mono text-[11px] text-muted">{n.detail}</div>
+              {notifications.map((n) => {
+                const rowClass =
+                  "flex items-start gap-2.5 border-b border-border-soft px-3.5 py-2.5 last:border-b-0";
+                const body = (
+                  <>
+                    <span className={"mt-1 h-1.5 w-1.5 flex-none rounded-full " + toneDot(n.tone)} />
+                    <div className="min-w-0">
+                      <div className="truncate text-[13px] font-medium">{n.title}</div>
+                      <div className="font-mono text-[11px] text-muted">{n.detail}</div>
+                    </div>
+                  </>
+                );
+
+                return n.href ? (
+                  <Link
+                    key={n.id}
+                    href={n.href}
+                    onClick={() => setOpen(false)}
+                    className={rowClass + " hover:bg-neutral-tint"}
+                  >
+                    {body}
+                  </Link>
+                ) : (
+                  <div key={n.id} className={rowClass}>
+                    {body}
                   </div>
-                </Link>
-              ))}
+                );
+              })}
             </div>
           </div>
         </>

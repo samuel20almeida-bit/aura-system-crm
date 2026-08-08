@@ -5,6 +5,7 @@ import { useOptimistic, useTransition } from "react";
 import Link from "next/link";
 import { Tag } from "@/components/ui/Tag";
 import { formatDate } from "@/lib/format";
+import { todayInAppTz } from "@/lib/timezone";
 import { updateTask } from "@/lib/actions/tasks";
 import { useToast } from "@/components/ui/Toast";
 
@@ -17,7 +18,8 @@ export function TaskQuickItem({
   const { notify } = useToast();
   const [pending, startTransition] = useTransition();
   const [optimisticDone, setOptimisticDone] = useOptimistic(false);
-  const overdue = task.due_date && task.due_date < new Date().toISOString().slice(0, 10);
+  // Mesma comparação que o sino faz: "hoje" é o dia em São Paulo, não em UTC.
+  const overdue = task.due_date && task.due_date < todayInAppTz();
 
   return (
     <div className="grid grid-cols-[20px_1fr_96px] items-center gap-2 border-b border-border-soft py-2.5 text-[13px] last:border-b-0">

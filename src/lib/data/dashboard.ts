@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { isInvoiceOverdue, UNPAID_INVOICE_STATUSES } from "@/lib/invoices";
 import {
   currentQuarterInAppTz,
   startOfMonthInAppTz,
@@ -28,7 +29,7 @@ export async function getDashboardData(userId: string) {
     { data: profiles },
     { data: myTasks },
     { data: weekEntries },
-    { data: overdueInvoices },
+    { data: unpaidInvoices },
     { data: paidInvoicesThisMonth },
     { data: endingContracts },
     { data: revenueGoal },
@@ -42,7 +43,7 @@ export async function getDashboardData(userId: string) {
       .neq("status", "done")
       .order("due_date", { ascending: true, nullsFirst: false }),
     supabase.from("time_entries").select("user_id, minutes, billable").gte("started_at", weekStart.toISOString()).lt("started_at", weekEnd.toISOString()).not("minutes", "is", null),
-    supabase.from("invoices").select("*, client:clients(id, name)").eq("status", "overdue").order("due_date"),
+    supabase.from("invoices").select("*, client:clients(id, name)").in("status", UNPAID_INVOICE_STATUSES).order("due_date"),
     supabase.from("invoices").select("amount").eq("status", "paid").gte("paid_at", monthStart.toISOString().slice(0, 10)).lt("paid_at", monthEnd.toISOString().slice(0, 10)),
     supabase.from("contracts").select("*, client:clients(id, name)").eq("status", "active").not("end_date", "is", null).lte("end_date", addDaysToDateStr(todayStr, 30)).gte("end_date", todayStr),
     supabase.from("goals").select("*").eq("quarter", quarter).eq("area", "Geral").eq("unit", "currency").ilike("title", "%fatur%").maybeSingle(),
@@ -58,7 +59,9 @@ export async function getDashboardData(userId: string) {
     .gte("due_date", weekStartStr);
 
   const monthRevenue = (paidInvoicesThisMonth ?? []).reduce((s, i) => s + Number(i.amount), 0);
-  const overdueAmount = (overdueInvoices ?? []).reduce((s, i) => s + Number(i.amount), 0);
+  // Mesma regra derivada da data que o sino usa — ver src/lib/invoices.ts.
+  const overdueInvoices = (unpaidInvoices ?? []).filter((i) => isInvoiceOverdue(i.status, i.due_date, todayStr));
+  const overdueAmount = overdueInvoices.reduce((s, i) => s + Number(i.amount), 0);
 
   const capacity = (profiles ?? []).map((p) => {
     const minutes = (weekEntries ?? []).filter((e) => e.user_id === p.id).reduce((s, e) => s + (e.minutes ?? 0), 0);
@@ -81,7 +84,7 @@ export async function getDashboardData(userId: string) {
     myWeekBillablePct: myWeekMinutes > 0 ? (myWeekBillable / myWeekMinutes) * 100 : 0,
     monthRevenue,
     revenueGoal,
-    overdueInvoices: overdueInvoices ?? [],
+    overdueInvoices,
     overdueAmount,
     endingContracts: endingContracts ?? [],
     activity: activity ?? [],

@@ -1,33 +1,49 @@
+import { formatCurrency, formatDate } from "./format";
+import { isInvoiceOverdue } from "./invoices";
+
 export type AppNotification = {
   id: string;
   tone: "red" | "amber" | "neutral";
   title: string;
   detail: string;
-  href: string;
+  /** `null` quando o aviso não leva a lugar nenhum (ex.: falha ao consultar). */
+  href: string | null;
 };
 
 export type NotificationInput = {
-  overdueInvoices: { id: string; clientId: string; clientName: string; amount: number; dueDate: string }[];
+  /** Faturas não pagas — o atraso é derivado aqui, não pelo status guardado. */
+  openInvoices: {
+    id: string;
+    clientId: string;
+    clientName: string;
+    amount: number;
+    dueDate: string;
+    status: string;
+  }[];
   myOpenTasks: { id: string; title: string; dueDate: string | null }[];
   endingContracts: { id: string; clientId: string; clientName: string; endDate: string }[];
   runningTimerStartedAt: string | null;
 };
 
-const EIGHT_HOURS_MS = 8 * 3600 * 1000;
+/** Um timer aberto por mais tempo que isto foi provavelmente esquecido. */
+export const FORGOTTEN_TIMER_MS = 8 * 3600 * 1000;
 
-function currency(value: number): string {
-  return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }).format(value);
-}
+const TONE_ORDER: Record<AppNotification["tone"], number> = { red: 0, amber: 1, neutral: 2 };
 
-export function buildNotifications(input: NotificationInput, today: string): AppNotification[] {
+export function buildNotifications(
+  input: NotificationInput,
+  today: string,
+  now: number = Date.now()
+): AppNotification[] {
   const out: AppNotification[] = [];
 
-  for (const invoice of input.overdueInvoices) {
+  for (const invoice of input.openInvoices) {
+    if (!isInvoiceOverdue(invoice.status, invoice.dueDate, today)) continue;
     out.push({
       id: `fatura-${invoice.id}`,
       tone: "red",
       title: `${invoice.clientName} · fatura vencida`,
-      detail: `${currency(invoice.amount)} · venceu em ${invoice.dueDate}`,
+      detail: `${formatCurrency(invoice.amount)} · venceu em ${formatDate(invoice.dueDate)}`,
       href: `/crm/${invoice.clientId}`,
     });
   }
@@ -58,14 +74,14 @@ export function buildNotifications(input: NotificationInput, today: string): App
       id: `contrato-${contract.id}`,
       tone: "neutral",
       title: `Contrato ${contract.clientName} termina em breve`,
-      detail: `Até ${contract.endDate}`,
+      detail: `Até ${formatDate(contract.endDate)}`,
       href: `/crm/${contract.clientId}`,
     });
   }
 
   if (input.runningTimerStartedAt) {
-    const elapsed = Date.now() - new Date(input.runningTimerStartedAt).getTime();
-    if (elapsed > EIGHT_HOURS_MS) {
+    const elapsed = now - new Date(input.runningTimerStartedAt).getTime();
+    if (elapsed > FORGOTTEN_TIMER_MS) {
       out.push({
         id: "timer-esquecido",
         tone: "amber",
@@ -76,5 +92,7 @@ export function buildNotifications(input: NotificationInput, today: string): App
     }
   }
 
-  return out;
+  // Ordena por urgência (vermelho → âmbar → neutro). `sort` é estável, então a
+  // ordem dentro de cada tom continua sendo a das queries (por data de vencimento).
+  return out.sort((a, b) => TONE_ORDER[a.tone] - TONE_ORDER[b.tone]);
 }

@@ -1,8 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
+import { isInvoiceOverdue } from "@/lib/invoices";
+import { todayInAppTz } from "@/lib/timezone";
 
 export async function getCrmData() {
   const supabase = await createClient();
   const now = new Date();
+  const today = todayInAppTz();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
   const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString().slice(0, 10);
 
@@ -17,7 +20,9 @@ export async function getCrmData() {
     (i) => i.status === "paid" && i.paid_at && i.paid_at >= monthStart && i.paid_at < monthEnd
   );
   const monthRevenue = paidThisMonth.reduce((s, i) => s + Number(i.amount), 0);
-  const overdue = (invoices ?? []).filter((i) => i.status === "overdue");
+  // Mesma regra derivada da data que o sino usa — ver src/lib/invoices.ts.
+  // A coluna de status da tabela de faturas continua mostrando o valor guardado.
+  const overdue = (invoices ?? []).filter((i) => isInvoiceOverdue(i.status, i.due_date, today));
   const overdueAmount = overdue.reduce((s, i) => s + Number(i.amount), 0);
   const allActiveAmount = (invoices ?? [])
     .filter((i) => i.due_date >= monthStart.slice(0, 7))

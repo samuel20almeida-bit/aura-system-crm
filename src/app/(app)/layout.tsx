@@ -8,9 +8,13 @@ import { ToastProvider } from "@/components/ui/Toast";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const { profile } = await requireProfile();
-  const counts = await getNavCounts();
-  const timer = await getRunningTimer(profile.id);
-  const notifications = await getNotifications(profile.id);
+  // As três consultas são independentes entre si — em série custavam quatro
+  // esperas antes de qualquer página começar a renderizar.
+  const [counts, timer, notifications] = await Promise.all([
+    getNavCounts(),
+    getRunningTimer(profile.id),
+    getNotifications(profile.id),
+  ]);
   const running = timer
     ? {
         id: timer.id,

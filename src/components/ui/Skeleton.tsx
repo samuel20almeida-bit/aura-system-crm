@@ -1,7 +1,7 @@
 import clsx from "clsx";
 
 export function Skeleton({ className }: { className?: string }) {
-  return <div className={clsx("rounded bg-[#EDEAE2] motion-safe:animate-pulse-soft", className)} />;
+  return <div className={clsx("rounded bg-[#EDEAE2] animate-pulse-soft", className)} />;
 }
 
 export function SkeletonKpiRow({ count = 4 }: { count?: number }) {
