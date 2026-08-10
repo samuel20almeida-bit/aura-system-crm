@@ -19,7 +19,7 @@ export function AppShell({
   notifications,
   children,
 }: {
-  profile: { full_name: string; role_title: string | null; initials: string };
+  profile: { id: string; full_name: string; role_title: string | null; initials: string };
   counts: { openTasks: number | null; overdueInvoices: number | null };
   running: RunningTimer | null;
   notifications: AppNotification[];
@@ -34,6 +34,8 @@ export function AppShell({
       <Sidebar profile={profile} counts={counts} open={open} onClose={() => setOpen(false)} />
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar
+          userId={profile.id}
+          fullName={profile.full_name}
           initials={profile.initials}
           running={running}
           notifications={notifications}

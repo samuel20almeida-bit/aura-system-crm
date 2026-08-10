@@ -28,6 +28,16 @@ const businessItems: NavItem[] = [
   { href: "/playbooks", label: "Playbooks", icon: PlaybookIcon },
 ];
 
+/**
+ * Os rótulos que aparecem no menu, para quem precisar traduzir uma rota num
+ * nome de tela sem duplicar a lista — hoje, a presença ao vivo (Topbar) usa
+ * isto para dizer em que módulo cada pessoa está. Único mapa de rótulos de
+ * rota do app; dois divergem com o tempo.
+ */
+export const navItems: { href: string; label: string }[] = [...workItems, ...businessItems].map(
+  ({ href, label }) => ({ href, label })
+);
+
 export function Sidebar({
   profile,
   counts,

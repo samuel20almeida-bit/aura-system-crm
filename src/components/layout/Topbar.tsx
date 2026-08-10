@@ -7,6 +7,7 @@ import { Avatar } from "@/components/ui/Avatar";
 import { TimerWidget, type RunningTimer } from "@/components/layout/TimerWidget";
 import { NotificationBell } from "@/components/layout/NotificationBell";
 import { MobileNavToggle } from "@/components/layout/Sidebar";
+import { PresenceRow } from "@/components/layout/PresenceRow";
 import type { AppNotification } from "@/lib/notifications";
 
 const crumbs: { match: RegExp; label: string }[] = [
@@ -21,11 +22,15 @@ const crumbs: { match: RegExp; label: string }[] = [
 type SearchResult = { type: "tarefa" | "cliente"; id: string; title: string; sub: string; href: string };
 
 export function Topbar({
+  userId,
+  fullName,
   initials,
   running,
   notifications,
   onMenuClick,
 }: {
+  userId: string;
+  fullName: string;
   initials: string;
   running: RunningTimer | null;
   notifications: AppNotification[];
@@ -106,6 +111,8 @@ export function Topbar({
         <NotificationBell notifications={notifications} />
 
         <TimerWidget running={running} />
+
+        <PresenceRow userId={userId} name={fullName.split(" ")[0]} initials={initials} />
 
         <Avatar initials={initials} />
       </div>
