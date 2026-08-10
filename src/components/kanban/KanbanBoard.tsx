@@ -18,6 +18,7 @@ import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable"
 import { useDroppable } from "@dnd-kit/core";
 import { TaskCard } from "./TaskCard";
 import { updateTaskPosition } from "@/lib/actions/tasks";
+import { beginMutation } from "@/lib/realtime/mutation-gate";
 import type { TaskWithRelations } from "@/lib/data/tasks";
 import { moveItem, reorderWithin, findColumnIn, type Columns, type ColumnId as OptimisticColumnId } from "@/lib/optimistic";
 import { useToast } from "@/components/ui/Toast";
@@ -185,11 +186,18 @@ export function KanbanBoard({
     }
 
     const orderedIds = finalColumns[overCol].map((t) => t.id);
-    updateTaskPosition({ taskId: String(active.id), status: overCol, orderedIdsInColumn: orderedIds }).catch(() => {
-      if (startColumns) setColumns(startColumns);
-      notify("error", "Não foi possível mover a tarefa. Ela voltou para a posição anterior.");
-      router.refresh();
-    });
+    // O portão segura a atualização por tempo real até a escrita terminar: sem
+    // ele, o eco do próprio arraste chegaria por cima do otimismo e devolveria
+    // o card. Não dá para usar try/finally aqui porque a promessa não é
+    // aguardada — quem fecha o portão é o .finally() dela.
+    const end = beginMutation();
+    updateTaskPosition({ taskId: String(active.id), status: overCol, orderedIdsInColumn: orderedIds })
+      .catch(() => {
+        if (startColumns) setColumns(startColumns);
+        notify("error", "Não foi possível mover a tarefa. Ela voltou para a posição anterior.");
+        router.refresh();
+      })
+      .finally(end);
   }
 
   return (

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Overlay";
 import { Field, Input, Select } from "@/components/ui/Field";
 import { createGoal, deleteGoal, updateGoalProgress } from "@/lib/actions/goals";
+import { beginMutation } from "@/lib/realtime/mutation-gate";
 import type { GoalRow } from "@/lib/data/goals";
 import { useToast } from "@/components/ui/Toast";
 
@@ -38,12 +39,15 @@ function GoalRowItem({ goal }: { goal: GoalRow }) {
               const parsed = Number(value.replace(",", ".")) || 0;
               startTransition(async () => {
                 setOptimisticCurrent(parsed);
+                const end = beginMutation();
                 try {
                   await updateGoalProgress(goal.id, parsed);
                   setEditing(false);
                   router.refresh();
                 } catch {
                   notify("error", "Não foi possível atualizar o progresso da meta. Tente novamente.");
+                } finally {
+                  end();
                 }
               });
             }}
@@ -75,11 +79,14 @@ function GoalRowItem({ goal }: { goal: GoalRow }) {
           onClick={() =>
             startTransition(async () => {
               if (!confirm("Excluir meta?")) return;
+              const end = beginMutation();
               try {
                 await deleteGoal(goal.id);
                 router.refresh();
               } catch {
                 notify("error", "Não foi possível excluir a meta. Tente novamente.");
+              } finally {
+                end();
               }
             })
           }
