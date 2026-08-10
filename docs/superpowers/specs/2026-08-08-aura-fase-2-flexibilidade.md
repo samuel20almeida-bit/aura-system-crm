@@ -1,6 +1,6 @@
 # Fase 2 — Tempo real e flexibilidade
 
-**Data:** 2026-08-08 (reescrito com tempo real no topo)
+**Data:** 2026-08-08 (reescrito com tempo real no topo; escopo da Parte I decidido)
 **Status:** rascunho, aguardando revisão do Samuel
 **Fase anterior:** `2026-08-03-aura-ux-elite-design.md` (Fase 1, em produção)
 
@@ -31,42 +31,64 @@ A primeira é mais fundamental. Uma ferramenta de equipe que mostra dados velhos
 
 Verificado no código (zero assinaturas) e no banco (zero tabelas publicando mudanças): **não há nada de tempo real.**
 
-Samuel move um card no Kanban. A tela dele muda na hora — mecânica otimista da Fase 1, e ela é **só dele**. A tela do Saymon continua mostrando o card na coluna antiga, por tempo indeterminado, até ele navegar, recarregar ou executar uma ação. Se ele deixou o Kanban aberto e foi almoçar, ao voltar vê a tela de duas horas atrás, **sem nenhum sinal de que está velha**.
+Samuel move um card. A tela dele muda na hora — mecânica otimista da Fase 1, e ela é **só dele**. A tela do Saymon continua na versão antiga por tempo indeterminado, sem nenhum sinal de que está velha. Se ele deixou o Kanban aberto e foi almoçar, ao voltar vê a tela de duas horas atrás.
 
-O caso que morde de verdade: os dois abrem a mesma tarefa e editam. **O último a salvar sobrescreve o outro, em silêncio.** Nenhum dos dois fica sabendo.
+E o caso que morde: os dois editam a mesma tarefa, **o último a salvar sobrescreve o outro em silêncio**.
 
-## 1. Mudança do outro aparece sozinha
+## O que "visibilidade do que o outro está fazendo" quer dizer aqui
 
-O Supabase já traz isso — foi uma das razões de tê-lo escolhido. Falta ligar:
+Samuel pediu o que for melhor para isso e delegou a escolha. **Os seis itens abaixo entram, nesta ordem** — que é a ordem de valor sobre custo, não a de vistosidade:
 
-- **Publicar as tabelas** que importam. Começar por `tasks`, `invoices`, `clients`, `deals`, `time_entries`; ampliar depois se fizer falta.
-- **Assinar no navegador** e, quando algo mudar, pedir dados novos ao servidor. Como as telas são componentes de servidor, isso encaixa sem reescrever nada para guardar estado no cliente.
-- **Aplicar as permissões no canal.** Uma assinatura que ignora RLS é vazamento por outra porta.
+### 1. A mudança do outro aparece sozinha
 
-**A armadilha, que precisa ser resolvida de propósito:** tempo real mistura mal com o otimismo da Fase 1. Se a tela já mostrou a mudança e o aviso do servidor chega depois, ela pisca ou volta atrás. Três regras não negociáveis:
+A base. Sem isso, nada mais importa. Publicar `tasks`, `invoices`, `clients`, `deals` e `time_entries`; assinar no navegador; aplicar RLS no canal, porque assinatura que ignora permissão é vazamento por outra porta.
+
+**A armadilha:** tempo real mistura mal com o otimismo da Fase 1. Três regras não negociáveis:
 
 - O eco da **própria** ação não redesenha nada.
-- Atualização **nunca** apaga o que está sendo digitado, nem fecha janela aberta.
+- Atualização **nunca** apaga o que está sendo digitado nem fecha janela aberta.
 - Rajada de mudanças vira **uma** atualização, não dez.
 
-## 2. Colisão avisa em vez de sobrescrever
+### 2. Fluxo de atividade ao vivo — o melhor negócio da fase
 
-Hoje o último a salvar ganha, calado. O mínimo aceitável é o sistema perceber e dizer: *"o Saymon mudou isso enquanto você editava"*, com o valor dele à vista, antes de sobrescrever.
+**A tabela `activity_log` já existe e já está sendo preenchida.** Cada ação escreve nela desde a Task 7: quem criou tarefa, quem moveu para qual coluna, quem trocou responsável, quem mudou prazo, quem concluiu subtarefa, quem lançou horas, quem criou meta, quem adicionou cliente.
 
-**Isso exige trabalho de banco que ainda não existe.** Conferido: só `tasks`, `deals` e `playbooks` guardam quando foram alteradas, e apenas `playbooks` guarda **quem** alterou. Sem essas duas colunas não há como detectar colisão nem dizer de quem foi a mudança. Então:
+Ela está guardando tudo e **ninguém vê**, exceto dentro da aba Histórico de uma tarefa específica.
 
-- `updated_at` e `updated_by` nas tabelas que duas pessoas editam, mantidas por gatilho e não pela aplicação — o que a aplicação esquece de preencher, o banco não esquece.
+Transmitir esse fluxo é a resposta mais direta à pergunta "o que o outro está fazendo", e é o item mais barato da lista inteira — os dados já estão lá, escritos, corretos. Falta uma tela e uma assinatura.
+
+Onde: um painel na `/início` e um item no sino. *"Saymon moveu Finalizar o CRM para Em andamento · há 2 min."*
+
+### 3. Quem está online, e em que tela
+
+O Supabase traz presença embutida — não precisa de tabela, coluna nem migração. Um avatar na barra superior mostrando que o outro está no sistema, e em qual módulo.
+
+Custo baixo, e responde metade da pergunta sozinho: saber que o Saymon está no CRM agora muda o que você faz em seguida.
+
+### 4. Cronômetro do outro à vista
+
+*"Saymon · 0:42 em NIM-04"* na barra superior.
+
+Numa agência isso não é enfeite: é como você sabe que o outro está tocando aquele cliente **agora**, sem perguntar. A infraestrutura de cronômetro já existe inteira desde a Task 8; falta transmitir.
+
+### 5. Colisão avisa em vez de sobrescrever
+
+O sistema percebe e diz *"o Saymon mudou isso enquanto você editava"*, com o valor dele à vista, antes de sobrescrever.
+
+**Exige trabalho de banco que ainda não existe.** Conferido: das 17 tabelas, só `tasks`, `deals` e `playbooks` guardam quando foram alteradas, e apenas `playbooks` guarda **quem**. Sem essas duas colunas não há como detectar colisão nem dizer de quem foi a mudança.
+
+- `updated_at` e `updated_by` nas tabelas que duas pessoas editam, mantidas **por gatilho** e não pela aplicação — o que a aplicação esquece de preencher, o banco não esquece.
 - A escrita compara com o valor que a tela carregou. Diferente, avisa.
 
-## 3. Sinal honesto de defasagem
+É o item mais caro desta parte, e o único que mexe no esquema. Mas é o único que impede vocês de apagarem o trabalho um do outro sem saber.
 
-Enquanto a conexão estiver caída — celular no elevador, rede ruim — a tela precisa **dizer** que parou de receber, em vez de continuar exibindo dados velhos com cara de novos. É a mesma regra que a Fase 1 aplicou ao sino: um número desatualizado sem aviso é pior que um aviso.
+### 6. Sinal honesto de defasagem
 
-## Fora do escopo: presença
+Conexão caída — celular no elevador, rede ruim — a tela **diz** que parou de receber, em vez de mostrar dados velhos com cara de novos. Mesma regra que a Fase 1 aplicou ao sino.
 
-*"Saymon está vendo esta tarefa agora"*, cursores, avatares na tela. É bem maior e resolve um problema que duas pessoas não têm. Reavaliar se a equipe crescer.
+## Fora do escopo: cursores
 
----
+Cursor do outro se mexendo na tela. Bonito em demonstração, inútil para duas pessoas que trabalham em coisas diferentes. Presença (item 3) entrega o sinal que importa por uma fração do custo.
 
 # Parte II — Flexibilidade
 
@@ -140,7 +162,6 @@ Do ledger, o que não foi corrigido e passa a doer com duas pessoas usando ao me
 
 ## Decisões pendentes
 
-- Até onde vai o tempo real: só ver a mudança aparecer (item 1) ou também o aviso de colisão (item 2)?
 - Visões salvas nascem privadas ou compartilhadas entre os dois?
 - A linha do tempo de tarefas mostra dependências ou só datas?
 
