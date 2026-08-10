@@ -18,6 +18,18 @@ import { navItems } from "@/components/layout/Sidebar";
  * descartaria a config em silêncio. Por isso só `PresenceRow` chama este
  * hook, e só é montado a partir de `Topbar`, que é chrome de `AppShell` —
  * persiste entre navegações, nunca remonta numa tela.
+ *
+ * O canal é PRIVADO (`config.private`, abaixo). Sem isso ele era público: a
+ * anon key e este tópico viajam no bundle do cliente, então qualquer pessoa
+ * que abrisse /login e lesse o JS podia assinar o tópico e ver, ao vivo, o
+ * primeiro nome, as iniciais, o UUID de autenticação e a tela de cada sócio —
+ * e podia se anunciar com uma chave forjada, inclusive a do outro sócio.
+ *
+ * `private: true` sozinho não basta, e a metade que falta falha em SILÊNCIO:
+ * `realtime.messages` tem RLS ligada, então canal privado sem policy é negado
+ * na entrada e a faixa simplesmente nunca aparece. As policies vivem em
+ * `supabase/migrations/0012_realtime_presenca_privada.sql` e são a outra
+ * metade obrigatória desta linha.
  */
 const PRESENCE_TOPIC = "aura:presenca";
 
@@ -81,7 +93,9 @@ export function usePresence({
   useEffect(() => {
     let cancelado = false;
     const supabase = createClient();
-    const channel = supabase.channel(PRESENCE_TOPIC, { config: { presence: { key: userId } } });
+    const channel = supabase.channel(PRESENCE_TOPIC, {
+      config: { private: true, presence: { key: userId } },
+    });
     channelRef.current = channel;
 
     function sync() {
