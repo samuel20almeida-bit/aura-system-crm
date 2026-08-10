@@ -55,4 +55,31 @@ describe("formatActivityWhen", () => {
     expect(formatActivityWhen(ha59min, NOW)).toBe("há 59 min");
     expect(formatActivityWhen(ha60min, NOW)).toBe("há 1 h");
   });
+
+  // A partir daqui a decisão deixa de ser "horas corridas" e passa a ser o
+  // calendário de São Paulo — o ramo que motivou o parâmetro opcional de
+  // `todayInAppTz` e que nenhum teste alcançava.
+  it("23 h ainda é 'há 23 h'; 24 h já vira 'ontem'", () => {
+    const ha23h = new Date(NOW.getTime() - 23 * 3_600_000).toISOString();
+    const ha24h = new Date(NOW.getTime() - 24 * 3_600_000).toISOString();
+    expect(formatActivityWhen(ha23h, NOW)).toBe("há 23 h");
+    expect(formatActivityWhen(ha24h, NOW)).toBe("ontem");
+  });
+
+  it("a virada do dia segue o calendário de São Paulo, não o de UTC", () => {
+    // 01:00Z do dia 9 ainda é 22:00 do dia 8 em São Paulo (UTC-3), e 23:00Z do
+    // dia 10 é 20:00 do dia 10. Pelo calendário de SP são dois dias (08 -> 10);
+    // pelo de UTC seria um só (09 -> 10), o que diria "ontem" para algo que
+    // aconteceu anteontem à noite.
+    const antesDaMeiaNoiteEmSp = "2026-08-09T01:00:00Z";
+    const agora = new Date("2026-08-10T23:00:00Z");
+    expect(formatActivityWhen(antesDaMeiaNoiteEmSp, agora)).toBe("há 2 dias");
+  });
+
+  it("6 dias ainda conta os dias; 7 dias vira a data cheia", () => {
+    const ha6dias = new Date(NOW.getTime() - 6 * 86_400_000).toISOString();
+    const ha7dias = new Date(NOW.getTime() - 7 * 86_400_000).toISOString();
+    expect(formatActivityWhen(ha6dias, NOW)).toBe("há 6 dias");
+    expect(formatActivityWhen(ha7dias, NOW)).toBe("03 de ago");
+  });
 });

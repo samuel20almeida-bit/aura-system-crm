@@ -214,11 +214,11 @@ export default async function InicioPage() {
               </span>
             )}
           </Card>
-          {activityItems === null ? (
-            <Unavailable title="Não foi possível carregar a atividade recente" className="flex-1" />
-          ) : (
-            <LiveActivity items={activityItems} />
-          )}
+          {/* Monta sempre, mesmo em falha: é o único ponto do sistema que abre o
+              canal de tempo real, e trocá-lo por um <Unavailable> mataria a
+              atualização ao vivo da página inteira até alguém recarregar à mão.
+              O aviso de erro vive dentro do componente. */}
+          <LiveActivity items={activityItems ?? []} error={activityItems === null} />
         </div>
       </div>
     </PageBody>

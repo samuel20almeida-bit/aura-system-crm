@@ -19,7 +19,23 @@ export type LiveActivityItem = {
 /** Mesma cadência do relógio do sino — não precisa ser mais fino que isto. */
 const REFRESH_INTERVAL_MS = 60_000;
 
-export function LiveActivity({ items }: { items: LiveActivityItem[] }) {
+/**
+ * O painel monta SEMPRE, inclusive quando a consulta do servidor falhou — daí
+ * `error` ser prop e o aviso ser desenhado aqui dentro, em vez de a página
+ * trocar o componente inteiro por um `<Unavailable>`.
+ *
+ * A razão não é estética. Este componente é o único do sistema que chama
+ * `useLiveRefresh`; se ele não montasse, um blip de rede numa única consulta
+ * derrubaria a atualização ao vivo da `/início` inteira — e para sempre, porque
+ * sem o canal não chega evento nenhum que refaça o payload. O canal morreria
+ * exatamente na condição em que é mais útil. Montado, o próximo refresh cura o
+ * painel sozinho.
+ *
+ * Vale como padrão, não como detalhe desta tela: quem pendurar a faixa de
+ * defasagem neste mesmo mecanismo herdaria o acoplamento e ficaria mudo
+ * justamente quando precisa falar.
+ */
+export function LiveActivity({ items, error = false }: { items: LiveActivityItem[]; error?: boolean }) {
   useLiveRefresh(["activity_log"]);
 
   // `null` até o primeiro tick do cliente: nesse estado o texto exibido é
@@ -53,7 +69,15 @@ export function LiveActivity({ items }: { items: LiveActivityItem[] }) {
     <Card className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-hidden p-4">
       <span className="label">ATIVIDADE RECENTE</span>
       <div className="flex flex-col gap-2.5 overflow-y-auto scrollbar-thin text-[12.5px]">
-        {items.length === 0 && <div className="text-faint">Nada aconteceu por aqui ainda.</div>}
+        {error && (
+          <div className="flex flex-col gap-1">
+            <span className="font-medium text-red">Não foi possível carregar a atividade recente.</span>
+            <span className="font-mono text-[11px] text-muted">
+              A consulta ao banco falhou — a próxima atualização tenta de novo.
+            </span>
+          </div>
+        )}
+        {!error && items.length === 0 && <div className="text-faint">Nada aconteceu por aqui ainda.</div>}
         {items.map((item) => (
           <div key={item.id} className={clsx("flex gap-2.5", freshIds.has(item.id) && "animate-slide-in")}>
             <Avatar initials={item.initials} size="sm" ghost />
