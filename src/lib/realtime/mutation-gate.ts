@@ -1,18 +1,18 @@
 "use client";
 
 /**
- * Conta escritas locais em andamento. Enquanto houver alguma, a atualização por
- * tempo real espera — é o que impede o eco da própria ação de passar por cima do
- * otimismo da Fase 1 e causar piscada ou reversão visível.
+ * Conta o que está acontecendo localmente agora. Enquanto houver algo em curso,
+ * a atualização por tempo real espera — é o que impede o eco da própria ação de
+ * passar por cima do otimismo da Fase 1 e causar piscada ou reversão visível.
  *
  * Módulo puro: sem React, sem DOM, sem Supabase. Roda em Node, e é por isso que
- * os testes conseguem exercitar o contador sem navegador. O `"use client"` do
+ * os testes conseguem exercitar os contadores sem navegador. O `"use client"` do
  * topo não atrapalha o vitest (é só uma diretiva de string); está aqui para que
  * uma Server Action que importasse este módulo por engano falhasse no build em
- * vez de silenciosamente transformar `inFlight` num global de processo,
- * compartilhado entre usuários diferentes.
+ * vez de silenciosamente transformar os contadores em globais de processo,
+ * compartilhados entre usuários diferentes.
  *
- * Um contador, não um booleano, porque duas ações podem estar em voo ao mesmo
+ * Contadores, não booleanos, porque duas coisas podem estar em voo ao mesmo
  * tempo (arrastar um card enquanto um comentário salva) e a primeira a terminar
  * não pode liberar o portão.
  */
@@ -27,24 +27,33 @@
  */
 const MUTATION_WATCHDOG_MS = 15_000;
 
+/**
+ * O mesmo seguro para a interação, com prazo muito mais folgado: o arraste é
+ * liberado pelo par `onDragEnd`/`onDragCancel` e pela desmontagem do quadro, mas
+ * se algum caminho escapar de todos os três o tempo real não pode morrer junto.
+ * Dois minutos é mais do que qualquer arraste real e menos do que "para sempre".
+ */
+const INTERACTION_WATCHDOG_MS = 120_000;
+
 let inFlight = 0;
+let interactions = 0;
 const watchdogs = new Set<ReturnType<typeof setTimeout>>();
 
-/** Marca uma escrita local em andamento. O retorno a encerra, e encerra uma vez só. */
-export function beginMutation(): () => void {
-  inFlight += 1;
+/** Cria um contador com liberação idempotente e cão de guarda próprio. */
+function begin(increment: (delta: number) => void, watchdogMs: number): () => void {
+  increment(1);
   let released = false;
 
   function release() {
     if (released) return;
     released = true;
-    inFlight = Math.max(0, inFlight - 1);
+    increment(-1);
   }
 
   const watchdog = setTimeout(() => {
     watchdogs.delete(watchdog);
     release();
-  }, MUTATION_WATCHDOG_MS);
+  }, watchdogMs);
   watchdogs.add(watchdog);
 
   return function end() {
@@ -54,13 +63,40 @@ export function beginMutation(): () => void {
   };
 }
 
+/** Marca uma escrita local em andamento. O retorno a encerra, e encerra uma vez só. */
+export function beginMutation(): () => void {
+  return begin((delta) => {
+    inFlight = Math.max(0, inFlight + delta);
+  }, MUTATION_WATCHDOG_MS);
+}
+
 export function isMutating(): boolean {
   return inFlight > 0;
 }
 
-/** Só para os testes: zera o contador e os cães de guarda entre casos. */
+/**
+ * Marca uma interação direta em curso — hoje, um card na mão do usuário.
+ *
+ * É irmão do portão de escrita e existe porque a janela importa: o efeito que
+ * sincroniza a opção `paused` do hook roda depois do commit, como macrotask, e
+ * pode perder a corrida para um `setTimeout` já vencido. Chamado do
+ * `onDragStart`, isto é manipulador de evento, não render: o contador sobe antes
+ * de o React ter qualquer coisa a agendar.
+ */
+export function beginInteraction(): () => void {
+  return begin((delta) => {
+    interactions = Math.max(0, interactions + delta);
+  }, INTERACTION_WATCHDOG_MS);
+}
+
+export function isInteracting(): boolean {
+  return interactions > 0;
+}
+
+/** Só para os testes: zera os contadores e os cães de guarda entre casos. */
 export function resetGateForTests() {
   for (const watchdog of watchdogs) clearTimeout(watchdog);
   watchdogs.clear();
   inFlight = 0;
+  interactions = 0;
 }

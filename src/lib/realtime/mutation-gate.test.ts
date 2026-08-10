@@ -1,5 +1,11 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { beginMutation, isMutating, resetGateForTests } from "./mutation-gate";
+import {
+  beginInteraction,
+  beginMutation,
+  isInteracting,
+  isMutating,
+  resetGateForTests,
+} from "./mutation-gate";
 
 describe("mutation-gate", () => {
   beforeEach(() => {
@@ -95,5 +101,54 @@ describe("mutation-gate", () => {
 
     endSegunda();
     expect(isMutating()).toBe(false);
+  });
+
+  it("sem interação em curso, o portão de interação está aberto", () => {
+    expect(isInteracting()).toBe(false);
+  });
+
+  it("um arraste em curso fecha o portão de interação; terminado, ele reabre", () => {
+    const end = beginInteraction();
+    expect(isInteracting()).toBe(true);
+    end();
+    expect(isInteracting()).toBe(false);
+  });
+
+  it("com duas interações em curso, a primeira a terminar NÃO abre o portão", () => {
+    const endPrimeira = beginInteraction();
+    const endSegunda = beginInteraction();
+
+    endPrimeira();
+    expect(isInteracting()).toBe(true);
+
+    endSegunda();
+    expect(isInteracting()).toBe(false);
+  });
+
+  it("interação e escrita são contadores independentes", () => {
+    const endInteracao = beginInteraction();
+    expect(isInteracting()).toBe(true);
+    expect(isMutating()).toBe(false);
+
+    const endEscrita = beginMutation();
+    endInteracao();
+    // O arraste acabou, mas a escrita que ele disparou ainda está em voo.
+    expect(isInteracting()).toBe(false);
+    expect(isMutating()).toBe(true);
+
+    endEscrita();
+    expect(isMutating()).toBe(false);
+  });
+
+  it("o cão de guarda da interação é folgado: um arraste longo continua protegido", () => {
+    beginInteraction();
+
+    // Muito além do prazo da escrita, e ainda assim um arraste plausível:
+    // o card na mão não pode ser arrancado por um cronômetro.
+    vi.advanceTimersByTime(60_000);
+    expect(isInteracting()).toBe(true);
+
+    vi.advanceTimersByTime(60_000);
+    expect(isInteracting()).toBe(false);
   });
 });
