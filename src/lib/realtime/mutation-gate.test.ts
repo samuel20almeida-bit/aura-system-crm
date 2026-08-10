@@ -1,9 +1,15 @@
-import { describe, it, expect, beforeEach } from "vitest";
-import { beginMutation, isMutating, subscribeToGate, resetGateForTests } from "./mutation-gate";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { beginMutation, isMutating, resetGateForTests } from "./mutation-gate";
 
 describe("mutation-gate", () => {
   beforeEach(() => {
+    vi.useFakeTimers();
     resetGateForTests();
+  });
+
+  afterEach(() => {
+    resetGateForTests();
+    vi.useRealTimers();
   });
 
   it("sem escritas em voo, o portão está aberto", () => {
@@ -48,17 +54,46 @@ describe("mutation-gate", () => {
     expect(isMutating()).toBe(false);
   });
 
-  it("avisa os inscritos ao fechar e ao abrir, e o retorno cancela a inscrição", () => {
-    const estados: boolean[] = [];
-    const cancelar = subscribeToGate(() => estados.push(isMutating()));
+  it("uma escrita que nunca responde é solta sozinha pelo cão de guarda", () => {
+    // Aba congelada ou wifi caindo: a promessa da Server Action nunca assenta e
+    // o `finally` de quem chamou nunca roda. Sem o cão de guarda o contador
+    // ficaria em 1 para sempre e nenhuma tela voltaria a se atualizar.
+    beginMutation();
+    expect(isMutating()).toBe(true);
 
-    const end = beginMutation();
-    end();
-    expect(estados).toEqual([true, false]);
+    vi.advanceTimersByTime(14_999);
+    expect(isMutating()).toBe(true);
 
-    cancelar();
-    const outra = beginMutation();
-    outra();
-    expect(estados).toEqual([true, false]);
+    vi.advanceTimersByTime(1);
+    expect(isMutating()).toBe(false);
+  });
+
+  it("o `end` de uma escrita já solta pelo cão de guarda não derruba o contador de outra", () => {
+    const endTravada = beginMutation();
+    vi.advanceTimersByTime(15_000);
+    expect(isMutating()).toBe(false);
+
+    const endNova = beginMutation();
+    endTravada(); // chega atrasado, quando a promessa finalmente assenta
+    expect(isMutating()).toBe(true);
+
+    endNova();
+    expect(isMutating()).toBe(false);
+  });
+
+  it("o `end` normal cancela o cão de guarda da própria escrita", () => {
+    const endPrimeira = beginMutation();
+    endPrimeira();
+
+    vi.advanceTimersByTime(10_000);
+    const endSegunda = beginMutation();
+
+    // t = 15.001s: o cão de guarda da PRIMEIRA venceria agora se não tivesse
+    // sido cancelado, e derrubaria o contador da segunda, que ainda está em voo.
+    vi.advanceTimersByTime(5_001);
+    expect(isMutating()).toBe(true);
+
+    endSegunda();
+    expect(isMutating()).toBe(false);
   });
 });
