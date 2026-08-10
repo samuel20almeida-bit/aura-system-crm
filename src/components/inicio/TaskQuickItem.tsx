@@ -7,6 +7,7 @@ import { Tag } from "@/components/ui/Tag";
 import { formatDate } from "@/lib/format";
 import { todayInAppTz } from "@/lib/timezone";
 import { updateTask } from "@/lib/actions/tasks";
+import { beginMutation } from "@/lib/realtime/mutation-gate";
 import { useToast } from "@/components/ui/Toast";
 
 export function TaskQuickItem({
@@ -28,11 +29,14 @@ export function TaskQuickItem({
         onClick={() =>
           startTransition(async () => {
             setOptimisticDone(true);
+            const end = beginMutation();
             try {
               await updateTask(task.id, { status: "done" });
               router.refresh();
             } catch {
               notify("error", "Não foi possível concluir a tarefa.");
+            } finally {
+              end();
             }
           })
         }

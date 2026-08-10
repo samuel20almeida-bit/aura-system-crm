@@ -4,6 +4,7 @@ import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { formatDuration } from "@/lib/format";
 import { stopRunningTimer } from "@/lib/actions/time";
+import { beginMutation } from "@/lib/realtime/mutation-gate";
 import { useToast } from "@/components/ui/Toast";
 import { FORGOTTEN_TIMER_MS } from "@/lib/notifications";
 
@@ -51,12 +52,15 @@ export function TimerWidget({ running }: { running: RunningTimer | null }) {
         disabled={pending}
         onClick={() =>
           startTransition(async () => {
+            const end = beginMutation();
             try {
               await stopRunningTimer();
               notify("success", "Timer parado e horas registradas.");
               router.refresh();
             } catch {
               notify("error", "Não foi possível parar o timer.");
+            } finally {
+              end();
             }
           })
         }

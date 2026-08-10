@@ -128,17 +128,22 @@ export function NewGoalModal({
           const finalArea = area === "__new" ? customArea.trim() : area;
           if (!title.trim() || !finalArea || !target) return;
           startTransition(async () => {
-            await createGoal({
-              quarter,
-              area: finalArea,
-              title: title.trim(),
-              target: Number(target.replace(",", ".")),
-              current: Number(current.replace(",", ".")) || 0,
-              unit,
-              ownerId: ownerId || null,
-            });
-            router.refresh();
-            onClose();
+            const end = beginMutation();
+            try {
+              await createGoal({
+                quarter,
+                area: finalArea,
+                title: title.trim(),
+                target: Number(target.replace(",", ".")),
+                current: Number(current.replace(",", ".")) || 0,
+                unit,
+                ownerId: ownerId || null,
+              });
+              router.refresh();
+              onClose();
+            } finally {
+              end();
+            }
           });
         }}
         className="flex flex-col gap-3.5 p-5.5"

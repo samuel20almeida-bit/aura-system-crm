@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { formatDuration } from "@/lib/format";
 import { stopRunningTimer } from "@/lib/actions/time";
+import { beginMutation } from "@/lib/realtime/mutation-gate";
 
 export function TimerBanner({
   startedAt,
@@ -37,8 +38,13 @@ export function TimerBanner({
         disabled={pending}
         onClick={() =>
           startTransition(async () => {
-            await stopRunningTimer();
-            router.refresh();
+            const end = beginMutation();
+            try {
+              await stopRunningTimer();
+              router.refresh();
+            } finally {
+              end();
+            }
           })
         }
       >
