@@ -1,19 +1,30 @@
 import { PageBody } from "@/components/layout/PageBody";
 import { CrmClient } from "@/components/crm/CrmClient";
-import { Unavailable } from "@/components/ui/Unavailable";
 import { getCrmData } from "@/lib/data/crm";
 import { listProfiles } from "@/lib/data/profile";
 
 export default async function CrmPage() {
   const [data, profiles] = await Promise.all([getCrmData(), listProfiles()]);
 
-  // Sem esta ramificação, uma falha do banco renderizava um CRM plausível e
-  // vazio: nenhum cliente, nenhuma fatura, 0% de inadimplência.
+  // Uma falha do banco não pode renderizar um CRM plausível e vazio (nenhum
+  // cliente, 0% de inadimplência) — mas também não pode devolver uma página de
+  // erro seca, porque aí some o botão de cadastrar e o usuário fica sem
+  // nenhuma saída. O aviso entra no lugar dos números; a ação continua.
   if (data.unavailable) {
     return (
       <PageBody>
-        <h1 className="text-[21px] font-medium">CRM</h1>
-        <Unavailable title="Não foi possível carregar o CRM agora" />
+        <CrmClient
+          clients={[]}
+          deals={[]}
+          invoices={[]}
+          profiles={profiles}
+          monthRevenue={0}
+          overdueAmount={0}
+          overdueCount={0}
+          inadimplenciaPct={0}
+          ticketMedio={0}
+          unavailable
+        />
       </PageBody>
     );
   }

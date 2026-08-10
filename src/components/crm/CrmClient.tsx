@@ -8,6 +8,7 @@ import { Tag } from "@/components/ui/Tag";
 import { Button } from "@/components/ui/Button";
 import { Avatar } from "@/components/ui/Avatar";
 import { NewClientModal, NewDealModal, NewInvoiceModal } from "./CrmModals";
+import { Unavailable } from "@/components/ui/Unavailable";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { markInvoiceStatus, updateDealStage } from "@/lib/actions/crm";
 import type { Tables } from "@/lib/supabase/database.types";
@@ -34,6 +35,7 @@ export function CrmClient({
   overdueCount,
   inadimplenciaPct,
   ticketMedio,
+  unavailable = false,
 }: {
   clients: ClientRow[];
   deals: DealRow[];
@@ -44,6 +46,7 @@ export function CrmClient({
   overdueCount: number;
   inadimplenciaPct: number;
   ticketMedio: number;
+  unavailable?: boolean;
 }) {
   const [tab, setTab] = useState<"overview" | "clientes" | "pipeline" | "faturas">("overview");
   const [modal, setModal] = useState<"client" | "deal" | "invoice" | null>(null);
@@ -74,13 +77,19 @@ export function CrmClient({
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {tab === "pipeline" && <Button variant="ghost" onClick={() => setModal("deal")}>+ Novo negócio</Button>}
-          {tab === "faturas" && <Button variant="ghost" onClick={() => setModal("invoice")}>+ Nova fatura</Button>}
+          {!unavailable && tab === "pipeline" && <Button variant="ghost" onClick={() => setModal("deal")}>+ Novo negócio</Button>}
+          {!unavailable && tab === "faturas" && <Button variant="ghost" onClick={() => setModal("invoice")}>+ Nova fatura</Button>}
           <Button onClick={() => setModal("client")}>+ Novo cliente</Button>
         </div>
       </div>
 
-      <div className="flex gap-4.5 overflow-x-auto border-b border-border">
+      {/* Uma falha de LEITURA nunca pode tirar a capacidade de ESCREVER: o aviso
+          substitui os números e as listas, mas o botão de cadastrar continua
+          onde estava. Antes, a página inteira virava um cartão de erro e o
+          usuário ficava sem nenhuma forma de adicionar um cliente. */}
+      {unavailable && <Unavailable title="Não foi possível carregar os dados do CRM agora" />}
+
+      {!unavailable && <div className="flex gap-4.5 overflow-x-auto border-b border-border">
         {(["overview", "clientes", "pipeline", "faturas"] as const).map((tb) => (
           <button
             key={tb}
@@ -90,9 +99,9 @@ export function CrmClient({
             {tb === "overview" ? "Visão geral" : tb === "clientes" ? "Clientes" : tb === "pipeline" ? "Pipeline" : `Faturas · ${overdueCount}`}
           </button>
         ))}
-      </div>
+      </div>}
 
-      {tab === "overview" && (
+      {!unavailable && tab === "overview" && (
         <div className="flex flex-1 flex-col gap-4 overflow-y-auto scrollbar-thin">
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
             <Kpi label="FATURAMENTO (MÊS)" value={formatCurrency(monthRevenue)} />
@@ -130,7 +139,7 @@ export function CrmClient({
         </div>
       )}
 
-      {tab === "clientes" && (
+      {!unavailable && tab === "clientes" && (
         <Card className="flex-1 overflow-hidden p-4">
           <div className="hidden grid-cols-[1.6fr_1fr_.9fr_1fr] gap-2 border-b border-border pb-2 font-mono text-[9.5px] font-semibold tracking-wide text-faint md:grid">
             <div>CLIENTE</div>
@@ -168,7 +177,7 @@ export function CrmClient({
         </Card>
       )}
 
-      {tab === "pipeline" && (
+      {!unavailable && tab === "pipeline" && (
         <div className="grid flex-1 grid-cols-4 gap-3 overflow-hidden">
           {stages.map((stage) => {
             const stageDeals = optimisticDeals.filter((d) => d.stage === stage.id);
@@ -214,7 +223,7 @@ export function CrmClient({
         </div>
       )}
 
-      {tab === "faturas" && (
+      {!unavailable && tab === "faturas" && (
         <Card className="flex-1 overflow-hidden p-4">
           <div className="hidden grid-cols-[1.4fr_1fr_.9fr_.9fr_.8fr] gap-2 border-b border-border pb-2 font-mono text-[9.5px] font-semibold tracking-wide text-faint md:grid">
             <div>CLIENTE</div>

@@ -6,9 +6,28 @@ import { Modal } from "@/components/ui/Overlay";
 import { Field, Input, Select } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Button";
 import { createClientRecord, createContract, createDeal, createInvoice } from "@/lib/actions/crm";
+import { useToast } from "@/components/ui/Toast";
+
+/** Sem isto, uma falha ao criar deixava a janela aberta e muda: o botão voltava
+ *  ao normal, nada era criado e nenhuma mensagem aparecia. O usuário concluía
+ *  que o sistema não permite cadastrar. */
+function useCreateHandler(onClose: () => void) {
+  const router = useRouter();
+  const { notify } = useToast();
+  return async function run(what: string, action: () => Promise<unknown>) {
+    try {
+      await action();
+      router.refresh();
+      onClose();
+    } catch (error) {
+      console.error(`[crm] falha ao criar ${what}:`, error);
+      notify("error", `Não foi possível criar ${what}. Tente de novo — se persistir, me avise.`);
+    }
+  };
+}
 
 export function NewClientModal({ onClose }: { onClose: () => void }) {
-  const router = useRouter();
+  const run = useCreateHandler(onClose);
   const [pending, startTransition] = useTransition();
   const [name, setName] = useState("");
   const [segment, setSegment] = useState("");
@@ -21,11 +40,16 @@ export function NewClientModal({ onClose }: { onClose: () => void }) {
         onSubmit={(e) => {
           e.preventDefault();
           if (!name.trim()) return;
-          startTransition(async () => {
-            await createClientRecord({ name: name.trim(), segment: segment || null, contactName: contactName || null, contactEmail: contactEmail || null });
-            router.refresh();
-            onClose();
-          });
+          startTransition(() =>
+            run("o cliente", () =>
+              createClientRecord({
+                name: name.trim(),
+                segment: segment || null,
+                contactName: contactName || null,
+                contactEmail: contactEmail || null,
+              })
+            )
+          );
         }}
         className="flex flex-col gap-3.5 p-5.5"
       >
@@ -62,7 +86,7 @@ export function NewDealModal({
   profiles: { id: string; full_name: string }[];
   onClose: () => void;
 }) {
-  const router = useRouter();
+  const run = useCreateHandler(onClose);
   const [pending, startTransition] = useTransition();
   const [name, setName] = useState("");
   const [clientId, setClientId] = useState("");
@@ -75,11 +99,17 @@ export function NewDealModal({
         onSubmit={(e) => {
           e.preventDefault();
           if (!name.trim()) return;
-          startTransition(async () => {
-            await createDeal({ name: name.trim(), clientId: clientId || null, stage: "lead", value: value ? Number(value) : null, ownerId: ownerId || null });
-            router.refresh();
-            onClose();
-          });
+          startTransition(() =>
+            run("o negócio", () =>
+              createDeal({
+                name: name.trim(),
+                clientId: clientId || null,
+                stage: "lead",
+                value: value ? Number(value) : null,
+                ownerId: ownerId || null,
+              })
+            )
+          );
         }}
         className="flex flex-col gap-3.5 p-5.5"
       >
@@ -126,7 +156,7 @@ export function NewInvoiceModal({
   defaultClientId?: string;
   onClose: () => void;
 }) {
-  const router = useRouter();
+  const run = useCreateHandler(onClose);
   const [pending, startTransition] = useTransition();
   const [clientId, setClientId] = useState(defaultClientId ?? "");
   const [referencePeriod, setReferencePeriod] = useState("");
@@ -140,11 +170,17 @@ export function NewInvoiceModal({
         onSubmit={(e) => {
           e.preventDefault();
           if (!clientId || !dueDate || !amount) return;
-          startTransition(async () => {
-            await createInvoice({ clientId, referencePeriod: referencePeriod || dueDate.slice(0, 7), dueDate, amount: Number(amount), status });
-            router.refresh();
-            onClose();
-          });
+          startTransition(() =>
+            run("a fatura", () =>
+              createInvoice({
+                clientId,
+                referencePeriod: referencePeriod || dueDate.slice(0, 7),
+                dueDate,
+                amount: Number(amount),
+                status,
+              })
+            )
+          );
         }}
         className="flex flex-col gap-3.5 p-5.5"
       >
@@ -189,7 +225,7 @@ export function NewInvoiceModal({
 }
 
 export function NewContractModal({ clientId, onClose }: { clientId: string; onClose: () => void }) {
-  const router = useRouter();
+  const run = useCreateHandler(onClose);
   const [pending, startTransition] = useTransition();
   const [name, setName] = useState("");
   const [contractType, setContractType] = useState("annual");
@@ -203,18 +239,18 @@ export function NewContractModal({ clientId, onClose }: { clientId: string; onCl
         onSubmit={(e) => {
           e.preventDefault();
           if (!name.trim()) return;
-          startTransition(async () => {
-            await createContract({
-              clientId,
-              name: name.trim(),
-              contractType,
-              value: value ? Number(value) : null,
-              startDate: startDate || null,
-              endDate: endDate || null,
-            });
-            router.refresh();
-            onClose();
-          });
+          startTransition(() =>
+            run("o contrato", () =>
+              createContract({
+                clientId,
+                name: name.trim(),
+                contractType,
+                value: value ? Number(value) : null,
+                startDate: startDate || null,
+                endDate: endDate || null,
+              })
+            )
+          );
         }}
         className="flex flex-col gap-3.5 p-5.5"
       >
