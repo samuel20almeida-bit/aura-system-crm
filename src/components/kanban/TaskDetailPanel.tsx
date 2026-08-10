@@ -8,7 +8,10 @@ import { Avatar } from "@/components/ui/Avatar";
 import { Tag } from "@/components/ui/Tag";
 import { Button } from "@/components/ui/Button";
 import { ProgressBar } from "@/components/ui/Card";
-import { formatDate, formatRelative, daysUntil } from "@/lib/format";
+import { formatDate, daysUntil } from "@/lib/format";
+// Mesmas linhas de `activity_log` que o painel da /início mostra: mesmo
+// formatador, mesmo texto, mesmo fuso.
+import { formatActivityWhen } from "@/lib/activity-feed";
 import {
   addChecklistItem,
   addComment,
@@ -397,7 +400,7 @@ export function TaskDetailPanel({ detail, profiles }: { detail: TaskDetail; prof
                     <b className="font-medium">{event.user?.full_name ?? "Alguém"}</b> {event.verb}
                     {event.detail ? ` ${event.detail}` : ""}
                   </span>
-                  <div className="mt-0.5 font-mono text-[11px] text-faint">{formatRelative(event.created_at)}</div>
+                  <div className="mt-0.5 font-mono text-[11px] text-faint">{formatActivityWhen(event.created_at)}</div>
                 </div>
               </div>
             ))}

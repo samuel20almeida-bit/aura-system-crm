@@ -16,9 +16,18 @@ export type ActivityRow = {
   user: ActivityAuthor;
 };
 
+/**
+ * `verb` e `detail` viajam SEPARADOS de propósito. Colapsá-los numa string só
+ * tira de quem desenha a linha a chance de destacar o detalhe — que é a parte
+ * que o olho procura ("moveu Finalizar o CRM para **Em andamento**"). Juntar as
+ * duas é trabalho de uma linha para o componente; separar de novo, depois de
+ * concatenadas, é impossível sem adivinhar onde uma acaba.
+ */
 export type DescribedActivity = {
   who: string;
-  text: string;
+  verb: string;
+  /** Nulo quando a linha não tem detalhe — o componente não desenha nada. */
+  detail: string | null;
   when: string;
 };
 
@@ -37,16 +46,18 @@ function describeWho(row: ActivityRow, currentUserId: string): string {
   return firstName(row.user.full_name);
 }
 
-/** `verb` + `detail`, espaço único, sem sobra quando `detail` é nulo. */
-function describeText(row: ActivityRow): string {
-  return row.detail ? `${row.verb} ${row.detail}` : row.verb;
-}
-
-/** "10 ago" — dia e mês no fuso de operação da Aura, não em UTC cru. */
-function formatFullDate(date: Date): string {
+/**
+ * "03 de ago" para o ano corrente, "03 de ago de 2025" para qualquer outro —
+ * sempre no fuso de operação da Aura, não em UTC cru. O ano só aparece quando
+ * muda porque, sem ele, uma linha de 370 dias atrás sai idêntica a uma de 5
+ * dias: as duas viram "05 de ago" e não há como distinguir.
+ */
+function formatFullDate(date: Date, now: Date): string {
+  const mesmoAno = todayInAppTz(date).slice(0, 4) === todayInAppTz(now).slice(0, 4);
   return new Intl.DateTimeFormat("pt-BR", {
     day: "2-digit",
     month: "short",
+    ...(mesmoAno ? {} : { year: "numeric" }),
     timeZone: APP_TIMEZONE,
   })
     .format(date)
@@ -54,10 +65,11 @@ function formatFullDate(date: Date): string {
 }
 
 /**
- * Dias corridos no calendário de São Paulo entre duas datas — não horas
- * decorridas divididas por 24. Uma escrita às 23h55 de ontem, vista às 00h05
- * de hoje, é "ontem": só um dia de calendário separa as duas, mesmo com 10
- * minutos de diferença real. É por isso que a decisão passa pelos helpers de
+ * Dias de calendário em São Paulo entre duas datas — não horas decorridas
+ * divididas por 24. Só quem chega aqui já passou de 24 h corridas (abaixo
+ * disso o texto é "há N h"), então a diferença que este cálculo faz é sobre a
+ * fronteira do dia: 26 h atrás pode ser "ontem" ou "há 2 dias" conforme a hora
+ * do relógio de São Paulo, e é por isso que a decisão passa pelos helpers de
  * `timezone.ts` em vez de aritmética direta sobre milissegundos.
  */
 function calendarDaysBetween(earlier: Date, later: Date): number {
@@ -67,9 +79,14 @@ function calendarDaysBetween(earlier: Date, later: Date): number {
 }
 
 /**
- * Tempo relativo em pt-BR: "agora", "há N min", "há N h" enquanto o intervalo
- * cabe dentro do mesmo dia de relógio; "ontem", "há N dias" ou a data cheia
- * depois disso, decidido pelo calendário de São Paulo.
+ * Tempo relativo em pt-BR: "agora", "há N min" e "há N h" nas primeiras 24 h
+ * corridas; passado isso, "ontem", "há N dias" ou a data cheia, decidido pelo
+ * calendário de São Paulo.
+ *
+ * É o único formatador relativo do sistema — a aba Histórico da tarefa mostra
+ * as MESMAS linhas de `activity_log` que o painel da /início, e um segundo
+ * formatador significava dois textos para o mesmo dado ("há 3 h" contra
+ * "há 3h"), um deles ignorando o fuso.
  *
  * Recebe `now` explícito (default `new Date()`) para que os testes controlem
  * o instante sem depender do relógio real, e para que o mesmo cálculo sirva
@@ -90,7 +107,7 @@ export function formatActivityWhen(createdAt: string, now: Date = new Date()): s
   const dayDiff = calendarDaysBetween(created, now);
   if (dayDiff <= 1) return "ontem";
   if (dayDiff < 7) return `há ${dayDiff} dias`;
-  return formatFullDate(created);
+  return formatFullDate(created, now);
 }
 
 /**
@@ -104,7 +121,8 @@ export function describeActivity(
 ): DescribedActivity {
   return {
     who: describeWho(row, currentUserId),
-    text: describeText(row),
+    verb: row.verb,
+    detail: row.detail,
     when: formatActivityWhen(row.created_at, now),
   };
 }

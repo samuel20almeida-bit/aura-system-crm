@@ -35,11 +35,17 @@ describe("describeActivity — quem", () => {
 });
 
 describe("describeActivity — texto", () => {
-  it("detail nulo não deixa espaço sobrando", () => {
+  it("verbo e detalhe chegam separados, para o detalhe poder ser destacado", () => {
+    const descrito = describeActivity(row(), "user-saymon", NOW);
+    expect(descrito.verb).toBe("moveu Finalizar o CRM para");
+    expect(descrito.detail).toBe("Em andamento");
+  });
+
+  it("detail nulo continua nulo — o componente não desenha nada, nem espaço", () => {
     const semDetalhe = row({ verb: "lançou", detail: null });
-    const { text } = describeActivity(semDetalhe, "user-samuel", NOW);
-    expect(text).toBe("lançou");
-    expect(text.endsWith(" ")).toBe(false);
+    const descrito = describeActivity(semDetalhe, "user-samuel", NOW);
+    expect(descrito.verb).toBe("lançou");
+    expect(descrito.detail).toBeNull();
   });
 });
 
@@ -81,5 +87,12 @@ describe("formatActivityWhen", () => {
     const ha7dias = new Date(NOW.getTime() - 7 * 86_400_000).toISOString();
     expect(formatActivityWhen(ha6dias, NOW)).toBe("há 6 dias");
     expect(formatActivityWhen(ha7dias, NOW)).toBe("03 de ago");
+  });
+
+  it("a data cheia ganha o ano quando ele não é o corrente", () => {
+    // Sem o ano, 370 dias atrás sairia "05 de ago" — indistinguível de uma
+    // linha de cinco dias atrás.
+    const ha370dias = new Date(NOW.getTime() - 370 * 86_400_000).toISOString();
+    expect(formatActivityWhen(ha370dias, NOW)).toBe("05 de ago de 2025");
   });
 });

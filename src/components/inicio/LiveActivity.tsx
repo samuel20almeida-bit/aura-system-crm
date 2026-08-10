@@ -10,7 +10,8 @@ import { useLiveRefresh } from "@/lib/realtime/useLiveRefresh";
 export type LiveActivityItem = {
   id: string;
   who: string;
-  text: string;
+  verb: string;
+  detail: string | null;
   when: string;
   createdAt: string;
   initials: string | null;
@@ -54,15 +55,29 @@ export function LiveActivity({ items, error = false }: { items: LiveActivityItem
   // Só a entrada que chegou depois da montagem ganha a animação de entrada —
   // recarregar a página não deve fazer a lista inteira deslizar para dentro.
   const previousIds = useRef<Set<string> | null>(null);
+  // Instante da linha mais nova já vista. Id ausente da lista anterior NÃO
+  // basta para chamar de novidade: `activity_log.task_id` é `on delete
+  // cascade`, então apagar uma tarefa com 3 registros encurta a lista e puxa
+  // para dentro da janela de 12 três linhas ANTIGAS, que nunca tinham sido
+  // vistas e deslizariam como se acabassem de acontecer. Novidade é id nova E
+  // mais recente que tudo que já passou por aqui.
+  const newestSeen = useRef(Number.NEGATIVE_INFINITY);
   const [freshIds, setFreshIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    const currentIds = new Set(items.map((item) => item.id));
+    const maisNovoDaVez = items.reduce(
+      (max, item) => Math.max(max, Date.parse(item.createdAt)),
+      Number.NEGATIVE_INFINITY
+    );
     if (previousIds.current) {
-      const fresh = items.filter((item) => !previousIds.current!.has(item.id)).map((item) => item.id);
+      const corte = newestSeen.current;
+      const fresh = items
+        .filter((item) => !previousIds.current!.has(item.id) && Date.parse(item.createdAt) > corte)
+        .map((item) => item.id);
       setFreshIds(new Set(fresh));
     }
-    previousIds.current = currentIds;
+    previousIds.current = new Set(items.map((item) => item.id));
+    newestSeen.current = Math.max(newestSeen.current, maisNovoDaVez);
   }, [items]);
 
   return (
@@ -82,8 +97,13 @@ export function LiveActivity({ items, error = false }: { items: LiveActivityItem
           <div key={item.id} className={clsx("flex gap-2.5", freshIds.has(item.id) && "animate-slide-in")}>
             <Avatar initials={item.initials} size="sm" ghost />
             <div>
+              {/* O detalhe vem separado do verbo para poder ser destacado: é a
+                  parte que o olho procura na frase ("moveu Finalizar o CRM
+                  para **Em andamento**"). Sem `detail`, nada é renderizado —
+                  não sobra espaço no fim da linha. */}
               <span>
-                {item.who} {item.text}
+                {item.who} {item.verb}
+                {item.detail === null ? null : <> <b className="font-medium">{item.detail}</b></>}
               </span>
               <div className="mt-0.5 font-mono text-[11px] text-faint">
                 {clientNow === null ? item.when : formatActivityWhen(item.createdAt, new Date(clientNow))}
