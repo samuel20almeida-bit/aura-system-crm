@@ -53,6 +53,12 @@ export function moduleFromPath(pathname: string): string | null {
 }
 
 /**
+ * Guarda de instância única. O tópico de presença é compartilhado por
+ * construção, então não existe a proteção por `useId` que o useLiveRefresh tem.
+ */
+let instanciaMontada = false;
+
+/**
  * Quem mais está online, e em que tela — recurso de canal do Supabase, não de
  * banco: não precisa de tabela, coluna nem migração.
  *
@@ -70,6 +76,9 @@ export function usePresence({
 }): Peer[] {
   const pathname = usePathname();
   const [peers, setPeers] = useState<Peer[]>([]);
+  // Contador de geração: incrementado quando o canal morre de um jeito que não
+  // se recupera sozinho (ver o ramo CLOSED abaixo), força o efeito a recriá-lo.
+  const [geracao, setGeracao] = useState(0);
 
   // O canal é criado uma vez (efeito abaixo, sem `pathname` nas deps) e
   // reanunciado via `.track()` a cada navegação — não recriado a cada troca
@@ -86,11 +95,30 @@ export function usePresence({
   useEffect(() => {
     pathnameRef.current = pathname;
     if (subscribedRef.current) {
-      channelRef.current?.track({ name, initials, module: moduleFromPath(pathname) });
+      channelRef.current?.track({ name, initials, module: moduleFromPath(pathname) })?.catch(() => {});
     }
   }, [pathname, name, initials]);
 
   useEffect(() => {
+    // O tópico é FIXO — tem que ser, é assim que os dois sócios se veem — então
+    // a proteção do useLiveRefresh (um tópico por instância via useId) não vale
+    // aqui. Duas instâncias montadas receberiam o MESMO canal pela dedução por
+    // tópico do realtime-js, e o segundo `.on("presence", …)` lançaria
+    // "cannot add presence callbacks after subscribe()". E o preço é pior que na
+    // T1: a Topbar vive DENTRO do layout, acima de (app)/error.tsx, e não há
+    // global-error.tsx — o erro sobe até a raiz e derruba o app inteiro, não uma
+    // tela. A guarda sobrevive ao StrictMode porque ele faz setup→cleanup→setup,
+    // nunca dois setups vivos ao mesmo tempo.
+    if (instanciaMontada) {
+      if (process.env.NODE_ENV !== "production") {
+        console.error(
+          "usePresence: segunda instância montada. O tópico é fixo e não suporta duas — monte <PresenceRow> uma vez só, no AppShell."
+        );
+      }
+      return;
+    }
+    instanciaMontada = true;
+
     let cancelado = false;
     const supabase = createClient();
     const channel = supabase.channel(PRESENCE_TOPIC, {
@@ -116,24 +144,40 @@ export function usePresence({
       if (cancelado) return;
       if (status === "SUBSCRIBED") {
         subscribedRef.current = true;
-        await channel.track({ name, initials, module: moduleFromPath(pathnameRef.current) });
-      } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
-        // A presença falhou: a faixa some (lista vazia), mas o canal continua
-        // de pé — a próxima reconexão a repovoa sozinha.
+        await channel
+          .track({ name, initials, module: moduleFromPath(pathnameRef.current) })
+          .catch(() => {});
+      } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+        // Estes dois o phoenix recupera sozinho: o canal fica `errored`, o
+        // rejoinTimer reagenda, e no `onOpen` do socket o reingresso acontece
+        // porque a condição é `isErrored()`. A faixa esvazia e volta sozinha.
         subscribedRef.current = false;
         setPeers([]);
+      } else if (status === "CLOSED") {
+        // CLOSED é diferente, e o comentário anterior mentia sobre isso: o
+        // `onClose` do phoenix RESETA o rejoinTimer, põe o estado em `closed` e
+        // tira o canal da lista do socket. Como o reingresso do `onOpen` exige
+        // `isErrored()`, nada ressuscita este canal — sem isto, a presença
+        // morreria calada até um recarregamento. Recriamos pela geração.
+        subscribedRef.current = false;
+        setPeers([]);
+        setGeracao((g) => g + 1);
       }
     });
 
     return () => {
+      // `cancelado` barra o CLOSED legítimo disparado pelo próprio
+      // removeChannel abaixo — sem ele, cada desmontagem incrementaria a
+      // geração e o efeito se recriaria em laço.
       cancelado = true;
       subscribedRef.current = false;
       channelRef.current = null;
+      instanciaMontada = false;
       setPeers([]);
       supabase.removeChannel(channel);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- name/initials/pathname tratados no efeito de re-anúncio acima; recriar o canal por eles quebraria a instância única
-  }, [userId]);
+  }, [userId, geracao]);
 
   return peers;
 }
