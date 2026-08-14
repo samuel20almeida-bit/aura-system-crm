@@ -167,6 +167,56 @@ export type Database = {
           },
         ]
       }
+      contas: {
+        Row: {
+          cidade: string | null
+          criado_em: string
+          decisor_nome: string | null
+          dono_id: string | null
+          fase: Database["public"]["Enums"]["conta_fase"]
+          id: string
+          nicho: string | null
+          nome: string
+          origem: string | null
+          software_atual: string | null
+          uf: string | null
+        }
+        Insert: {
+          cidade?: string | null
+          criado_em?: string
+          decisor_nome?: string | null
+          dono_id?: string | null
+          fase?: Database["public"]["Enums"]["conta_fase"]
+          id?: string
+          nicho?: string | null
+          nome: string
+          origem?: string | null
+          software_atual?: string | null
+          uf?: string | null
+        }
+        Update: {
+          cidade?: string | null
+          criado_em?: string
+          decisor_nome?: string | null
+          dono_id?: string | null
+          fase?: Database["public"]["Enums"]["conta_fase"]
+          id?: string
+          nicho?: string | null
+          nome?: string
+          origem?: string | null
+          software_atual?: string | null
+          uf?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contas_dono_id_fkey"
+            columns: ["dono_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contracts: {
         Row: {
           client_id: string
@@ -306,6 +356,27 @@ export type Database = {
           },
         ]
       }
+      implantacao_etapas: {
+        Row: {
+          espera: Database["public"]["Enums"]["etapa_espera"]
+          nome: string
+          posicao: number
+          sla_dias: number
+        }
+        Insert: {
+          espera?: Database["public"]["Enums"]["etapa_espera"]
+          nome: string
+          posicao: number
+          sla_dias: number
+        }
+        Update: {
+          espera?: Database["public"]["Enums"]["etapa_espera"]
+          nome?: string
+          posicao?: number
+          sla_dias?: number
+        }
+        Relationships: []
+      }
       invoices: {
         Row: {
           amount: number
@@ -356,6 +427,112 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      negocios: {
+        Row: {
+          conta_id: string
+          criado_em: string
+          desconto: number
+          dono_id: string | null
+          estagio: Database["public"]["Enums"]["negocio_estagio"]
+          fechado_em: string | null
+          id: string
+          mexido_em: string
+          motivo_perda: string | null
+          mrr: number | null
+          plano_id: string | null
+          proximo_passo: string | null
+          proximo_passo_em: string | null
+          resultado: Database["public"]["Enums"]["negocio_resultado"] | null
+          setup: number | null
+        }
+        Insert: {
+          conta_id: string
+          criado_em?: string
+          desconto?: number
+          dono_id?: string | null
+          estagio?: Database["public"]["Enums"]["negocio_estagio"]
+          fechado_em?: string | null
+          id?: string
+          mexido_em?: string
+          motivo_perda?: string | null
+          mrr?: number | null
+          plano_id?: string | null
+          proximo_passo?: string | null
+          proximo_passo_em?: string | null
+          resultado?: Database["public"]["Enums"]["negocio_resultado"] | null
+          setup?: number | null
+        }
+        Update: {
+          conta_id?: string
+          criado_em?: string
+          desconto?: number
+          dono_id?: string | null
+          estagio?: Database["public"]["Enums"]["negocio_estagio"]
+          fechado_em?: string | null
+          id?: string
+          mexido_em?: string
+          motivo_perda?: string | null
+          mrr?: number | null
+          plano_id?: string | null
+          proximo_passo?: string | null
+          proximo_passo_em?: string | null
+          resultado?: Database["public"]["Enums"]["negocio_resultado"] | null
+          setup?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "negocios_conta_id_fkey"
+            columns: ["conta_id"]
+            isOneToOne: false
+            referencedRelation: "contas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "negocios_dono_id_fkey"
+            columns: ["dono_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "negocios_plano_id_fkey"
+            columns: ["plano_id"]
+            isOneToOne: false
+            referencedRelation: "planos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      planos: {
+        Row: {
+          ativo: boolean
+          id: string
+          mrr: number
+          nicho: string
+          nome: string
+          posicao: number
+          setup: number
+        }
+        Insert: {
+          ativo?: boolean
+          id?: string
+          mrr: number
+          nicho: string
+          nome: string
+          posicao?: number
+          setup: number
+        }
+        Update: {
+          ativo?: boolean
+          id?: string
+          mrr?: number
+          nicho?: string
+          nome?: string
+          posicao?: number
+          setup?: number
+        }
+        Relationships: []
       }
       playbook_categories: {
         Row: {
@@ -769,7 +946,15 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      conta_fase: "prospect" | "implantacao" | "cliente" | "perdido" | "churn"
+      etapa_espera: "nos" | "cliente"
+      negocio_estagio:
+        | "lead"
+        | "contato"
+        | "qualificado"
+        | "diagnostico"
+        | "proposta"
+      negocio_resultado: "ganho" | "perdido"
     }
     CompositeTypes: {
       [_ in never]: never
