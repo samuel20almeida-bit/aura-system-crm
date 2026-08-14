@@ -19,7 +19,6 @@ type NavItem = {
 const workItems: NavItem[] = [
   { href: "/inicio", label: "Início", icon: HomeIcon },
   { href: "/kanban", label: "Kanban", icon: KanbanIcon, countKey: "openTasks" },
-  { href: "/horas", label: "Horas", icon: ClockIcon },
 ];
 
 const businessItems: NavItem[] = [
@@ -197,14 +196,6 @@ function KanbanIcon() {
   return (
     <svg {...iconProps()}>
       <path d="M2.6 3h3.2v10.2H2.6zM6.9 3h3.2v6.6H6.9zM11.2 3h2.2v10.2h-2.2z" />
-    </svg>
-  );
-}
-function ClockIcon() {
-  return (
-    <svg {...iconProps()}>
-      <circle cx="8" cy="8" r="5.6" />
-      <path d="M8 4.8V8l2.2 1.4" />
     </svg>
   );
 }

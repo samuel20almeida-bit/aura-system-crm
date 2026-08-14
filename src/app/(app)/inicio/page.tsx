@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { PageBody } from "@/components/layout/PageBody";
 import { Kpi, Card, ProgressBar } from "@/components/ui/Card";
-import { Avatar } from "@/components/ui/Avatar";
 import { TaskQuickItem } from "@/components/inicio/TaskQuickItem";
 import { InicioActions } from "@/components/inicio/InicioActions";
 import { LiveActivity, type LiveActivityItem } from "@/components/inicio/LiveActivity";
@@ -13,7 +12,6 @@ import { getNotifications } from "@/lib/data/notifications";
 import { getRecentActivity } from "@/lib/data/activity";
 import { listClientsLite } from "@/lib/data/tasks";
 import { listProfiles } from "@/lib/data/profile";
-import { createClient } from "@/lib/supabase/server";
 import { ALL_CLEAR, TONE_BG } from "@/lib/notifications";
 import { describeActivity } from "@/lib/activity-feed";
 import { APP_TIMEZONE, currentHourInAppTz, isoWeekInAppTz } from "@/lib/timezone";
@@ -28,15 +26,13 @@ export default async function InicioPage() {
   const { profile } = await requireProfile();
   const now = new Date();
 
-  const [data, notifications, activityRows, clients, profiles, supabase] = await Promise.all([
+  const [data, notifications, activityRows, clients, profiles] = await Promise.all([
     getDashboardData(profile.id),
     getNotifications(profile.id),
     getRecentActivity(),
     listClientsLite(),
     listProfiles(),
-    createClient(),
   ]);
-  const tasksLite = (await supabase.from("tasks").select("id, title, client_id")).data ?? [];
 
   // Descrito aqui, no servidor, com o relógio do servidor — não dentro do
   // componente cliente. É o que garante que o primeiro quadro do cliente
@@ -80,12 +76,12 @@ export default async function InicioPage() {
             )}
           </div>
         </div>
-        <InicioActions clients={clients} profiles={profiles} tasks={tasksLite} />
+        <InicioActions clients={clients} profiles={profiles} />
       </div>
 
       {data.unavailable && <Unavailable title="Alguns números não puderam ser carregados" />}
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
         <Kpi
           label="FATURAMENTO DO MÊS"
           value={data.monthRevenue === null ? DASH : <CountUp value={data.monthRevenue} format="currency" />}
@@ -107,23 +103,6 @@ export default async function InicioPage() {
               {data.myTasksWeek > 0 && <span className="rounded-full bg-neutral-tint px-2 py-0.5 text-[11px] text-muted">{data.myTasksWeek} na semana</span>}
               {data.myTasksToday === 0 && data.myTasksWeek === 0 && <span className="font-mono text-[11px] text-faint">tudo em dia</span>}
             </div>
-          )}
-        </Kpi>
-        <Kpi
-          label="HORAS DA SEMANA"
-          value={
-            data.myWeekHours === null ? (
-              DASH
-            ) : (
-              <>{data.myWeekHours.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}h <span className="text-[13px] font-normal text-muted">/ {profile.weekly_capacity_hours}h</span></>
-            )
-          }
-        >
-          {data.myWeekHours !== null && data.myWeekBillablePct !== null && (
-            <>
-              <ProgressBar percent={(data.myWeekHours / profile.weekly_capacity_hours) * 100} className="mt-0.5" />
-              <span className="font-mono text-[11px] text-muted">{Math.round(data.myWeekBillablePct)}% faturáveis</span>
-            </>
           )}
         </Kpi>
         <Kpi
@@ -158,24 +137,6 @@ export default async function InicioPage() {
                 {data.myTasks.length === 0 && <div className="py-3 text-center text-[12.5px] text-faint">Nenhuma tarefa pendente atribuída a você.</div>}
               </>
             )}
-          </div>
-
-          <div className="mt-1 flex items-center justify-between">
-            <span className="label">CAPACIDADE DA EQUIPE</span>
-            <span className="font-mono text-[11px] text-muted">semana {isoWeekInAppTz(now)}</span>
-          </div>
-          <div className="flex flex-col gap-2.5">
-            {data.capacity === null && (
-              <div className="text-[12.5px] text-faint">Não foi possível carregar a capacidade da equipe.</div>
-            )}
-            {(data.capacity ?? []).map(({ profile: p, hours, target }) => (
-              <div key={p.id} className="grid grid-cols-[26px_76px_1fr_46px] items-center gap-2.5 text-[13px]">
-                <Avatar initials={p.initials} size="sm" />
-                <span className="truncate">{p.full_name.split(" ")[0]}</span>
-                <ProgressBar percent={(hours / target) * 100} danger={hours > target} />
-                <span className={`font-mono ${hours > target ? "text-red" : ""}`}>{hours.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}h</span>
-              </div>
-            ))}
           </div>
         </Card>
 

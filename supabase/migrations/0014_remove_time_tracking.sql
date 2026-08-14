@@ -1,0 +1,11 @@
+-- O cronômetro sai por decisão do dono do sistema (spec da Fase 3).
+-- A tabela some junto: manter tabela sem escritor é dívida que ninguém lembra.
+--
+-- `time_entries` já saiu da publicação de tempo real na 0013, então não há
+-- publicação a limpar. Antes de aplicar, foi conferido que nenhuma view,
+-- matview, função ou chave estrangeira de outra tabela referenciava a tabela —
+-- o `drop` não precisa de `cascade` e não deve levar nada junto.
+--
+-- Os índices (`time_entries_user_idx`, `time_entries_running_idx`, criados na
+-- 0001) e a política de RLS (0003) caem com a tabela.
+drop table if exists public.time_entries;

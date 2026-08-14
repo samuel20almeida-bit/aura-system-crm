@@ -90,15 +90,13 @@ export async function getClientDetail(id: string) {
     supabase.from("playbook_runs").select("*, playbook:playbooks(id, name)").eq("client_id", id),
   ]);
 
-  const timeEntriesRes = await supabase.from("time_entries").select("minutes").eq("client_id", id).not("minutes", "is", null);
-
   // PGRST116 no .single() é "nenhuma linha" — aí o cliente realmente não
   // existe e a página chama notFound(). Qualquer outro erro é falha de
   // consulta, e dizer "cliente não encontrado" seria mentira; o mesmo vale
   // para as consultas de apoio, cujas listas vazias significariam "esse
   // cliente não tem nada".
   const clientMissing = Boolean(clientRes.error) && clientRes.error?.code === "PGRST116";
-  const failures = [clientRes, contractsRes, invoicesRes, tasksRes, contactsRes, runsRes, timeEntriesRes].filter(
+  const failures = [clientRes, contractsRes, invoicesRes, tasksRes, contactsRes, runsRes].filter(
     (r) => r.error && !(r === clientRes && clientMissing)
   );
   if (failures.length > 0) {
@@ -116,7 +114,6 @@ export async function getClientDetail(id: string) {
   const contacts = contactsRes.data;
   const runs = runsRes.data;
 
-  const totalMinutes = (timeEntriesRes.data ?? []).reduce((s, t) => s + (t.minutes ?? 0), 0);
   const revenueTotal = (invoices ?? []).filter((i) => i.status === "paid").reduce((s, i) => s + Number(i.amount), 0);
 
   return {
@@ -127,7 +124,6 @@ export async function getClientDetail(id: string) {
     tasks: tasks ?? [],
     contacts: contacts ?? [],
     runs: runs ?? [],
-    totalMinutes,
     revenueTotal,
   };
 }

@@ -24,7 +24,7 @@ export async function getNotifications(userId: string): Promise<AppNotification[
   const today = todayInAppTz();
   const in30Days = new Date(new Date(today + "T00:00:00Z").getTime() + 30 * 86400000).toISOString().slice(0, 10);
 
-  const [invoicesRes, tasksRes, contractsRes, timerRes] = await Promise.all([
+  const [invoicesRes, tasksRes, contractsRes] = await Promise.all([
     supabase
       .from("invoices")
       .select("id, client_id, amount, due_date, status, client:clients(name)")
@@ -43,20 +43,9 @@ export async function getNotifications(userId: string): Promise<AppNotification[
       .not("end_date", "is", null)
       .lte("end_date", in30Days)
       .gte("end_date", today),
-    // Ordenar e limitar: se um race no startTimer deixar duas entradas abertas,
-    // um maybeSingle() cru devolve erro e o aviso de timer esquecido sumiria
-    // justamente quando os dados estão mais quebrados.
-    supabase
-      .from("time_entries")
-      .select("started_at")
-      .eq("user_id", userId)
-      .is("ended_at", null)
-      .order("started_at", { ascending: false })
-      .limit(1)
-      .maybeSingle(),
   ]);
 
-  const failure = [invoicesRes, tasksRes, contractsRes, timerRes].find((r) => r.error);
+  const failure = [invoicesRes, tasksRes, contractsRes].find((r) => r.error);
   if (failure) {
     console.error("[avisos] falha ao consultar o Supabase:", failure.error);
     return UNAVAILABLE;
@@ -79,7 +68,6 @@ export async function getNotifications(userId: string): Promise<AppNotification[
         clientName: c.client?.name ?? "Cliente",
         endDate: c.end_date!,
       })),
-      runningTimerStartedAt: timerRes.data?.started_at ?? null,
     },
     today
   );

@@ -1,19 +1,16 @@
 import { describe, it, expect } from "vitest";
-import { buildNotifications, FORGOTTEN_TIMER_MS, type NotificationInput } from "./notifications";
+import { buildNotifications, type NotificationInput } from "./notifications";
 
 const TODAY = "2026-08-03";
-/** Relógio fixo — os testes não podem depender da hora em que rodam. */
-const NOW = Date.parse("2026-08-03T18:00:00Z");
 
 const EMPTY: NotificationInput = {
   openInvoices: [],
   myOpenTasks: [],
   endingContracts: [],
-  runningTimerStartedAt: null,
 };
 
-function build(input: Partial<NotificationInput>, now = NOW) {
-  return buildNotifications({ ...EMPTY, ...input }, TODAY, now);
+function build(input: Partial<NotificationInput>) {
+  return buildNotifications({ ...EMPTY, ...input }, TODAY);
 }
 
 describe("buildNotifications", () => {
@@ -87,21 +84,9 @@ describe("buildNotifications", () => {
       ],
       myOpenTasks: [{ id: "t1", title: "Entregar relatório", dueDate: "2026-08-01" }],
       endingContracts: [{ id: "k1", clientId: "c9", clientName: "Vértice", endDate: "2026-08-28" }],
-      runningTimerStartedAt: new Date(NOW - 9 * 3600 * 1000).toISOString(),
     });
-    expect(result.map((n) => n.id)).toEqual(["fatura-i1", "tarefa-t1", "timer-esquecido", "contrato-k1"]);
-    expect(result.map((n) => n.tone)).toEqual(["red", "red", "amber", "neutral"]);
-  });
-
-  it("avisa sobre timer rodando há mais de 8 horas", () => {
-    const result = build({ runningTimerStartedAt: new Date(NOW - FORGOTTEN_TIMER_MS - 1000).toISOString() });
-    expect(result).toHaveLength(1);
-    expect(result[0].id).toBe("timer-esquecido");
-  });
-
-  it("ignora timer recente", () => {
-    const result = build({ runningTimerStartedAt: new Date(NOW - FORGOTTEN_TIMER_MS + 1000).toISOString() });
-    expect(result).toHaveLength(0);
+    expect(result.map((n) => n.id)).toEqual(["fatura-i1", "tarefa-t1", "contrato-k1"]);
+    expect(result.map((n) => n.tone)).toEqual(["red", "red", "neutral"]);
   });
 
   it("devolve lista vazia quando não há nada a fazer", () => {

@@ -761,67 +761,6 @@ export type Database = {
           },
         ]
       }
-      time_entries: {
-        Row: {
-          billable: boolean
-          client_id: string | null
-          created_at: string
-          ended_at: string | null
-          id: string
-          minutes: number | null
-          note: string | null
-          started_at: string
-          task_id: string | null
-          user_id: string
-        }
-        Insert: {
-          billable?: boolean
-          client_id?: string | null
-          created_at?: string
-          ended_at?: string | null
-          id?: string
-          minutes?: number | null
-          note?: string | null
-          started_at?: string
-          task_id?: string | null
-          user_id: string
-        }
-        Update: {
-          billable?: boolean
-          client_id?: string | null
-          created_at?: string
-          ended_at?: string | null
-          id?: string
-          minutes?: number | null
-          note?: string | null
-          started_at?: string
-          task_id?: string | null
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "time_entries_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "clients"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "time_entries_task_id_fkey"
-            columns: ["task_id"]
-            isOneToOne: false
-            referencedRelation: "tasks"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "time_entries_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
     }
     Views: {
       [_ in never]: never

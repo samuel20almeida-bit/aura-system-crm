@@ -23,13 +23,11 @@ export function KanbanClient({
   clients,
   profiles,
   checklistCounts,
-  runningTaskId,
 }: {
   tasks: TaskWithRelations[];
   clients: ClientLite[];
   profiles: Tables<"profiles">[];
   checklistCounts: Record<string, { done: number; total: number }>;
-  runningTaskId?: string | null;
 }) {
   const router = useRouter();
   const [view, setView] = useState<"board" | "list">("board");
@@ -165,7 +163,6 @@ export function KanbanClient({
             tasks={filtered}
             checklistCounts={checklistCounts}
             onOpenTask={openTask}
-            runningTaskId={runningTaskId}
             mobileColumn={mobileColumn}
           />
         </>

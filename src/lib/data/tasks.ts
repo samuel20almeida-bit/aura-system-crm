@@ -43,7 +43,6 @@ export async function getTaskDetail(id: string) {
     { data: checklist },
     { data: comments },
     { data: attachments },
-    { data: timeSpent },
     history,
   ] = await Promise.all([
     supabase
@@ -64,11 +63,8 @@ export async function getTaskDetail(id: string) {
       .eq("task_id", id)
       .order("created_at"),
     supabase.from("task_attachments").select("*").eq("task_id", id).order("created_at"),
-    supabase.from("time_entries").select("minutes").eq("task_id", id).not("minutes", "is", null),
     getTaskHistory(id),
   ]);
-
-  const totalMinutes = (timeSpent ?? []).reduce((sum, t) => sum + (t.minutes ?? 0), 0);
 
   const attachmentRows = attachments ?? [];
   const storagePaths = attachmentRows
@@ -94,7 +90,6 @@ export async function getTaskDetail(id: string) {
     checklist: checklist ?? [],
     comments: comments ?? [],
     attachments: resolvedAttachments,
-    totalMinutes,
     history,
   };
 }

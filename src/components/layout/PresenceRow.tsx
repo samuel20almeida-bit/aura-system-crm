@@ -4,8 +4,8 @@ import { usePresence, type Peer } from "@/lib/realtime/usePresence";
 import { Avatar } from "@/components/ui/Avatar";
 
 /**
- * "no Kanban", "no CRM", "em Horas" — o gênero do artigo varia com o rótulo
- * do menu (`Sidebar.tsx`). Cobre os seis nomes que existem hoje; um rótulo
+ * "no Kanban", "no CRM", "em Metas" — o gênero do artigo varia com o rótulo
+ * do menu (`Sidebar.tsx`). Cobre os cinco nomes que existem hoje; um rótulo
  * novo cai no padrão "em", que é sempre correto, só não o mais natural para
  * todos os casos.
  */

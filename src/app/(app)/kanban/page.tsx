@@ -2,8 +2,7 @@ import { PageBody } from "@/components/layout/PageBody";
 import { KanbanClient } from "@/components/kanban/KanbanClient";
 import { TaskDetailPanel } from "@/components/kanban/TaskDetailPanel";
 import { listClientsLite, listTasks, getTaskDetail } from "@/lib/data/tasks";
-import { listProfiles, requireProfile } from "@/lib/data/profile";
-import { getRunningTimer } from "@/lib/data/time";
+import { listProfiles } from "@/lib/data/profile";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function KanbanPage({
@@ -13,14 +12,12 @@ export default async function KanbanPage({
 }) {
   const { task: taskId } = await searchParams;
   const supabase = await createClient();
-  const { profile } = await requireProfile();
 
-  const [tasks, clients, profiles, { data: checklistRows }, runningTimer] = await Promise.all([
+  const [tasks, clients, profiles, { data: checklistRows }] = await Promise.all([
     listTasks(),
     listClientsLite(),
     listProfiles(),
     supabase.from("task_checklist_items").select("task_id, done"),
-    getRunningTimer(profile.id),
   ]);
 
   const checklistCounts: Record<string, { done: number; total: number }> = {};
@@ -29,8 +26,6 @@ export default async function KanbanPage({
     c.total += 1;
     if (row.done) c.done += 1;
   }
-
-  const runningTaskId = runningTimer?.task_id ?? null;
 
   const detail = taskId ? await getTaskDetail(taskId) : null;
 
@@ -41,7 +36,6 @@ export default async function KanbanPage({
         clients={clients}
         profiles={profiles}
         checklistCounts={checklistCounts}
-        runningTaskId={runningTaskId}
       />
       {detail?.task && <TaskDetailPanel detail={detail} profiles={profiles} />}
     </PageBody>

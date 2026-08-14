@@ -8,9 +8,18 @@ export function Skeleton({ className }: { className?: string }) {
 // ponto de um esqueleto: ocupar o mesmo espaço que o conteúdo real vai ocupar.
 // Fixas em 4 e 3 colunas, elas escapavam pela direita a 390px e a primeira
 // pintura de toda navegação no celular saltava para o empilhado logo depois.
+// As classes são literais porque o Tailwind lê o código-fonte: uma string
+// montada como `md:grid-cols-${count}` não geraria CSS nenhum.
+const KPI_ROW_COLS: Record<number, string> = {
+  3: "grid grid-cols-2 gap-3 md:grid-cols-3",
+  4: "grid grid-cols-2 gap-3 md:grid-cols-4",
+};
+
 export function SkeletonKpiRow({ count = 4 }: { count?: number }) {
   return (
-    <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+    // O esqueleto tem que ter a mesma contagem e a mesma grade da tela que ele
+    // cobre; divergir troca o desenho por um salto no momento em que os dados chegam.
+    <div className={KPI_ROW_COLS[count] ?? KPI_ROW_COLS[4]}>
       {Array.from({ length: count }).map((_, i) => (
         <div key={i} className="flex flex-col gap-2 rounded-xl border border-border bg-surface p-4">
           <Skeleton className="h-2.5 w-24" />

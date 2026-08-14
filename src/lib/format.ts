@@ -31,18 +31,6 @@ export function formatDate(value: string | Date, opts?: Intl.DateTimeFormatOptio
   }).format(date).replace(".", "");
 }
 
-export function formatHours(minutes: number): string {
-  const hours = minutes / 60;
-  return `${hours.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}h`;
-}
-
-export function formatDuration(seconds: number): string {
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = Math.floor(seconds % 60);
-  return [h, m, s].map((n) => String(n).padStart(2, "0")).join(":");
-}
-
 // `formatRelative` vivia aqui e foi removida: era um segundo formatador
 // relativo sobre o mesmo dado de `activity_log` que o painel da /início já
 // formata, com texto divergente ("há 3h" contra "há 3 h") e contando os dias
