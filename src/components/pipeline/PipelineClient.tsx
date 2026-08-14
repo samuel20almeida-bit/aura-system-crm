@@ -15,13 +15,20 @@ export function PipelineClient({
   negocios,
   profiles,
   unavailable = false,
+  negocioInicialId = null,
 }: {
   negocios: NegocioAberto[];
   profiles: { id: string; full_name: string }[];
   unavailable?: boolean;
+  /**
+   * Vem de `searchParams.negocio`, lido uma vez no server (mesmo padrão de
+   * `KanbanClient`/`kanban/page.tsx`: o server lê o parâmetro e passa como
+   * prop inicial, sem `useSearchParams` no cliente). Deep-link de `/hoje`.
+   */
+  negocioInicialId?: string | null;
 }) {
   const [mostrarNovo, setMostrarNovo] = useState(false);
-  const [idSelecionado, setIdSelecionado] = useState<string | null>(null);
+  const [idSelecionado, setIdSelecionado] = useState<string | null>(negocioInicialId);
 
   // Um instante só para a tela inteira: cartões, gaveta e resumo têm que
   // concordar sobre que horas são. Reancorado a cada leitura nova de `negocios`

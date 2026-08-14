@@ -11,8 +11,16 @@ import { listProfiles } from "@/lib/data/profile";
  * publicar é decisão consciente para quando o modelo estiver estável — o mesmo
  * raciocínio da migration 0013.
  */
-export default async function PipelinePage() {
-  const [dados, profiles] = await Promise.all([listNegociosAbertos(), listProfiles()]);
+export default async function PipelinePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ negocio?: string }>;
+}) {
+  const [{ negocio: negocioId }, dados, profiles] = await Promise.all([
+    searchParams,
+    listNegociosAbertos(),
+    listProfiles(),
+  ]);
 
   // Falha de leitura não pode tirar a capacidade de escrever: o quadro vira
   // aviso, o "+ Novo negócio" continua.
@@ -26,7 +34,7 @@ export default async function PipelinePage() {
 
   return (
     <PageBody>
-      <PipelineClient negocios={dados.negocios} profiles={profiles} />
+      <PipelineClient negocios={dados.negocios} profiles={profiles} negocioInicialId={negocioId ?? null} />
     </PageBody>
   );
 }

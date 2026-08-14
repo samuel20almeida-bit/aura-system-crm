@@ -8,11 +8,9 @@ import { CountUp } from "@/components/ui/CountUp";
 import { Unavailable } from "@/components/ui/Unavailable";
 import { requireProfile } from "@/lib/data/profile";
 import { getDashboardData } from "@/lib/data/dashboard";
-import { getNotifications } from "@/lib/data/notifications";
 import { getRecentActivity } from "@/lib/data/activity";
 import { listClientsLite } from "@/lib/data/tasks";
 import { listProfiles } from "@/lib/data/profile";
-import { ALL_CLEAR, TONE_BG } from "@/lib/notifications";
 import { describeActivity } from "@/lib/activity-feed";
 import { APP_TIMEZONE, currentHourInAppTz, isoWeekInAppTz } from "@/lib/timezone";
 
@@ -26,9 +24,8 @@ export default async function InicioPage() {
   const { profile } = await requireProfile();
   const now = new Date();
 
-  const [data, notifications, activityRows, clients, profiles] = await Promise.all([
+  const [data, activityRows, clients, profiles] = await Promise.all([
     getDashboardData(profile.id),
-    getNotifications(profile.id),
     getRecentActivity(),
     listClientsLite(),
     listProfiles(),
@@ -58,11 +55,6 @@ export default async function InicioPage() {
   const goalPct = monthlyGoal && data.monthRevenue !== null ? (data.monthRevenue / monthlyGoal) * 100 : null;
   // Um número que não pôde ser lido aparece como "—". Zero é uma afirmação.
   const DASH = "—";
-
-  // O card mostra os primeiros; o resto continua no sino, contado em voz alta.
-  const NEEDS_YOU_LIMIT = 4;
-  const needsYou = notifications.slice(0, NEEDS_YOU_LIMIT);
-  const needsYouRest = notifications.length - needsYou.length;
 
   return (
     <PageBody>
@@ -140,47 +132,15 @@ export default async function InicioPage() {
           </div>
         </Card>
 
-        <div className="flex min-h-0 flex-col gap-3">
-          {/* Mesma fonte do sino (buildNotifications), duas apresentações. Antes
-              eram duas listas com o mesmo título e a mesma frase de vazio: o
-              card cobria 2 categorias, o sino 5, e o card cortava em 2 sem
-              avisar — dava para ler "Tudo em dia por aqui." com seis tarefas
-              atrasadas no sino, logo acima. */}
-          <Card className="flex flex-col gap-2.5 p-4">
-            <span className="label">PRECISA DE VOCÊ</span>
-            {needsYou.length === 0 && <div className="text-[12.5px] text-faint">{ALL_CLEAR}</div>}
-            {needsYou.map((n) => {
-              const body = (
-                <>
-                  <span className={"w-[3px] flex-none self-stretch rounded " + TONE_BG[n.tone]} />
-                  <div className="min-w-0">
-                    <div className="truncate text-[13px] font-medium">{n.title}</div>
-                    <div className="font-mono text-[11px] text-muted">{n.detail}</div>
-                  </div>
-                </>
-              );
-              return n.href ? (
-                <Link key={n.id} href={n.href} className="flex items-start gap-2.5 hover:opacity-80">
-                  {body}
-                </Link>
-              ) : (
-                <div key={n.id} className="flex items-start gap-2.5">
-                  {body}
-                </div>
-              );
-            })}
-            {needsYouRest > 0 && (
-              <span className="font-mono text-[11px] text-faint">
-                +{needsYouRest} {needsYouRest === 1 ? "outro aviso" : "outros avisos"} no sino
-              </span>
-            )}
-          </Card>
-          {/* Monta sempre, mesmo em falha: é o único ponto do sistema que abre o
-              canal de tempo real, e trocá-lo por um <Unavailable> mataria a
-              atualização ao vivo da página inteira até alguém recarregar à mão.
-              O aviso de erro vive dentro do componente. */}
-          <LiveActivity items={activityItems ?? []} error={activityItems === null} />
-        </div>
+        {/* O card "PRECISA DE VOCÊ" saiu daqui na Task 5: era a mesma lista do
+            sino (buildNotifications), só que sem cobrir negócio/Pipeline —
+            duas apresentações da mesma fonte na mesma tela. `/hoje` agora é o
+            lugar único para negócio + tarefa; o sino aponta pra lá. Monta
+            sempre, mesmo em falha: é o único ponto do sistema que abre o canal
+            de tempo real, e trocá-lo por um <Unavailable> mataria a
+            atualização ao vivo da página inteira até alguém recarregar à mão.
+            O aviso de erro vive dentro do componente. */}
+        <LiveActivity items={activityItems ?? []} error={activityItems === null} />
       </div>
     </PageBody>
   );

@@ -79,6 +79,17 @@ export function NotificationBell({ notifications }: { notifications: AppNotifica
                 );
               })}
             </div>
+            {/* O sino cobre faturas/contratos (CRM antigo) + tarefas — não
+                negócio/Pipeline, que `getNotifications` nunca passou a
+                incluir. `/hoje` é quem unifica negócio + tarefa; este link só
+                aponta pra lá, não substitui os itens acima. */}
+            <Link
+              href="/hoje"
+              onClick={() => setOpen(false)}
+              className="block border-t border-border px-3.5 py-2.25 text-center font-mono text-[11px] text-muted hover:bg-neutral-tint hover:text-ink"
+            >
+              Ver tudo em /hoje
+            </Link>
           </div>
         </>
       )}
