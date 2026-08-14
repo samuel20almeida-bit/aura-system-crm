@@ -3,13 +3,14 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Slideover } from "@/components/ui/Overlay";
-import { Field, Input, Textarea } from "@/components/ui/Field";
+import { Field, Input, Select, Textarea } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Button";
 import { Avatar } from "@/components/ui/Avatar";
 import { useToast } from "@/components/ui/Toast";
 import { beginMutation } from "@/lib/realtime/mutation-gate";
-import { atualizarNegocio, ganharNegocio, perderNegocio } from "@/lib/actions/deals";
+import { atualizarNegocio, ganharNegocio, moverNegocioParaEstagio, perderNegocio } from "@/lib/actions/deals";
 import { diasParado, rotuloVencimento, saudeDoNegocio } from "@/lib/negocios";
+import { ESTAGIOS, type EstagioId } from "./PipelineBoard";
 import type { NegocioAberto } from "@/lib/data/deals";
 
 const ROTULO_DA_SAUDE = {
@@ -121,6 +122,26 @@ export function NegocioDrawer({
 
         <div className="flex flex-col gap-3.5">
           <div className="label">O NEGÓCIO</div>
+          {/* Único jeito de mudar de estágio sem arrastar: o quadro não tem
+              KeyboardSensor, e o arraste fica desabilitado no celular. Sem
+              isto, o Pipeline vira somente-leitura fora do desktop com mouse. */}
+          <Field label="ESTÁGIO">
+            <Select
+              value={negocio.estagio}
+              disabled={pendente}
+              onChange={(e) =>
+                executar("mover o negócio de estágio", () =>
+                  moverNegocioParaEstagio(negocio.id, e.target.value as EstagioId)
+                )
+              }
+            >
+              {ESTAGIOS.map((estagio) => (
+                <option key={estagio.id} value={estagio.id}>
+                  {estagio.label}
+                </option>
+              ))}
+            </Select>
+          </Field>
           <Field label="PRÓXIMO PASSO">
             <Textarea
               rows={2}

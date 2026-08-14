@@ -24,9 +24,17 @@ export function PipelineClient({
   const [idSelecionado, setIdSelecionado] = useState<string | null>(null);
 
   // Um instante só para a tela inteira: cartões, gaveta e resumo têm que
-  // concordar sobre que horas são. Fotografado uma vez para não mudar entre
-  // dois renders da mesma sessão (é o mesmo cuidado que o Kanban tem com "hoje").
-  const agora = useMemo(() => new Date(), []);
+  // concordar sobre que horas são. Reancorado a cada leitura nova de `negocios`
+  // — não fotografado uma vez para a vida inteira do componente. Com deps
+  // vazias, uma aba deixada aberta de um dia para o outro nunca envelhece: um
+  // negócio que cruzou os 7 dias parado continuaria desenhado "ok" mesmo depois
+  // de um router.refresh() trazer dados novos, porque o React preserva o
+  // estado do componente entre renders. A tela que existe para gritar sobre
+  // negócio esquecido ficaria ela mesma esquecida.
+  // `negocios` é usado como sinal de "leitura nova chegou", não como valor lido
+  // dentro do memo — daí o disable, na linha certa, logo antes do código.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const agora = useMemo(() => new Date(), [negocios]);
 
   const podres = negocios.filter(
     (n) =>

@@ -27,8 +27,13 @@ import type { Database } from "@/lib/supabase/database.types";
 /**
  * Os cinco estágios do funil, na ordem. **Não existe coluna de ganho**: ganhar é
  * passagem de bastão para a implantação, e mora na gaveta do negócio.
+ *
+ * Exportado para `NegocioDrawer.tsx` reusar nos rótulos do seletor de estágio —
+ * um segundo lugar com esses cinco nomes divergiria com o tempo, o mesmo
+ * raciocínio que já se aplicou ao cálculo de dias de calendário e ao
+ * movimento entre colunas nesta fase.
  */
-const ESTAGIOS = [
+export const ESTAGIOS = [
   { id: "lead", label: "LEAD" },
   { id: "contato", label: "CONTATO" },
   { id: "qualificado", label: "QUALIFICADO" },
@@ -36,7 +41,7 @@ const ESTAGIOS = [
   { id: "proposta", label: "PROPOSTA" },
 ] as const satisfies { id: Database["public"]["Enums"]["negocio_estagio"]; label: string }[];
 
-type EstagioId = (typeof ESTAGIOS)[number]["id"];
+export type EstagioId = (typeof ESTAGIOS)[number]["id"];
 const ESTAGIO_IDS = ESTAGIOS.map((e) => e.id);
 
 type EstadoDasColunas = Columns<NegocioAberto, EstagioId>;
