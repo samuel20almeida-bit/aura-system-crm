@@ -59,6 +59,14 @@ export function moduleFromPath(pathname: string): string | null {
 let instanciaMontada = false;
 
 /**
+ * Teto de recriações do canal e espera crescente entre elas. Ver o ramo CLOSED:
+ * sem teto, um `phx_close` repetido do servidor viraria um laço de join/close no
+ * ritmo do round-trip. Cinco tentativas, dobrando de 1s até 16s.
+ */
+const MAX_RECRIACOES = 5;
+const RECRIACAO_BASE_MS = 1_000;
+
+/**
  * Quem mais está online, e em que tela — recurso de canal do Supabase, não de
  * banco: não precisa de tabela, coluna nem migração.
  *
@@ -120,6 +128,7 @@ export function usePresence({
     instanciaMontada = true;
 
     let cancelado = false;
+    const temporizadores = new Set<ReturnType<typeof setTimeout>>();
     const supabase = createClient();
     const channel = supabase.channel(PRESENCE_TOPIC, {
       config: { private: true, presence: { key: userId } },
@@ -154,14 +163,28 @@ export function usePresence({
         subscribedRef.current = false;
         setPeers([]);
       } else if (status === "CLOSED") {
-        // CLOSED é diferente, e o comentário anterior mentia sobre isso: o
-        // `onClose` do phoenix RESETA o rejoinTimer, põe o estado em `closed` e
-        // tira o canal da lista do socket. Como o reingresso do `onOpen` exige
-        // `isErrored()`, nada ressuscita este canal — sem isto, a presença
-        // morreria calada até um recarregamento. Recriamos pela geração.
+        // CLOSED é diferente: o `onClose` do phoenix RESETA o rejoinTimer, põe o
+        // estado em `closed` e tira o canal da lista do socket. Como o reingresso
+        // do `onOpen` exige `isErrored()`, nada ressuscita este canal — sem
+        // recriar, a presença morreria calada até um recarregamento.
+        //
+        // Mas recriar SEM TETO é pior que não recriar. O CLOSED que chega aqui
+        // fora da limpeza é um `phx_close` vindo do servidor — token recusado no
+        // canal, limite de taxa, reinício do lado dele. Nesses casos o join
+        // seguinte é fechado de novo, e um `setGeracao` incondicional viraria
+        // laço de join/close no ritmo do round-trip, para sempre, sem nada na
+        // tela dizendo. Daí o teto e a espera crescente: tenta, desiste, e
+        // desistir é um estado honesto — a faixa some, como quando não há
+        // ninguém online.
         subscribedRef.current = false;
         setPeers([]);
-        setGeracao((g) => g + 1);
+        if (geracao < MAX_RECRIACOES) {
+          const espera = RECRIACAO_BASE_MS * 2 ** geracao;
+          const t = setTimeout(() => {
+            if (!cancelado) setGeracao((g) => g + 1);
+          }, espera);
+          temporizadores.add(t);
+        }
       }
     });
 
@@ -170,6 +193,8 @@ export function usePresence({
       // removeChannel abaixo — sem ele, cada desmontagem incrementaria a
       // geração e o efeito se recriaria em laço.
       cancelado = true;
+      for (const t of temporizadores) clearTimeout(t);
+      temporizadores.clear();
       subscribedRef.current = false;
       channelRef.current = null;
       instanciaMontada = false;

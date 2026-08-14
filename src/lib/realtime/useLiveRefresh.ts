@@ -12,8 +12,13 @@ export type TransportStatus = "conectando" | "ao-vivo" | "sem-conexao";
  * O que uma tela precisa saber para dizer a verdade sobre defasagem.
  *
  * `transport` sozinho mente: um canal perfeitamente vivo continua dizendo
- * "ao-vivo" enquanto o portão segura um refresh represado. Quem for desenhar a
- * faixa de aviso precisa das três informações juntas.
+ * "ao-vivo" enquanto o portão segura um refresh represado. Uma faixa de aviso
+ * honesta precisaria das três informações juntas. *
+ * NOTA DE ESCOPO — a Parte I parou em 3 de 7 tarefas. Hoje NADA lê este retorno:
+ * o único consumidor (`LiveActivity`) o descarta. A faixa de defasagem que
+ * usaria estes três campos era a Task 6, cancelada quando o negócio mudou de
+ * direção. Os campos ficam porque estão corretos e são exatamente o que uma
+ * faixa dessas precisaria — não porque exista uma.
  */
 export type LiveStatus = {
   transport: TransportStatus;
@@ -42,6 +47,12 @@ const MAX_DEFER_MS = 5_000;
  * sobrevive é estado derivado de props, como o `columns` do KanbanBoard: por
  * isso existe o contador de interação do `mutation-gate`, setado no
  * `onDragStart` do quadro.
+ *
+ * NOTA DE ESCOPO: essa proteção está posta À FRENTE de um Kanban ao vivo que a
+ * Parte I não chegou a entregar. Hoje este hook só é montado na /início, então
+ * nenhum refresh de tempo real alcança o quadro e o contador de interação nunca
+ * é consultado por lá. Não remova achando que é código morto: é o que torna
+ * seguro assinar `tasks` no dia em que o Kanban entrar.
  *
  * A opção `paused` continua aqui porque é útil e barata, mas ela não é a
  * garantia do arraste: o efeito que a sincroniza roda depois do commit e pode

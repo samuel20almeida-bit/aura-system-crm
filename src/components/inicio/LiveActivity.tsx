@@ -32,9 +32,13 @@ const REFRESH_INTERVAL_MS = 60_000;
  * exatamente na condição em que é mais útil. Montado, o próximo refresh cura o
  * painel sozinho.
  *
- * Vale como padrão, não como detalhe desta tela: quem pendurar a faixa de
- * defasagem neste mesmo mecanismo herdaria o acoplamento e ficaria mudo
- * justamente quando precisa falar.
+ * Vale como padrão, não como detalhe desta tela: qualquer coisa que venha a
+ * pendurar-se neste mecanismo herdaria o acoplamento e ficaria muda justamente
+ * quando precisa falar.
+ *
+ * NOTA DE ESCOPO: este é o ÚNICO consumidor de `useLiveRefresh` no app. A Parte I
+ * parou em 3 de 7 tarefas, então "ao vivo" é esta tela, não o sistema — Kanban,
+ * CRM, Metas e Horas continuam se comportando como antes, sem assinatura.
  */
 export function LiveActivity({ items, error = false }: { items: LiveActivityItem[]; error?: boolean }) {
   useLiveRefresh(["activity_log"]);

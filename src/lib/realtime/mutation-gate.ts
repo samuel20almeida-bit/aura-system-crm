@@ -82,6 +82,10 @@ export function isMutating(): boolean {
  * pode perder a corrida para um `setTimeout` já vencido. Chamado do
  * `onDragStart`, isto é manipulador de evento, não render: o contador sobe antes
  * de o React ter qualquer coisa a agendar.
+ *
+ * NOTA DE ESCOPO: hoje ninguém consulta este contador enquanto o Kanban está
+ * aberto, porque `useLiveRefresh` só é montado na /início — a Parte I parou em
+ * 3 de 7 e o Kanban ao vivo ficou de fora. A proteção é preventiva, não ativa.
  */
 export function beginInteraction(): () => void {
   return begin((delta) => {
