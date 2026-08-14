@@ -8,7 +8,10 @@ import { Avatar } from "@/components/ui/Avatar";
 import { Tag } from "@/components/ui/Tag";
 import { Button } from "@/components/ui/Button";
 import { ProgressBar } from "@/components/ui/Card";
-import { formatDate, formatRelative, daysUntil } from "@/lib/format";
+import { formatDate, daysUntil } from "@/lib/format";
+// Mesmas linhas de `activity_log` que o painel da /início mostra: mesmo
+// formatador, mesmo texto, mesmo fuso.
+import { formatActivityWhen } from "@/lib/activity-feed";
 import {
   addChecklistItem,
   addComment,
@@ -18,6 +21,7 @@ import {
   updateTask,
 } from "@/lib/actions/tasks";
 import { startTimer } from "@/lib/actions/time";
+import { beginMutation } from "@/lib/realtime/mutation-gate";
 import type { Tables } from "@/lib/supabase/database.types";
 import { useToast } from "@/components/ui/Toast";
 
@@ -68,8 +72,13 @@ export function TaskDetailPanel({ detail, profiles }: { detail: TaskDetail; prof
           value={t.status}
           onChange={(e) =>
             startTransition(async () => {
-              await updateTask(t.id, { status: e.target.value });
-              router.refresh();
+              const end = beginMutation();
+              try {
+                await updateTask(t.id, { status: e.target.value });
+                router.refresh();
+              } finally {
+                end();
+              }
             })
           }
           className="rounded-full border border-border bg-surface px-2.5 py-1 text-xs font-medium"
@@ -82,9 +91,13 @@ export function TaskDetailPanel({ detail, profiles }: { detail: TaskDetail; prof
           <button
             onClick={() =>
               startTransition(async () => {
-                if (confirm("Excluir esta tarefa?")) {
+                if (!confirm("Excluir esta tarefa?")) return;
+                const end = beginMutation();
+                try {
                   await deleteTask(t.id);
                   close();
+                } finally {
+                  end();
                 }
               })
             }
@@ -104,8 +117,13 @@ export function TaskDetailPanel({ detail, profiles }: { detail: TaskDetail; prof
           onBlur={(e) => {
             if (e.target.value.trim() && e.target.value !== t.title) {
               startTransition(async () => {
-                await updateTask(t.id, { title: e.target.value.trim() });
-                router.refresh();
+                const end = beginMutation();
+                try {
+                  await updateTask(t.id, { title: e.target.value.trim() });
+                  router.refresh();
+                } finally {
+                  end();
+                }
               });
             }
           }}
@@ -140,8 +158,13 @@ export function TaskDetailPanel({ detail, profiles }: { detail: TaskDetail; prof
                 value={t.assignee_id ?? ""}
                 onChange={(e) =>
                   startTransition(async () => {
-                    await updateTask(t.id, { assignee_id: e.target.value || null });
-                    router.refresh();
+                    const end = beginMutation();
+                    try {
+                      await updateTask(t.id, { assignee_id: e.target.value || null });
+                      router.refresh();
+                    } finally {
+                      end();
+                    }
                   })
                 }
                 className="rounded-lg border border-border bg-bone px-2 py-1.5 text-[13px]"
@@ -161,8 +184,13 @@ export function TaskDetailPanel({ detail, profiles }: { detail: TaskDetail; prof
                   defaultValue={t.due_date ?? ""}
                   onChange={(e) =>
                     startTransition(async () => {
-                      await updateTask(t.id, { due_date: e.target.value || null });
-                      router.refresh();
+                      const end = beginMutation();
+                      try {
+                        await updateTask(t.id, { due_date: e.target.value || null });
+                        router.refresh();
+                      } finally {
+                        end();
+                      }
                     })
                   }
                   className="rounded-lg border border-border bg-bone px-2 py-1.5 text-[13px]"
@@ -179,8 +207,13 @@ export function TaskDetailPanel({ detail, profiles }: { detail: TaskDetail; prof
                 value={t.priority}
                 onChange={(e) =>
                   startTransition(async () => {
-                    await updateTask(t.id, { priority: e.target.value });
-                    router.refresh();
+                    const end = beginMutation();
+                    try {
+                      await updateTask(t.id, { priority: e.target.value });
+                      router.refresh();
+                    } finally {
+                      end();
+                    }
                   })
                 }
                 className="rounded-lg border border-border bg-bone px-2 py-1.5 text-[13px]"
@@ -209,8 +242,13 @@ export function TaskDetailPanel({ detail, profiles }: { detail: TaskDetail; prof
                 disabled={pending}
                 onClick={() =>
                   startTransition(async () => {
-                    await startTimer(t.id, t.client_id);
-                    router.push("/horas");
+                    const end = beginMutation();
+                    try {
+                      await startTimer(t.id, t.client_id);
+                      router.push("/horas");
+                    } finally {
+                      end();
+                    }
                   })
                 }
               >
@@ -225,7 +263,12 @@ export function TaskDetailPanel({ detail, profiles }: { detail: TaskDetail; prof
                 placeholder="Sem descrição"
                 onBlur={(e) =>
                   startTransition(async () => {
-                    await updateTask(t.id, { description: e.target.value || null });
+                    const end = beginMutation();
+                    try {
+                      await updateTask(t.id, { description: e.target.value || null });
+                    } finally {
+                      end();
+                    }
                   })
                 }
                 rows={3}
@@ -253,11 +296,14 @@ export function TaskDetailPanel({ detail, profiles }: { detail: TaskDetail; prof
                       onClick={() =>
                         startTransition(async () => {
                           toggleOptimistic({ id: item.id, done: !item.done });
+                          const end = beginMutation();
                           try {
                             await toggleChecklistItem(item.id, !item.done);
                             router.refresh();
                           } catch {
                             notify("error", "Não foi possível atualizar a subtarefa. Tente novamente.");
+                          } finally {
+                            end();
                           }
                         })
                       }
@@ -273,11 +319,14 @@ export function TaskDetailPanel({ detail, profiles }: { detail: TaskDetail; prof
                     <button
                       onClick={() =>
                         startTransition(async () => {
+                          const end = beginMutation();
                           try {
                             await deleteChecklistItem(item.id);
                             router.refresh();
                           } catch {
                             notify("error", "Não foi possível remover a subtarefa. Tente novamente.");
+                          } finally {
+                            end();
                           }
                         })
                       }
@@ -292,9 +341,14 @@ export function TaskDetailPanel({ detail, profiles }: { detail: TaskDetail; prof
                     e.preventDefault();
                     if (!newItem.trim()) return;
                     startTransition(async () => {
-                      await addChecklistItem(t.id, newItem.trim());
-                      setNewItem("");
-                      router.refresh();
+                      const end = beginMutation();
+                      try {
+                        await addChecklistItem(t.id, newItem.trim());
+                        setNewItem("");
+                        router.refresh();
+                      } finally {
+                        end();
+                      }
                     });
                   }}
                   className="flex items-center gap-2"
@@ -346,7 +400,7 @@ export function TaskDetailPanel({ detail, profiles }: { detail: TaskDetail; prof
                     <b className="font-medium">{event.user?.full_name ?? "Alguém"}</b> {event.verb}
                     {event.detail ? ` ${event.detail}` : ""}
                   </span>
-                  <div className="mt-0.5 font-mono text-[11px] text-faint">{formatRelative(event.created_at)}</div>
+                  <div className="mt-0.5 font-mono text-[11px] text-faint">{formatActivityWhen(event.created_at)}</div>
                 </div>
               </div>
             ))}
@@ -359,9 +413,14 @@ export function TaskDetailPanel({ detail, profiles }: { detail: TaskDetail; prof
           e.preventDefault();
           if (!newComment.trim()) return;
           startTransition(async () => {
-            await addComment(t.id, newComment.trim());
-            setNewComment("");
-            router.refresh();
+            const end = beginMutation();
+            try {
+              await addComment(t.id, newComment.trim());
+              setNewComment("");
+              router.refresh();
+            } finally {
+              end();
+            }
           });
         }}
         className="flex items-center gap-2.5 border-t border-border px-5.5 py-3"

@@ -7,25 +7,22 @@ import { Avatar } from "@/components/ui/Avatar";
 import { TimerWidget, type RunningTimer } from "@/components/layout/TimerWidget";
 import { NotificationBell } from "@/components/layout/NotificationBell";
 import { MobileNavToggle } from "@/components/layout/Sidebar";
+import { PresenceRow } from "@/components/layout/PresenceRow";
+import { moduleFromPath } from "@/lib/realtime/usePresence";
 import type { AppNotification } from "@/lib/notifications";
-
-const crumbs: { match: RegExp; label: string }[] = [
-  { match: /^\/inicio/, label: "Início" },
-  { match: /^\/kanban/, label: "Kanban" },
-  { match: /^\/horas/, label: "Horas" },
-  { match: /^\/metas/, label: "Metas" },
-  { match: /^\/crm/, label: "CRM" },
-  { match: /^\/playbooks/, label: "Playbooks" },
-];
 
 type SearchResult = { type: "tarefa" | "cliente"; id: string; title: string; sub: string; href: string };
 
 export function Topbar({
+  userId,
+  fullName,
   initials,
   running,
   notifications,
   onMenuClick,
 }: {
+  userId: string;
+  fullName: string;
   initials: string;
   running: RunningTimer | null;
   notifications: AppNotification[];
@@ -33,7 +30,10 @@ export function Topbar({
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const crumb = crumbs.find((c) => c.match.test(pathname))?.label ?? "";
+  // Mesma fonte de rótulos que a presença usa (que por sua vez reusa navItems do
+  // Sidebar). O mapa de RegExp que vivia aqui era um segundo mapa rota→rótulo e
+  // já divergia: /^\/crm/ casava "/crmzada" como CRM.
+  const crumb = moduleFromPath(pathname) ?? "";
 
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -106,6 +106,8 @@ export function Topbar({
         <NotificationBell notifications={notifications} />
 
         <TimerWidget running={running} />
+
+        <PresenceRow userId={userId} name={fullName.split(" ")[0]} initials={initials} />
 
         <Avatar initials={initials} />
       </div>

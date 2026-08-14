@@ -43,18 +43,11 @@ export function formatDuration(seconds: number): string {
   return [h, m, s].map((n) => String(n).padStart(2, "0")).join(":");
 }
 
-export function formatRelative(dateStr: string): string {
-  const diffMs = Date.now() - new Date(dateStr).getTime();
-  const minutes = Math.floor(diffMs / 60000);
-  if (minutes < 1) return "agora";
-  if (minutes < 60) return `há ${minutes} min`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `há ${hours}h`;
-  const days = Math.floor(hours / 24);
-  if (days === 1) return "ontem";
-  if (days < 7) return `há ${days} dias`;
-  return formatDate(dateStr);
-}
+// `formatRelative` vivia aqui e foi removida: era um segundo formatador
+// relativo sobre o mesmo dado de `activity_log` que o painel da /início já
+// formata, com texto divergente ("há 3h" contra "há 3 h") e contando os dias
+// por horas corridas a partir de um `Date.now()` cru, sem passar pelo fuso.
+// O formatador que ficou é `formatActivityWhen`, em `src/lib/activity-feed.ts`.
 
 export function daysUntil(dateStr: string): number {
   const [ty, tm, td] = todayInAppTz().split("-").map(Number);

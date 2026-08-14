@@ -4,6 +4,7 @@ import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { addFileAttachment, addLinkAttachment, removeAttachment } from "@/lib/actions/tasks";
+import { beginMutation } from "@/lib/realtime/mutation-gate";
 import { useToast } from "@/components/ui/Toast";
 import { normalizeLinkUrl } from "@/lib/links";
 import type { Tables } from "@/lib/supabase/database.types";
@@ -53,6 +54,7 @@ export function Attachments({
       return;
     }
     startTransition(async () => {
+      const end = beginMutation();
       try {
         await addFileAttachment(taskId, file.name, path);
         notify("success", "Arquivo anexado.");
@@ -62,6 +64,8 @@ export function Attachments({
         // ele: invisível na interface, ocupando espaço para sempre.
         await supabase.storage.from("task-attachments").remove([path]);
         notify("error", "Não foi possível registrar o anexo.");
+      } finally {
+        end();
       }
     });
   }
@@ -89,11 +93,14 @@ export function Attachments({
             <button
               onClick={() =>
                 startTransition(async () => {
+                  const end = beginMutation();
                   try {
                     await removeAttachment(a.id);
                     router.refresh();
                   } catch {
                     notify("error", "Não foi possível remover o anexo.");
+                  } finally {
+                    end();
                   }
                 })
               }
@@ -142,6 +149,7 @@ export function Attachments({
               return;
             }
             startTransition(async () => {
+              const end = beginMutation();
               try {
                 await addLinkAttachment(taskId, linkName.trim() || normalized.url, normalized.url);
                 setLinkUrl("");
@@ -151,6 +159,8 @@ export function Attachments({
                 router.refresh();
               } catch {
                 notify("error", "Não foi possível anexar o link.");
+              } finally {
+                end();
               }
             });
           }}

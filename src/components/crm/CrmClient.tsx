@@ -11,6 +11,7 @@ import { NewClientModal, NewDealModal, NewInvoiceModal } from "./CrmModals";
 import { Unavailable } from "@/components/ui/Unavailable";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { markInvoiceStatus, updateDealStage } from "@/lib/actions/crm";
+import { beginMutation } from "@/lib/realtime/mutation-gate";
 import type { Tables } from "@/lib/supabase/database.types";
 import { useToast } from "@/components/ui/Toast";
 
@@ -201,10 +202,13 @@ export function CrmClient({
                         const stage = e.target.value;
                         startTransition(async () => {
                           setDealStageOptimistic({ id: d.id, stage });
+                          const end = beginMutation();
                           try {
                             await updateDealStage(d.id, stage);
                           } catch {
                             notify("error", "Não foi possível atualizar a etapa do negócio. Tente novamente.");
+                          } finally {
+                            end();
                           }
                         });
                       }}
@@ -262,10 +266,13 @@ export function CrmClient({
                       const status = e.target.value;
                       startTransition(async () => {
                         setInvoiceStatusOptimistic({ id: inv.id, status });
+                        const end = beginMutation();
                         try {
                           await markInvoiceStatus(inv.id, inv.client_id, status);
                         } catch {
                           notify("error", "Não foi possível atualizar o status da fatura. Tente novamente.");
+                        } finally {
+                          end();
                         }
                       });
                     }}

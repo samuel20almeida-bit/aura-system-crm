@@ -6,6 +6,7 @@ import { Modal } from "@/components/ui/Overlay";
 import { Field, Input, Select, Textarea } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Button";
 import { createTask } from "@/lib/actions/tasks";
+import { beginMutation } from "@/lib/realtime/mutation-gate";
 import type { Tables } from "@/lib/supabase/database.types";
 
 type ClientLite = { id: string; name: string; color: string; code_prefix: string };
@@ -34,18 +35,23 @@ export function NewTaskModal({
     e.preventDefault();
     if (!title.trim()) return;
     startTransition(async () => {
-      await createTask({
-        title: title.trim(),
-        clientId: isInternal ? null : clientId || null,
-        isInternal,
-        area: isInternal ? area : null,
-        priority,
-        assigneeId: assigneeId || null,
-        dueDate: dueDate || null,
-        description: description || null,
-      });
-      router.refresh();
-      onClose();
+      const end = beginMutation();
+      try {
+        await createTask({
+          title: title.trim(),
+          clientId: isInternal ? null : clientId || null,
+          isInternal,
+          area: isInternal ? area : null,
+          priority,
+          assigneeId: assigneeId || null,
+          dueDate: dueDate || null,
+          description: description || null,
+        });
+        router.refresh();
+        onClose();
+      } finally {
+        end();
+      }
     });
   }
 

@@ -6,6 +6,7 @@ import { Modal } from "@/components/ui/Overlay";
 import { Field, Input, Select } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Button";
 import { createClientRecord, createContract, createDeal, createInvoice } from "@/lib/actions/crm";
+import { beginMutation } from "@/lib/realtime/mutation-gate";
 import { useToast } from "@/components/ui/Toast";
 
 /** Sem isto, uma falha ao criar deixava a janela aberta e muda: o botão voltava
@@ -15,6 +16,7 @@ function useCreateHandler(onClose: () => void) {
   const router = useRouter();
   const { notify } = useToast();
   return async function run(what: string, action: () => Promise<unknown>) {
+    const end = beginMutation();
     try {
       await action();
       router.refresh();
@@ -22,6 +24,8 @@ function useCreateHandler(onClose: () => void) {
     } catch (error) {
       console.error(`[crm] falha ao criar ${what}:`, error);
       notify("error", `Não foi possível criar ${what}. Tente de novo — se persistir, me avise.`);
+    } finally {
+      end();
     }
   };
 }

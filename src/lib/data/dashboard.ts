@@ -27,7 +27,6 @@ export async function getDashboardData(userId: string) {
     unpaidInvoicesRes,
     paidInvoicesRes,
     revenueGoalRes,
-    activityRes,
   ] = await Promise.all([
     supabase.from("profiles").select("*"),
     supabase
@@ -53,7 +52,6 @@ export async function getDashboardData(userId: string) {
       .order("created_at", { ascending: true })
       .limit(1)
       .maybeSingle(),
-    supabase.from("activity_log").select("*, user:profiles(id, full_name, initials)").order("created_at", { ascending: false }).limit(6),
   ]);
 
   const openTasksWeekRes = await supabase
@@ -75,7 +73,6 @@ export async function getDashboardData(userId: string) {
     unpaidInvoicesRes,
     paidInvoicesRes,
     revenueGoalRes,
-    activityRes,
     openTasksWeekRes,
   ].filter((r) => r.error);
   if (failures.length > 0) {
@@ -126,7 +123,6 @@ export async function getDashboardData(userId: string) {
     revenueGoal: revenueGoalRes.error ? null : revenueGoalRes.data,
     overdueInvoices,
     overdueAmount,
-    activity: activityRes.error ? null : activityRes.data ?? [],
     openTasksThisWeek: openTasksWeekRes.error ? null : openTasksWeekRes.count ?? 0,
     /** Ao menos uma consulta falhou — a página avisa em vez de fingir normalidade. */
     unavailable: failures.length > 0,

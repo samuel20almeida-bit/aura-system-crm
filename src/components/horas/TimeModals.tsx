@@ -6,6 +6,7 @@ import { Modal } from "@/components/ui/Overlay";
 import { Field, Input, Select, Textarea } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Button";
 import { startTimer, logManualTime } from "@/lib/actions/time";
+import { beginMutation } from "@/lib/realtime/mutation-gate";
 
 type ClientLite = { id: string; name: string };
 type TaskLite = { id: string; title: string; client_id: string | null };
@@ -32,9 +33,14 @@ export function StartTimerModal({
         onSubmit={(e) => {
           e.preventDefault();
           startTransition(async () => {
-            await startTimer(taskId || null, clientId || null);
-            router.refresh();
-            onClose();
+            const end = beginMutation();
+            try {
+              await startTimer(taskId || null, clientId || null);
+              router.refresh();
+              onClose();
+            } finally {
+              end();
+            }
           });
         }}
         className="flex flex-col gap-3.5 p-5.5"
@@ -93,16 +99,21 @@ export function LogTimeModal({
           const minutes = Math.round(parseFloat(hours.replace(",", ".")) * 60);
           if (!minutes || minutes <= 0) return;
           startTransition(async () => {
-            await logManualTime({
-              taskId: taskId || null,
-              clientId: clientId || null,
-              minutes,
-              note: note || null,
-              billable,
-              date,
-            });
-            router.refresh();
-            onClose();
+            const end = beginMutation();
+            try {
+              await logManualTime({
+                taskId: taskId || null,
+                clientId: clientId || null,
+                minutes,
+                note: note || null,
+                billable,
+                date,
+              });
+              router.refresh();
+              onClose();
+            } finally {
+              end();
+            }
           });
         }}
         className="flex flex-col gap-3.5 p-5.5"

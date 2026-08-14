@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { NewContractModal, NewInvoiceModal } from "./CrmModals";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { addClientContact } from "@/lib/actions/crm";
+import { beginMutation } from "@/lib/realtime/mutation-gate";
 import { useRouter } from "next/navigation";
 
 export function ClientHeaderActions({ clientId }: { clientId: string }) {
@@ -29,10 +30,15 @@ export function ClientHeaderActions({ clientId }: { clientId: string }) {
               e.preventDefault();
               if (!note.trim()) return;
               startTransition(async () => {
-                await addClientContact(clientId, note.trim());
-                setNote("");
-                setModal(null);
-                router.refresh();
+                const end = beginMutation();
+                try {
+                  await addClientContact(clientId, note.trim());
+                  setNote("");
+                  setModal(null);
+                  router.refresh();
+                } finally {
+                  end();
+                }
               });
             }}
             className="flex w-full max-w-md flex-col gap-3 rounded-xl border border-border bg-surface p-5.5"

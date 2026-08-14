@@ -4,16 +4,18 @@ import { Kpi, Card, ProgressBar } from "@/components/ui/Card";
 import { Avatar } from "@/components/ui/Avatar";
 import { TaskQuickItem } from "@/components/inicio/TaskQuickItem";
 import { InicioActions } from "@/components/inicio/InicioActions";
+import { LiveActivity, type LiveActivityItem } from "@/components/inicio/LiveActivity";
 import { CountUp } from "@/components/ui/CountUp";
 import { Unavailable } from "@/components/ui/Unavailable";
 import { requireProfile } from "@/lib/data/profile";
 import { getDashboardData } from "@/lib/data/dashboard";
 import { getNotifications } from "@/lib/data/notifications";
+import { getRecentActivity } from "@/lib/data/activity";
 import { listClientsLite } from "@/lib/data/tasks";
 import { listProfiles } from "@/lib/data/profile";
 import { createClient } from "@/lib/supabase/server";
 import { ALL_CLEAR, TONE_BG } from "@/lib/notifications";
-import { formatRelative } from "@/lib/format";
+import { describeActivity } from "@/lib/activity-feed";
 import { APP_TIMEZONE, currentHourInAppTz, isoWeekInAppTz } from "@/lib/timezone";
 
 function greeting(hour: number) {
@@ -26,14 +28,28 @@ export default async function InicioPage() {
   const { profile } = await requireProfile();
   const now = new Date();
 
-  const [data, notifications, clients, profiles, supabase] = await Promise.all([
+  const [data, notifications, activityRows, clients, profiles, supabase] = await Promise.all([
     getDashboardData(profile.id),
     getNotifications(profile.id),
+    getRecentActivity(),
     listClientsLite(),
     listProfiles(),
     createClient(),
   ]);
   const tasksLite = (await supabase.from("tasks").select("id, title, client_id")).data ?? [];
+
+  // Descrito aqui, no servidor, com o relógio do servidor — não dentro do
+  // componente cliente. É o que garante que o primeiro quadro do cliente
+  // mostre exatamente o mesmo "há N min" que já foi enviado no HTML.
+  const activityItems: LiveActivityItem[] | null =
+    activityRows === null
+      ? null
+      : activityRows.map((row) => ({
+          id: row.id,
+          createdAt: row.created_at,
+          initials: row.user?.initials ?? null,
+          ...describeActivity(row, profile.id, now),
+        }));
 
   const dateLabel = new Intl.DateTimeFormat("pt-BR", {
     weekday: "long",
@@ -198,24 +214,11 @@ export default async function InicioPage() {
               </span>
             )}
           </Card>
-          <Card className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-hidden p-4">
-            <span className="label">ATIVIDADE RECENTE</span>
-            <div className="flex flex-col gap-2.5 overflow-y-auto scrollbar-thin text-[12.5px]">
-              {data.activity === null && <div className="text-faint">Não foi possível carregar a atividade recente.</div>}
-              {(data.activity ?? []).map((a) => (
-                <div key={a.id} className="flex gap-2.5">
-                  <Avatar initials={a.user?.initials} size="sm" ghost />
-                  <div>
-                    <span>
-                      {a.user_id === profile.id ? "Você" : a.user?.full_name ?? "Alguém"} {a.verb} {a.detail && <b className="font-medium">{a.detail}</b>}
-                    </span>
-                    <div className="mt-0.5 font-mono text-[11px] text-faint">{formatRelative(a.created_at)}</div>
-                  </div>
-                </div>
-              ))}
-              {data.activity !== null && data.activity.length === 0 && <div className="text-faint">Nenhuma atividade ainda.</div>}
-            </div>
-          </Card>
+          {/* Monta sempre, mesmo em falha: é o único ponto do sistema que abre o
+              canal de tempo real, e trocá-lo por um <Unavailable> mataria a
+              atualização ao vivo da página inteira até alguém recarregar à mão.
+              O aviso de erro vive dentro do componente. */}
+          <LiveActivity items={activityItems ?? []} error={activityItems === null} />
         </div>
       </div>
     </PageBody>

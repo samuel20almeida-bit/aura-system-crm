@@ -14,9 +14,14 @@ function shiftFromAppTz(date: Date): Date {
   return new Date(date.getTime() - OFFSET_MINUTES * 60000);
 }
 
-/** Today's calendar date in America/Sao_Paulo, as "YYYY-MM-DD". */
-export function todayInAppTz(): string {
-  const d = shiftToAppTz(new Date());
+/**
+ * Calendar date in America/Sao_Paulo, as "YYYY-MM-DD", for `date` (default:
+ * now). Parameterized so callers can ask "what day was this instant, in our
+ * timezone" — not just "what day is it now" — without reaching for a raw
+ * `new Date()` of their own.
+ */
+export function todayInAppTz(date: Date = new Date()): string {
+  const d = shiftToAppTz(date);
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(
     d.getUTCDate()
   ).padStart(2, "0")}`;
