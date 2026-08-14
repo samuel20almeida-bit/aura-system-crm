@@ -2,7 +2,7 @@
 // permite testar a frase e o tempo relativo sem navegador. Um import daqui
 // para dentro de código de cliente ou de Server Action deve continuar
 // funcionando sem trazer nenhuma dessas dependências.
-import { APP_TIMEZONE, todayInAppTz } from "./timezone";
+import { APP_TIMEZONE, calendarDaysBetweenInAppTz, todayInAppTz } from "./timezone";
 
 export type ActivityAuthor = { id: string; full_name: string; initials: string } | null;
 
@@ -72,12 +72,6 @@ function formatFullDate(date: Date, now: Date): string {
  * do relógio de São Paulo, e é por isso que a decisão passa pelos helpers de
  * `timezone.ts` em vez de aritmética direta sobre milissegundos.
  */
-function calendarDaysBetween(earlier: Date, later: Date): number {
-  const [ey, em, ed] = todayInAppTz(earlier).split("-").map(Number);
-  const [ly, lm, ld] = todayInAppTz(later).split("-").map(Number);
-  return Math.round((Date.UTC(ly, lm - 1, ld) - Date.UTC(ey, em - 1, ed)) / 86_400_000);
-}
-
 /**
  * Tempo relativo em pt-BR: "agora", "há N min" e "há N h" nas primeiras 24 h
  * corridas; passado isso, "ontem", "há N dias" ou a data cheia, decidido pelo
@@ -104,7 +98,7 @@ export function formatActivityWhen(createdAt: string, now: Date = new Date()): s
   const diffHours = Math.floor(diffMin / 60);
   if (diffHours < 24) return `há ${diffHours} h`;
 
-  const dayDiff = calendarDaysBetween(created, now);
+  const dayDiff = calendarDaysBetweenInAppTz(created, now);
   if (dayDiff <= 1) return "ontem";
   if (dayDiff < 7) return `há ${dayDiff} dias`;
   return formatFullDate(created, now);

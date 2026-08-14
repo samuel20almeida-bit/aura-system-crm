@@ -97,3 +97,18 @@ export function quarterRangeInAppTz(quarter: string): { start: Date; end: Date }
     end: shiftFromAppTz(new Date(Date.UTC(year, startMonth + 3, 1))),
   };
 }
+
+/**
+ * Dias de CALENDÁRIO entre duas datas, contados em São Paulo — não horas
+ * corridas divididas por 24. 23h de ontem para 1h de hoje é 1 dia, não 0.
+ *
+ * Vive aqui, e não dentro de quem usa, porque dois módulos já precisam dela
+ * (o tempo relativo da atividade e a saúde do negócio) e duas implementações
+ * do mesmo cálculo divergem — foi o que aconteceu com os dois formatadores de
+ * tempo relativo na Fase 2.
+ */
+export function calendarDaysBetweenInAppTz(earlier: Date, later: Date): number {
+  const [ey, em, ed] = todayInAppTz(earlier).split("-").map(Number);
+  const [ly, lm, ld] = todayInAppTz(later).split("-").map(Number);
+  return Math.round((Date.UTC(ly, lm - 1, ld) - Date.UTC(ey, em - 1, ed)) / 86_400_000);
+}
