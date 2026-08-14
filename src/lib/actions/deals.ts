@@ -31,6 +31,14 @@ export async function criarContaComNegocio(input: {
   proximoPassoEm: string | null;
   donoId: string | null;
 }) {
+  // Servidor confere o que a tela já valida: Server Action é endpoint HTTP,
+  // não confia só no `required` do formulário. Mesma disciplina do motivo de
+  // perda em `perderNegocio`.
+  const nomeLimpo = input.nome.trim();
+  if (!nomeLimpo) throw new Error("O nome da conta é obrigatório.");
+  if ((input.setup ?? 0) < 0) throw new Error("O setup não pode ser negativo.");
+  if ((input.mrr ?? 0) < 0) throw new Error("A mensalidade não pode ser negativa.");
+
   const supabase = await createClient();
 
   const { data: conta, error: contaError } = await supabase
@@ -90,6 +98,11 @@ export async function atualizarNegocio(input: {
   setup: number | null;
   mrr: number | null;
 }) {
+  // Os inputs da gaveta têm `min="0"`, mas os botões não estão dentro de um
+  // `<form>` — a restrição nativa do navegador nunca dispara. Confere aqui.
+  if ((input.setup ?? 0) < 0) throw new Error("O setup não pode ser negativo.");
+  if ((input.mrr ?? 0) < 0) throw new Error("A mensalidade não pode ser negativa.");
+
   const supabase = await createClient();
 
   const { error } = await supabase
@@ -114,27 +127,40 @@ export async function atualizarNegocio(input: {
  * NÃO nasce linha de implantação aqui — a tabela `implantacoes` é da Fase 3B e
  * ainda não existe. Até ela existir, o negócio ganho fica sem tela, o que é
  * esperado e está registrado no ledger da fase.
+ *
+ * A ORDEM DAS DUAS ESCRITAS IMPORTA. A conta é atualizada PRIMEIRO, e o
+ * negócio (que tira ele do quadro, via `resultado is null` na leitura) por
+ * último. Se a segunda falhar, o negócio continua visível e o botão continua
+ * clicável — o usuário só tenta de novo, e atualizar `contas.fase` outra vez é
+ * inofensivo. Na ordem inversa, uma falha na segunda escrita deixaria o
+ * negócio marcado como ganho e já invisível no quadro, mas a conta parada em
+ * "prospect" — inconsistente e sem nenhuma tela para consertar, porque a 3B
+ * não existe ainda.
  */
 export async function ganharNegocio(negocioId: string) {
   const supabase = await createClient();
   const hoje = todayInAppTz();
 
-  // A conta vem da linha atualizada, não do cliente: Server Action é endpoint
-  // HTTP, e um par (negócio, conta) dessincronizado mudaria a fase da conta
-  // errada. É a mesma disciplina de `removeAttachment` com o caminho do anexo.
-  const { data: negocio, error } = await supabase
+  // Leitura, sem mutação: só para saber qual conta atualizar. Se falhar,
+  // nada aconteceu ainda.
+  const { data: negocio, error: leituraError } = await supabase
     .from("negocios")
-    .update({ resultado: "ganho", fechado_em: hoje, mexido_em: new Date().toISOString() })
-    .eq("id", negocioId)
     .select("conta_id")
+    .eq("id", negocioId)
     .single();
-  if (error) throw error;
+  if (leituraError) throw leituraError;
 
   const { error: contaError } = await supabase
     .from("contas")
     .update({ fase: "implantacao" })
     .eq("id", negocio.conta_id);
   if (contaError) throw contaError;
+
+  const { error } = await supabase
+    .from("negocios")
+    .update({ resultado: "ganho", fechado_em: hoje, mexido_em: new Date().toISOString() })
+    .eq("id", negocioId);
+  if (error) throw error;
 
   revalidatePath("/pipeline");
 }
@@ -148,7 +174,22 @@ export async function perderNegocio(negocioId: string, motivo: string) {
   const supabase = await createClient();
   const hoje = todayInAppTz();
 
-  const { data: negocio, error } = await supabase
+  // Mesma ordem e mesmo motivo de `ganharNegocio`: a conta primeiro, o
+  // negócio (que sai do quadro) por último.
+  const { data: negocio, error: leituraError } = await supabase
+    .from("negocios")
+    .select("conta_id")
+    .eq("id", negocioId)
+    .single();
+  if (leituraError) throw leituraError;
+
+  const { error: contaError } = await supabase
+    .from("contas")
+    .update({ fase: "perdido" })
+    .eq("id", negocio.conta_id);
+  if (contaError) throw contaError;
+
+  const { error } = await supabase
     .from("negocios")
     .update({
       resultado: "perdido",
@@ -156,16 +197,8 @@ export async function perderNegocio(negocioId: string, motivo: string) {
       fechado_em: hoje,
       mexido_em: new Date().toISOString(),
     })
-    .eq("id", negocioId)
-    .select("conta_id")
-    .single();
+    .eq("id", negocioId);
   if (error) throw error;
-
-  const { error: contaError } = await supabase
-    .from("contas")
-    .update({ fase: "perdido" })
-    .eq("id", negocio.conta_id);
-  if (contaError) throw contaError;
 
   revalidatePath("/pipeline");
 }
