@@ -22,11 +22,7 @@ export type NotificationInput = {
   }[];
   myOpenTasks: { id: string; title: string; dueDate: string | null }[];
   endingContracts: { id: string; clientId: string; clientName: string; endDate: string }[];
-  runningTimerStartedAt: string | null;
 };
-
-/** Um timer aberto por mais tempo que isto foi provavelmente esquecido. */
-export const FORGOTTEN_TIMER_MS = 8 * 3600 * 1000;
 
 /**
  * O sino e o card "PRECISA DE VOCÊ" da /início são duas apresentações da mesma
@@ -44,11 +40,7 @@ export const TONE_BG: Record<AppNotification["tone"], string> = {
 
 const TONE_ORDER: Record<AppNotification["tone"], number> = { red: 0, amber: 1, neutral: 2 };
 
-export function buildNotifications(
-  input: NotificationInput,
-  today: string,
-  now: number = Date.now()
-): AppNotification[] {
+export function buildNotifications(input: NotificationInput, today: string): AppNotification[] {
   const out: AppNotification[] = [];
 
   for (const invoice of input.openInvoices) {
@@ -91,19 +83,6 @@ export function buildNotifications(
       detail: `Até ${formatDate(contract.endDate)}`,
       href: `/crm/${contract.clientId}`,
     });
-  }
-
-  if (input.runningTimerStartedAt) {
-    const elapsed = now - new Date(input.runningTimerStartedAt).getTime();
-    if (elapsed > FORGOTTEN_TIMER_MS) {
-      out.push({
-        id: "timer-esquecido",
-        tone: "amber",
-        title: "Timer rodando há mais de 8 horas",
-        detail: "Provavelmente esquecido — confira antes que distorça a rentabilidade",
-        href: "/horas",
-      });
-    }
   }
 
   // Ordena por urgência (vermelho → âmbar → neutro). `sort` é estável, então a

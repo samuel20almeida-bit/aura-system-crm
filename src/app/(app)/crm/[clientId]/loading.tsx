@@ -11,7 +11,7 @@ export default function Loading() {
           <Skeleton className="h-3 w-64" />
         </div>
       </div>
-      <SkeletonKpiRow />
+      <SkeletonKpiRow count={3} />
       <div className="grid flex-1 grid-cols-1 gap-3.5 md:grid-cols-[1.6fr_1fr]">
         <div className="flex flex-col gap-3.5">
           {Array.from({ length: 3 }).map((_, i) => (

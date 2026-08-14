@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Topbar } from "@/components/layout/Topbar";
-import type { RunningTimer } from "@/components/layout/TimerWidget";
 import type { AppNotification } from "@/lib/notifications";
 
 /**
@@ -15,13 +14,11 @@ import type { AppNotification } from "@/lib/notifications";
 export function AppShell({
   profile,
   counts,
-  running,
   notifications,
   children,
 }: {
   profile: { id: string; full_name: string; role_title: string | null; initials: string };
   counts: { openTasks: number | null; overdueInvoices: number | null };
-  running: RunningTimer | null;
   notifications: AppNotification[];
   children: React.ReactNode;
 }) {
@@ -37,7 +34,6 @@ export function AppShell({
           userId={profile.id}
           fullName={profile.full_name}
           initials={profile.initials}
-          running={running}
           notifications={notifications}
           onMenuClick={() => setOpen(true)}
         />

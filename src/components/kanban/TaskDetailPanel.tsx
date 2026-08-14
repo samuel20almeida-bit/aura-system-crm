@@ -20,7 +20,6 @@ import {
   toggleChecklistItem,
   updateTask,
 } from "@/lib/actions/tasks";
-import { startTimer } from "@/lib/actions/time";
 import { beginMutation } from "@/lib/realtime/mutation-gate";
 import type { Tables } from "@/lib/supabase/database.types";
 import { useToast } from "@/components/ui/Toast";
@@ -35,7 +34,6 @@ type TaskDetail = {
   checklist: (Tables<"task_checklist_items"> & { assignee: { id: string; full_name: string; initials: string } | null })[];
   comments: (Tables<"task_comments"> & { author: { id: string; full_name: string; initials: string } | null })[];
   attachments: Tables<"task_attachments">[];
-  totalMinutes: number;
   history: (Tables<"activity_log"> & { user: { id: string; full_name: string; initials: string } | null })[];
 };
 
@@ -222,38 +220,6 @@ export function TaskDetailPanel({ detail, profiles }: { detail: TaskDetail; prof
                 <option value="medium">Média</option>
                 <option value="high">Alta</option>
               </select>
-            </div>
-
-            <div className="flex items-center gap-3.5 rounded-[10px] border border-border bg-bone p-3">
-              <div className="flex-1">
-                <div className="label">TEMPO REGISTRADO</div>
-                <div className="text-base font-semibold">
-                  {(detail.totalMinutes / 60).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}h
-                  {t.estimated_hours ? (
-                    <span className="text-xs font-normal text-muted"> de {t.estimated_hours}h estimadas</span>
-                  ) : null}
-                </div>
-                {t.estimated_hours ? (
-                  <ProgressBar percent={(detail.totalMinutes / 60 / t.estimated_hours) * 100} className="mt-1.5" />
-                ) : null}
-              </div>
-              <Button
-                variant="ghost"
-                disabled={pending}
-                onClick={() =>
-                  startTransition(async () => {
-                    const end = beginMutation();
-                    try {
-                      await startTimer(t.id, t.client_id);
-                      router.push("/horas");
-                    } finally {
-                      end();
-                    }
-                  })
-                }
-              >
-                ▶ Iniciar
-              </Button>
             </div>
 
             <div>

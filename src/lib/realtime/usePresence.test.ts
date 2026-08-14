@@ -5,7 +5,6 @@ describe("moduleFromPath", () => {
   it("traduz uma rota de topo para o rótulo do menu", () => {
     expect(moduleFromPath("/kanban")).toBe("Kanban");
     expect(moduleFromPath("/inicio")).toBe("Início");
-    expect(moduleFromPath("/horas")).toBe("Horas");
     expect(moduleFromPath("/metas")).toBe("Metas");
     expect(moduleFromPath("/crm")).toBe("CRM");
     expect(moduleFromPath("/playbooks")).toBe("Playbooks");

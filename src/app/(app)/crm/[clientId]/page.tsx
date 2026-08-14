@@ -28,7 +28,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ c
     );
   }
 
-  const { client, contracts, invoices, tasks, contacts, runs, totalMinutes, revenueTotal } = detail;
+  const { client, contracts, invoices, tasks, contacts, runs, revenueTotal } = detail;
 
   if (!client) notFound();
 
@@ -61,11 +61,10 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ c
         <Link href="/crm" className="hover:text-ink">← Voltar para CRM</Link>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
         <Kpi label="RECEITA ACUMULADA" value={formatCurrency(revenueTotal)} />
         <Kpi label="CONTRATOS ATIVOS" value={contracts.filter((c) => c.status === "active").length} />
         <Kpi label="TAREFAS ATIVAS" value={activeTasks.length} />
-        <Kpi label="HORAS REGISTRADAS" value={`${(totalMinutes / 60).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}h`} />
       </div>
 
       <div className="grid flex-1 grid-cols-1 gap-3.5 overflow-hidden md:grid-cols-[1.6fr_1fr]">

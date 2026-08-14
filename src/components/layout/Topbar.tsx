@@ -4,7 +4,6 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Avatar } from "@/components/ui/Avatar";
-import { TimerWidget, type RunningTimer } from "@/components/layout/TimerWidget";
 import { NotificationBell } from "@/components/layout/NotificationBell";
 import { MobileNavToggle } from "@/components/layout/Sidebar";
 import { PresenceRow } from "@/components/layout/PresenceRow";
@@ -17,14 +16,12 @@ export function Topbar({
   userId,
   fullName,
   initials,
-  running,
   notifications,
   onMenuClick,
 }: {
   userId: string;
   fullName: string;
   initials: string;
-  running: RunningTimer | null;
   notifications: AppNotification[];
   onMenuClick: () => void;
 }) {
@@ -104,8 +101,6 @@ export function Topbar({
 
       <div className="ml-auto flex items-center gap-3 md:ml-0 md:contents">
         <NotificationBell notifications={notifications} />
-
-        <TimerWidget running={running} />
 
         <PresenceRow userId={userId} name={fullName.split(" ")[0]} initials={initials} />
 

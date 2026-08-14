@@ -51,7 +51,6 @@ function Column({
   tasks,
   checklistCounts,
   onOpen,
-  runningTaskId,
   dragDisabled,
 }: {
   id: ColumnId;
@@ -59,7 +58,6 @@ function Column({
   tasks: TaskWithRelations[];
   checklistCounts: Record<string, { done: number; total: number }>;
   onOpen: (id: string) => void;
-  runningTaskId?: string | null;
   dragDisabled?: boolean;
 }) {
   const { setNodeRef } = useDroppable({ id });
@@ -77,7 +75,6 @@ function Column({
               task={task}
               checklistSummary={checklistSummaryFor(task.id, checklistCounts)}
               onOpen={() => onOpen(task.id)}
-              isRunning={task.id === runningTaskId}
               dragDisabled={dragDisabled}
             />
           ))}
@@ -96,13 +93,11 @@ export function KanbanBoard({
   tasks,
   checklistCounts,
   onOpenTask,
-  runningTaskId,
   mobileColumn,
 }: {
   tasks: TaskWithRelations[];
   checklistCounts: Record<string, { done: number; total: number }>;
   onOpenTask: (id: string) => void;
-  runningTaskId?: string | null;
   mobileColumn: ColumnId;
 }) {
   const [prevTasks, setPrevTasks] = useState(tasks);
@@ -271,7 +266,6 @@ export function KanbanBoard({
               tasks={columns[col.id]}
               checklistCounts={checklistCounts}
               onOpen={onOpenTask}
-              runningTaskId={runningTaskId}
               dragDisabled={isMobile}
             />
           </div>
@@ -283,7 +277,6 @@ export function KanbanBoard({
             task={activeTask}
             checklistSummary={checklistSummaryFor(activeTask.id, checklistCounts)}
             onOpen={() => {}}
-            isRunning={activeTask.id === runningTaskId}
           />
         ) : null}
       </DragOverlay>

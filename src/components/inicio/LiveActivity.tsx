@@ -38,7 +38,7 @@ const REFRESH_INTERVAL_MS = 60_000;
  *
  * NOTA DE ESCOPO: este é o ÚNICO consumidor de `useLiveRefresh` no app. A Parte I
  * parou em 3 de 7 tarefas, então "ao vivo" é esta tela, não o sistema — Kanban,
- * CRM, Metas e Horas continuam se comportando como antes, sem assinatura.
+ * CRM, Metas e Playbooks continuam se comportando como antes, sem assinatura.
  */
 export function LiveActivity({ items, error = false }: { items: LiveActivityItem[]; error?: boolean }) {
   useLiveRefresh(["activity_log"]);
@@ -47,8 +47,7 @@ export function LiveActivity({ items, error = false }: { items: LiveActivityItem
   // sempre `item.when`, o valor que o servidor já calculou e mandou no HTML.
   // Se em vez disso o primeiro render chamasse `formatActivityWhen(..., new
   // Date())`, o servidor e o cliente calculariam o relativo em instantes
-  // reais diferentes — a mesma armadilha que o TimerWidget evita começando
-  // `elapsedMs` em 0 e só corrigindo depois de montado, num efeito.
+  // reais diferentes: o valor do servidor é a única fonte até o cliente montar.
   const [clientNow, setClientNow] = useState<number | null>(null);
 
   useEffect(() => {
