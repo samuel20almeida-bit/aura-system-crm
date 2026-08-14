@@ -1,7 +1,13 @@
-export type ColumnId = "todo" | "in_progress" | "done";
-export type Columns<T> = Record<ColumnId, T[]>;
-
-const COLUMN_IDS: ColumnId[] = ["todo", "in_progress", "done"];
+/**
+ * Movimento otimista entre colunas, genérico no conjunto de colunas.
+ *
+ * Era fixo em `"todo" | "in_progress" | "done"` até o Pipeline precisar de
+ * cinco colunas diferentes (`negocio_estagio`). Generalizar aqui, em vez de
+ * copiar um segundo módulo quase idêntico para o Pipeline, é o mesmo raciocínio
+ * que já se aplicou ao cálculo de dias de calendário: duas implementações do
+ * mesmo mecanismo divergem com o tempo.
+ */
+export type Columns<T, C extends string = string> = Record<C, T[]>;
 
 export function reorderWithin<T extends { id: string }>(items: T[], activeId: string, overId: string): T[] {
   const from = items.findIndex((i) => i.id === activeId);
@@ -14,20 +20,25 @@ export function reorderWithin<T extends { id: string }>(items: T[], activeId: st
 }
 
 /** Coluna que contém `id`, ou `null` se nenhuma contém. */
-export function findColumnIn<T extends { id: string }>(columns: Columns<T>, id: string): ColumnId | null {
-  for (const col of COLUMN_IDS) {
+export function findColumnIn<T extends { id: string }, C extends string>(
+  columns: Columns<T, C>,
+  columnIds: readonly C[],
+  id: string
+): C | null {
+  for (const col of columnIds) {
     if (columns[col].some((item) => item.id === id)) return col;
   }
   return null;
 }
 
-export function moveItem<T extends { id: string }>(
-  columns: Columns<T>,
+export function moveItem<T extends { id: string }, C extends string>(
+  columns: Columns<T, C>,
+  columnIds: readonly C[],
   itemId: string,
-  toColumn: ColumnId,
+  toColumn: C,
   beforeItemId: string | null
-): Columns<T> {
-  const fromColumn = COLUMN_IDS.find((id) => columns[id].some((i) => i.id === itemId));
+): Columns<T, C> {
+  const fromColumn = columnIds.find((id) => columns[id].some((i) => i.id === itemId));
   if (!fromColumn) return columns;
 
   if (fromColumn === toColumn && beforeItemId) {

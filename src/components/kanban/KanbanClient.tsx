@@ -11,7 +11,7 @@ import { formatDate } from "@/lib/format";
 import { addDaysToDateStr, todayInAppTz } from "@/lib/timezone";
 import type { TaskWithRelations } from "@/lib/data/tasks";
 import type { Tables } from "@/lib/supabase/database.types";
-import type { ColumnId } from "@/lib/optimistic";
+import type { ColumnId } from "./KanbanBoard";
 
 type ClientLite = { id: string; name: string; color: string; code_prefix: string };
 

@@ -20,7 +20,7 @@ import { TaskCard } from "./TaskCard";
 import { updateTaskPosition } from "@/lib/actions/tasks";
 import { beginInteraction, beginMutation } from "@/lib/realtime/mutation-gate";
 import type { TaskWithRelations } from "@/lib/data/tasks";
-import { moveItem, reorderWithin, findColumnIn, type Columns, type ColumnId as OptimisticColumnId } from "@/lib/optimistic";
+import { moveItem, reorderWithin, findColumnIn, type Columns } from "@/lib/optimistic";
 import { useToast } from "@/components/ui/Toast";
 import { useMediaQuery } from "@/lib/use-media-query";
 
@@ -28,10 +28,15 @@ const COLUMNS = [
   { id: "todo", label: "A FAZER" },
   { id: "in_progress", label: "EM ANDAMENTO" },
   { id: "done", label: "FINALIZADAS" },
-] as const satisfies { id: OptimisticColumnId; label: string }[];
+] as const satisfies { id: string; label: string }[];
 
-type ColumnId = OptimisticColumnId;
-type ColumnsState = Columns<TaskWithRelations>;
+const COLUMN_IDS = COLUMNS.map((c) => c.id);
+
+/** As três colunas do Kanban. Antes vivia em `@/lib/optimistic`, mas esse
+ *  módulo virou genérico quando o Pipeline precisou de cinco colunas
+ *  diferentes — o tipo específico do Kanban pertence ao Kanban. */
+export type ColumnId = (typeof COLUMNS)[number]["id"];
+type ColumnsState = Columns<TaskWithRelations, ColumnId>;
 
 function groupTasks(tasks: TaskWithRelations[]): ColumnsState {
   return {
@@ -186,7 +191,7 @@ export function KanbanBoard({
     const overCol = findColumnOf(String(over.id));
     if (!activeCol || !overCol || activeCol === overCol) return;
 
-    setColumns((prev) => moveItem(prev, String(active.id), overCol, String(over.id)));
+    setColumns((prev) => moveItem(prev, COLUMN_IDS, String(active.id), overCol, String(over.id)));
   }
 
   function handleDragEnd(e: DragEndEvent) {
@@ -219,7 +224,7 @@ export function KanbanBoard({
     // A coluna de origem vem do estado do início do arraste, não do atual:
     // handleDragOver já pode ter movido o card, e ler o estado corrente faria
     // reorderWithin rodar uma segunda vez sobre o mesmo par, invertendo a posição.
-    const originCol = startColumns ? findColumnIn(startColumns, String(active.id)) : null;
+    const originCol = startColumns ? findColumnIn(startColumns, COLUMN_IDS, String(active.id)) : null;
 
     let finalColumns = columns;
     if (originCol === overCol && active.id !== over.id) {
