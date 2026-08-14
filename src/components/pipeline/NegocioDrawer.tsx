@@ -89,6 +89,14 @@ export function NegocioDrawer({
     return Number.isFinite(numero) ? numero : null;
   }
 
+  // Os campos têm `min="0"`, mas os botões não estão dentro de um `<form>` — a
+  // restrição nativa do navegador nunca dispara. O servidor recusa o valor
+  // negativo, mas sem isto o toast de erro que o usuário veria é o genérico
+  // ("não foi possível salvar"), que não diz o que corrigir. Barrar aqui é o
+  // mesmo raciocínio do botão "Confirmar perda", desabilitado até o motivo
+  // deixar de estar vazio.
+  const valoresInvalidos = (numeroOuNulo(setup) ?? 0) < 0 || (numeroOuNulo(mrr) ?? 0) < 0;
+
   return (
     <Slideover onClose={onClose}>
       <div className="flex items-start gap-2.5 border-b border-border px-5.5 py-4">
@@ -206,7 +214,7 @@ export function NegocioDrawer({
         ) : (
           <>
             <Button
-              disabled={pendente}
+              disabled={pendente || valoresInvalidos}
               onClick={() =>
                 executar("salvar o próximo passo", () =>
                   atualizarNegocio({

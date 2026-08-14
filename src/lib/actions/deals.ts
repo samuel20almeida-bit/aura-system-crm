@@ -44,7 +44,7 @@ export async function criarContaComNegocio(input: {
   const { data: conta, error: contaError } = await supabase
     .from("contas")
     .insert({
-      nome: input.nome,
+      nome: nomeLimpo,
       nicho: input.nicho,
       cidade: input.cidade,
       uf: input.uf,
