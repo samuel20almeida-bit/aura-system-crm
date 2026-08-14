@@ -75,23 +75,21 @@ O erro a evitar é o do protótipo: três listas separadas (`deals`, `implantaco
 
 **`account_sinais`** — uso do agente: mensagens, taxa de uso, agendamentos, última interação.
 
-## O buraco que eu não vou fingir que não existe
+## Os sinais de uso do cliente: o que tem fonte e o que não tem
 
-A tela de Clientes do protótipo mostra "uso 88%", "1240 mensagens", "96 agendamentos". **Esses números não têm fonte.** Eles vivem na plataforma onde os agentes rodam, e o sistema não fala com ela.
+A tela de Clientes do protótipo mostra "uso 88%", "1240 mensagens", "96 agendamentos". **Esses números não têm fonte** — vivem na plataforma onde os agentes rodam, e o sistema não fala com ela.
 
-Três saídas, e é decisão do Samuel:
+**Decidido:** a tela entra conforme o protótipo, com os campos no banco, e eles ficam vazios até existir integração. **Nenhum número inventado**, como em toda esta empreitada. Um "uso 88%" parado mentindo é pior que um campo em branco.
 
-1. **Integração** com a plataforma dos agentes — a melhor, e a que exige saber qual é e se tem API.
-2. **Lançamento manual** semanal — funciona para quatro clientes, não para quarenta.
-3. **Cortar a tela de Clientes desta fase** e entregá-la quando houver fonte.
-
-Enquanto não houver decisão, os campos existem no banco e a tela mostra o que estiver preenchido. **Nenhum número inventado**, como em toda esta empreitada.
+O sinal que **tem** fonte e entra funcionando é o que mais importa com poucos clientes: **dias sem contato**. Ele não vem da plataforma, vem de alguém registrar que falou com o cliente — e a tabela `client_contacts` já existe no banco desde a Fase 1, sem uso. É de onde sai o "risco".
 
 ## O que morre, o que sobrevive
 
-**Morre: Horas & rentabilidade.** Cobrança por hora deixou de existir; rentabilidade por projeto não é a pergunta do negócio novo.
+**Morre: Horas & rentabilidade, e o cronômetro junto.**
 
-*Ressalva:* medir quanto tempo uma implantação custa continua sendo pergunta boa — é o que diz se o setup está barato demais. Sugiro **não apagar** `time_entries`: aposentar a tela e manter o cronômetro amarrado à implantação, para responder isso quando houver dez implantações fechadas.
+Eu recomendei manter o cronômetro amarrado à implantação, para responder quanto custa uma implantação contra o setup cobrado. **Samuel decidiu remover.** Fica registrado o que se perde com isso: nenhuma resposta futura para "o setup está barato demais?", e essa medição não é recuperável depois — ou se mede na hora, ou não se mede.
+
+Sai tudo: a tela `/horas`, o cronômetro global da barra, o banner, os modais de lançamento, as ações de iniciar/parar, o aviso de "timer esquecido" no sino, e a tabela `time_entries`. A remoção é a primeira tarefa da 3A, para o resto ser construído sobre base limpa.
 
 **Sobrevive e ganha sentido:**
 - **Tarefas** — o protótipo tem tarefas internas com dono, prazo e vínculo. É o Kanban atual, alimentando a tela Hoje.
@@ -126,12 +124,13 @@ Por valor entregue, não por completude.
 
 O banco atual tem **0 clientes, 0 faturas, 0 negócios** e duas tarefas de teste. Isso é um presente: a mudança de modelo não tem dado de produção para migrar. As tabelas antigas do CRM podem ser aposentadas sem conversão e sem perda.
 
-## Decisões pendentes
+## Decisões tomadas
 
-1. **A fonte dos sinais de uso** — integração, lançamento manual, ou cortar a tela de Clientes por ora?
-2. **Os seis nomes e prazos das etapas de implantação** vêm do protótipo. Confirmam ou ajustam?
-3. **Setup e MRR por tier** (Básico · Pro · Anual) — são tabelados ou negociados caso a caso? Muda se o valor mora na assinatura ou num catálogo.
-4. **`time_entries`** — aposentar a tela e manter o cronômetro amarrado à implantação, ou remover de vez?
+1. **Sinais de uso** — tela conforme o protótipo, campos vazios até haver fonte. "Dias sem contato" entra funcionando, vindo de `client_contacts`.
+2. **Etapas de implantação** — as seis do protótipo, com os prazos do protótipo.
+   *Registro de uma recomendação não adotada:* duas dessas etapas — coleta de acessos e teste com o cliente — dependem do **cliente**, não de vocês. Com o mesmo vermelho para as duas famílias, o alerta perde valor quando o atraso não é culpa sua. O esquema vai guardar **quem a etapa está esperando** (`nós` ou `cliente`) mesmo sem a tela usar isso agora — é um campo hoje e uma migração depois.
+3. **Preços** — catálogo de planos por nicho. Os números do protótipo se repetem exatos entre negócios diferentes, o que é tabela e não negociação. **O valor é copiado para o negócio no momento da proposta, nunca referenciado:** subir o preço em novembro não pode reescrever o que foi vendido em agosto, senão a série histórica do Painel mente. Com campo de desconto.
+4. **Cronômetro** — removido, por decisão do Samuel.
 
 ## Verificação
 
