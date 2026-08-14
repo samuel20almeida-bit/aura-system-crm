@@ -107,7 +107,9 @@ export function ordenarPorUrgencia(itens: ItemHoje[]): ItemHoje[] {
       return a.vencimento < b.vencimento ? -1 : 1;
     }
 
-    if (a.texto !== b.texto) return a.texto < b.texto ? -1 : 1;
-    return 0;
+    // localeCompare, não `<`/`>` ordinal: o desempate é o único lugar em que
+    // a ordem chega a depender de acento, e `<`/`>` ordena por code point,
+    // não pela ordem alfabética que um leitor em pt-BR espera.
+    return a.texto.localeCompare(b.texto, "pt-BR");
   });
 }

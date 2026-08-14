@@ -25,10 +25,12 @@ export type NotificationInput = {
 };
 
 /**
- * O sino e o card "PRECISA DE VOCÊ" da /início são duas apresentações da mesma
- * lista. Enquanto tinham escopos diferentes, a /início podia dizer "Tudo em dia
- * por aqui." com seis tarefas atrasadas no sino, um centímetro acima. A frase e
- * as cores moram aqui para que não voltem a divergir.
+ * Frase e cores do sino. Até a Task 5 da Fase 3A, o card "PRECISA DE VOCÊ" da
+ * /início lia da mesma lista — enquanto tinham escopos diferentes, a /início
+ * podia dizer "Tudo em dia por aqui." com seis tarefas atrasadas no sino, um
+ * centímetro acima. O card saiu; `/hoje` é agora o lugar único para negócio +
+ * tarefa, e o sino aponta pra lá. A frase e as cores continuam aqui porque o
+ * sino ainda é a segunda apresentação de faturas/contratos/tarefas.
  */
 export const ALL_CLEAR = "Tudo em dia por aqui.";
 

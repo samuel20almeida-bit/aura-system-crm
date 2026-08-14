@@ -1,7 +1,6 @@
 /**
  * Regra única de "fatura vencida", compartilhada pelo sino de avisos, pelo
- * contador da navegação, pelo card "PRECISA DE VOCÊ" da /início e pelos KPIs
- * do CRM.
+ * contador da navegação e pelos KPIs do CRM.
  *
  * Nada no sistema promove `pending` para `overdue` quando a data passa — não há
  * trigger, cron nem Server Action. O status guardado só muda quando um humano
