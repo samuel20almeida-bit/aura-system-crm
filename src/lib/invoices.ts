@@ -1,15 +1,14 @@
 /**
- * Regra única de "fatura vencida", compartilhada pelo sino de avisos, pelo
- * contador da navegação e pelos KPIs do CRM.
+ * Regra única de "fatura vencida". Desde a Task 6 da Fase 3A (CRM antigo
+ * aposentado, sem tela), o único consumidor é o sino de avisos
+ * (`src/lib/data/notifications.ts`) — o contador da navegação parou de usar
+ * esta função, e não há mais nenhuma tela exibindo a coluna de status.
  *
  * Nada no sistema promove `pending` para `overdue` quando a data passa — não há
- * trigger, cron nem Server Action. O status guardado só muda quando um humano
- * escolhe "Atrasada" no CRM. Por isso o atraso é derivado da data de
- * vencimento, e o status marcado à mão só serve para ANTECIPAR o alerta (uma
- * fatura marcada como atrasada antes do vencimento continua valendo).
- *
- * A coluna de status exibida na tabela do CRM continua mostrando o valor
- * guardado: uma coisa é o que o usuário marcou, outra é o que o sistema alerta.
+ * trigger, cron nem Server Action. Por isso o atraso é sempre derivado da data
+ * de vencimento, nunca do status guardado (que só serve para ANTECIPAR o
+ * alerta: uma fatura marcada como atrasada antes do vencimento continua
+ * valendo).
  */
 export function isInvoiceOverdue(status: string, dueDate: string, today: string): boolean {
   if (status === "paid") return false;
