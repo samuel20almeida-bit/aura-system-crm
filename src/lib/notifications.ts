@@ -52,7 +52,9 @@ export function buildNotifications(input: NotificationInput, today: string): App
       tone: "red",
       title: `${invoice.clientName} · fatura vencida`,
       detail: `${formatCurrency(invoice.amount)} · venceu em ${formatDate(invoice.dueDate)}`,
-      href: `/crm/${invoice.clientId}`,
+      // A tela de cliente (/crm/[id]) foi removida na Task 6 — o aviso
+      // continua aparecendo (a fatura é dado real), só deixa de ser clicável.
+      href: null,
     });
   }
 
@@ -83,7 +85,8 @@ export function buildNotifications(input: NotificationInput, today: string): App
       tone: "neutral",
       title: `Contrato ${contract.clientName} termina em breve`,
       detail: `Até ${formatDate(contract.endDate)}`,
-      href: `/crm/${contract.clientId}`,
+      // Mesma razão do aviso de fatura, acima: a tela de cliente não existe mais.
+      href: null,
     });
   }
 

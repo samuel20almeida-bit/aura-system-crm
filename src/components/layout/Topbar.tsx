@@ -10,7 +10,7 @@ import { PresenceRow } from "@/components/layout/PresenceRow";
 import { moduleFromPath } from "@/lib/realtime/usePresence";
 import type { AppNotification } from "@/lib/notifications";
 
-type SearchResult = { type: "tarefa" | "cliente"; id: string; title: string; sub: string; href: string };
+type SearchResult = { type: "tarefa"; id: string; title: string; sub: string; href: string };
 
 export function Topbar({
   userId,
@@ -29,7 +29,7 @@ export function Topbar({
   const router = useRouter();
   // Mesma fonte de rótulos que a presença usa (que por sua vez reusa navItems do
   // Sidebar). O mapa de RegExp que vivia aqui era um segundo mapa rota→rótulo e
-  // já divergia: /^\/crm/ casava "/crmzada" como CRM.
+  // já divergia: /^\/hoje/ casava "/hojeemdia" como Hoje.
   const crumb = moduleFromPath(pathname) ?? "";
 
   const [open, setOpen] = useState(false);
@@ -54,10 +54,11 @@ export function Topbar({
     if (!query.trim()) return;
     const supabase = createClient();
     const timeout = setTimeout(async () => {
-      const [tasksRes, clientsRes] = await Promise.all([
-        supabase.from("tasks").select("id, title, code").ilike("title", `%${query}%`).limit(5),
-        supabase.from("clients").select("id, name, segment").ilike("name", `%${query}%`).limit(5),
-      ]);
+      const tasksRes = await supabase
+        .from("tasks")
+        .select("id, title, code")
+        .ilike("title", `%${query}%`)
+        .limit(5);
       const taskResults: SearchResult[] = (tasksRes.data ?? []).map((t) => ({
         type: "tarefa",
         id: t.id,
@@ -65,14 +66,7 @@ export function Topbar({
         sub: t.code,
         href: `/kanban?task=${t.id}`,
       }));
-      const clientResults: SearchResult[] = (clientsRes.data ?? []).map((c) => ({
-        type: "cliente",
-        id: c.id,
-        title: c.name,
-        sub: c.segment ?? "Cliente",
-        href: `/crm/${c.id}`,
-      }));
-      setResults([...taskResults, ...clientResults]);
+      setResults(taskResults);
     }, 200);
     return () => clearTimeout(timeout);
   }, [query]);
@@ -93,7 +87,7 @@ export function Topbar({
         }}
         className="ml-auto hidden max-w-[320px] flex-1 items-center gap-2 rounded-lg border border-border bg-bone px-2.5 py-1.5 text-left text-[12.5px] text-faint md:flex"
       >
-        Buscar tarefas, clientes…
+        Buscar tarefas…
         <span className="ml-auto rounded border border-border bg-surface px-1.5 py-0.5 font-mono text-[9.5px] text-faint">
           ⌘K
         </span>
@@ -120,7 +114,7 @@ export function Topbar({
               ref={inputRef}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Buscar tarefas, clientes…"
+              placeholder="Buscar tarefas…"
               className="w-full border-b border-border px-4 py-3.5 text-sm outline-none"
             />
             <div className="max-h-80 overflow-y-auto">

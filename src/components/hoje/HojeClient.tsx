@@ -6,6 +6,7 @@ import clsx from "clsx";
 import { PageHeader } from "@/components/layout/PageBody";
 import { Avatar } from "@/components/ui/Avatar";
 import { Unavailable } from "@/components/ui/Unavailable";
+import { LiveActivity, type LiveActivityItem } from "@/components/hoje/LiveActivity";
 import { rotuloVencimento, type SaudeNegocio } from "@/lib/negocios";
 import { negocioParaItemHoje, ordenarPorUrgencia, tarefaParaItemHoje, type ItemHoje } from "@/lib/hoje";
 import type { NegocioHoje, TarefaHoje } from "@/lib/data/hoje";
@@ -35,6 +36,7 @@ export function HojeClient({
   profiles,
   donoOptions,
   donoAtual,
+  activityItems,
   unavailable = false,
 }: {
   negocios: NegocioHoje[];
@@ -42,6 +44,8 @@ export function HojeClient({
   profiles: Tables<"profiles">[];
   donoOptions: { key: string; label: string; href: string }[];
   donoAtual: string;
+  /** `null` quando a consulta de atividade falhou — `LiveActivity` monta igual, ver o componente. */
+  activityItems: LiveActivityItem[] | null;
   unavailable?: boolean;
 }) {
   // Um instante só para a tela inteira — mesmo raciocínio de `PipelineClient`:
@@ -109,49 +113,68 @@ export function HojeClient({
         }
       />
 
-      {unavailable && <Unavailable title="Não foi possível carregar o que precisa de atenção hoje" />}
+      {/* `LiveActivity` mora fora deste grid quando `unavailable` (a coluna de
+          pendências vira um único aviso de largura cheia) e dentro dele nos
+          outros dois casos — ver as três variantes abaixo. Monta sempre,
+          mesmo com `activityItems` nulo: é o único ponto do sistema que abre
+          o canal de tempo real, e trocá-lo por um `<Unavailable>` mataria a
+          atualização ao vivo da página inteira até alguém recarregar à mão.
+          Comportamento herdado de `/início`, de onde foi transplantado na
+          Task 6 — ver `LiveActivity.tsx`. */}
+      {unavailable && (
+        <div className="grid flex-1 grid-cols-1 gap-4 overflow-hidden md:grid-cols-[1.55fr_1fr]">
+          <Unavailable title="Não foi possível carregar o que precisa de atenção hoje" />
+          <LiveActivity items={activityItems ?? []} error={activityItems === null} />
+        </div>
+      )}
 
       {!unavailable && itens.length === 0 && (
-        <div className="rounded-xl border border-dashed border-border p-8 text-center">
-          <div className="text-[13px] font-medium">Nada pendente — tudo em dia.</div>
+        <div className="grid flex-1 grid-cols-1 gap-4 overflow-hidden md:grid-cols-[1.55fr_1fr]">
+          <div className="rounded-xl border border-dashed border-border p-8 text-center">
+            <div className="text-[13px] font-medium">Nada pendente — tudo em dia.</div>
+          </div>
+          <LiveActivity items={activityItems ?? []} error={activityItems === null} />
         </div>
       )}
 
       {!unavailable && itens.length > 0 && (
-        <div className="flex-1 overflow-y-auto scrollbar-thin rounded-xl border border-border bg-surface">
-          {itens.map((item) => {
-            const dono = item.donoId ? profilePorId.get(item.donoId) : undefined;
-            const vencimento = rotuloVencimento(item.vencimento, agora);
-            const href = item.origem === "negocio" ? `/pipeline?negocio=${item.id}` : `/kanban?task=${item.id}`;
+        <div className="grid flex-1 grid-cols-1 gap-4 overflow-hidden md:grid-cols-[1.55fr_1fr]">
+          <div className="overflow-y-auto scrollbar-thin rounded-xl border border-border bg-surface">
+            {itens.map((item) => {
+              const dono = item.donoId ? profilePorId.get(item.donoId) : undefined;
+              const vencimento = rotuloVencimento(item.vencimento, agora);
+              const href = item.origem === "negocio" ? `/pipeline?negocio=${item.id}` : `/kanban?task=${item.id}`;
 
-            return (
-              <Link
-                key={`${item.origem}-${item.id}`}
-                href={href}
-                className="flex items-center gap-3 border-b border-border-soft px-3.5 py-2.75 text-[13px] last:border-b-0 hover:bg-neutral-tint"
-              >
-                <span
-                  title={TITULO_DO_PONTO[item.saude]}
-                  className={clsx("h-2 w-2 flex-none rounded-full", CLASSE_DO_PONTO[item.saude])}
-                />
-                <div className="min-w-0 flex-1">
-                  <div className="truncate font-medium">{item.texto}</div>
-                  {item.contexto && <div className="truncate text-[11.5px] text-muted">{item.contexto}</div>}
-                </div>
-                {vencimento && (
+              return (
+                <Link
+                  key={`${item.origem}-${item.id}`}
+                  href={href}
+                  className="flex items-center gap-3 border-b border-border-soft px-3.5 py-2.75 text-[13px] last:border-b-0 hover:bg-neutral-tint"
+                >
                   <span
-                    className={clsx(
-                      "flex-none font-mono text-[11px]",
-                      item.saude === "podre" ? "text-red" : "text-muted"
-                    )}
-                  >
-                    {vencimento}
-                  </span>
-                )}
-                <Avatar initials={dono?.initials} size="sm" ghost={!dono} />
-              </Link>
-            );
-          })}
+                    title={TITULO_DO_PONTO[item.saude]}
+                    className={clsx("h-2 w-2 flex-none rounded-full", CLASSE_DO_PONTO[item.saude])}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate font-medium">{item.texto}</div>
+                    {item.contexto && <div className="truncate text-[11.5px] text-muted">{item.contexto}</div>}
+                  </div>
+                  {vencimento && (
+                    <span
+                      className={clsx(
+                        "flex-none font-mono text-[11px]",
+                        item.saude === "podre" ? "text-red" : "text-muted"
+                      )}
+                    >
+                      {vencimento}
+                    </span>
+                  )}
+                  <Avatar initials={dono?.initials} size="sm" ghost={!dono} />
+                </Link>
+              );
+            })}
+          </div>
+          <LiveActivity items={activityItems ?? []} error={activityItems === null} />
         </div>
       )}
     </>

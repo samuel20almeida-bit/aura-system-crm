@@ -4,8 +4,8 @@ import { listNegociosAbertos } from "@/lib/data/deals";
 import { listProfiles } from "@/lib/data/profile";
 
 /**
- * A tela ainda não está no menu lateral: a navegação (e a aposentadoria do CRM
- * antigo) é a Task 6 desta fase. Até lá, `/pipeline` se acessa direto.
+ * Está no menu lateral desde a Task 6 desta fase, que também aposentou a
+ * tela do CRM antigo (`/crm`).
  *
  * Também não assina tempo real: `negocios` e `contas` não estão publicadas, e
  * publicar é decisão consciente para quando o modelo estiver estável — o mesmo

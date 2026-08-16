@@ -22,7 +22,8 @@ describe("buildNotifications", () => {
     });
     expect(result).toHaveLength(1);
     expect(result[0].tone).toBe("red");
-    expect(result[0].href).toBe("/crm/c1");
+    // A tela de cliente não existe mais (Task 6) — o aviso não é clicável.
+    expect(result[0].href).toBeNull();
     // Data formatada em pt-BR, nunca o ISO cru ("2026-07-15").
     // \s cobre o espaço não separável que o Intl põe depois de "R$".
     expect(result[0].detail).toMatch(/^R\$\s4\.200 · venceu em 15 de jul$/);
@@ -74,7 +75,8 @@ describe("buildNotifications", () => {
     expect(result[0].tone).toBe("neutral");
     expect(result[0].title).toBe("Contrato Nimbus termina em breve");
     expect(result[0].detail).toBe("Até 28 de ago");
-    expect(result[0].href).toBe("/crm/c9");
+    // A tela de cliente não existe mais (Task 6) — o aviso não é clicável.
+    expect(result[0].href).toBeNull();
   });
 
   it("acumula fatura vencida e tarefa atrasada no mesmo dia, do mais urgente ao menos", () => {

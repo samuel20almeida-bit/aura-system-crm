@@ -44,8 +44,9 @@ export type Peer = {
 
 /**
  * Traduz a rota para o nome que aparece no menu — `/kanban` → "Kanban",
- * `/crm/[id]` → "CRM". Reusa `navItems` de `Sidebar.tsx`, o único mapa de
- * rótulos de rota do app; um segundo mapa aqui divergiria dele com o tempo.
+ * `/pipeline?negocio=[id]` → "Pipeline". Reusa `navItems` de `Sidebar.tsx`, o
+ * único mapa de rótulos de rota do app; um segundo mapa aqui divergiria dele
+ * com o tempo.
  */
 export function moduleFromPath(pathname: string): string | null {
   const item = navItems.find((i) => pathname === i.href || pathname.startsWith(i.href + "/"));

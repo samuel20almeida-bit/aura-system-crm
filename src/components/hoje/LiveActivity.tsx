@@ -27,7 +27,7 @@ const REFRESH_INTERVAL_MS = 60_000;
  *
  * A razão não é estética. Este componente é o único do sistema que chama
  * `useLiveRefresh`; se ele não montasse, um blip de rede numa única consulta
- * derrubaria a atualização ao vivo da `/início` inteira — e para sempre, porque
+ * derrubaria a atualização ao vivo de `/hoje` inteira — e para sempre, porque
  * sem o canal não chega evento nenhum que refaça o payload. O canal morreria
  * exatamente na condição em que é mais útil. Montado, o próximo refresh cura o
  * painel sozinho.
@@ -38,7 +38,11 @@ const REFRESH_INTERVAL_MS = 60_000;
  *
  * NOTA DE ESCOPO: este é o ÚNICO consumidor de `useLiveRefresh` no app. A Parte I
  * parou em 3 de 7 tarefas, então "ao vivo" é esta tela, não o sistema — Kanban,
- * CRM, Metas e Playbooks continuam se comportando como antes, sem assinatura.
+ * Pipeline, Metas e Playbooks continuam se comportando como antes, sem assinatura.
+ *
+ * Transplantado de `/início` para `/hoje` na Task 6 da Fase 3A, quando
+ * `/início` virou redirect puro: era o único consumidor de `useLiveRefresh`
+ * do app, e a rota original ia sumir sem dar um novo lar a ele.
  */
 export function LiveActivity({ items, error = false }: { items: LiveActivityItem[]; error?: boolean }) {
   useLiveRefresh(["activity_log"]);

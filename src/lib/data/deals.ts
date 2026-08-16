@@ -25,10 +25,10 @@ export async function listNegociosAbertos() {
     // olho bate primeiro.
     .order("mexido_em", { ascending: true });
 
-  // A mesma sentinela do sino e do CRM (src/lib/data/notifications.ts,
-  // src/lib/data/crm.ts): uma consulta que falhou não pode virar "nenhum
-  // negócio no funil" — essa é a frase que o Samuel acreditaria, e ela o
-  // faria parar de olhar justamente quando o sistema deixou de enxergar.
+  // A mesma sentinela do sino (src/lib/data/notifications.ts): uma consulta
+  // que falhou não pode virar "nenhum negócio no funil" — essa é a frase que
+  // o Samuel acreditaria, e ela o faria parar de olhar justamente quando o
+  // sistema deixou de enxergar.
   if (error) {
     console.error("[pipeline] falha ao consultar os negócios:", error);
     return { unavailable: true as const };

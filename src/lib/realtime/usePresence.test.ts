@@ -3,19 +3,19 @@ import { moduleFromPath } from "./usePresence";
 
 describe("moduleFromPath", () => {
   it("traduz uma rota de topo para o rótulo do menu", () => {
+    expect(moduleFromPath("/hoje")).toBe("Hoje");
+    expect(moduleFromPath("/pipeline")).toBe("Pipeline");
     expect(moduleFromPath("/kanban")).toBe("Kanban");
-    expect(moduleFromPath("/inicio")).toBe("Início");
     expect(moduleFromPath("/metas")).toBe("Metas");
-    expect(moduleFromPath("/crm")).toBe("CRM");
     expect(moduleFromPath("/playbooks")).toBe("Playbooks");
   });
 
-  it("traduz uma rota com sub-recurso para o rótulo do item pai — /crm/[id] vira CRM", () => {
-    expect(moduleFromPath("/crm/9c6e6b8e-0000-4000-8000-000000000000")).toBe("CRM");
+  it("traduz uma rota com sub-recurso para o rótulo do item pai — /kanban/[id] vira Kanban", () => {
+    expect(moduleFromPath("/kanban/9c6e6b8e-0000-4000-8000-000000000000")).toBe("Kanban");
   });
 
-  it("não confunde um prefixo por acaso — /crmzada não é /crm", () => {
-    expect(moduleFromPath("/crmzada")).toBeNull();
+  it("não confunde um prefixo por acaso — /kanbanzada não é /kanban", () => {
+    expect(moduleFromPath("/kanbanzada")).toBeNull();
   });
 
   it("rota fora da navegação não tem módulo", () => {

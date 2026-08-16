@@ -18,7 +18,7 @@ export function AppShell({
   children,
 }: {
   profile: { id: string; full_name: string; role_title: string | null; initials: string };
-  counts: { openTasks: number | null; overdueInvoices: number | null };
+  counts: { openTasks: number | null };
   notifications: AppNotification[];
   children: React.ReactNode;
 }) {

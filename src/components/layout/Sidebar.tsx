@@ -8,7 +8,7 @@ import { AuraLogo } from "@/components/ui/AuraLogo";
 import { Avatar } from "@/components/ui/Avatar";
 import { signOut } from "@/lib/actions/auth";
 
-type NavCountKey = "openTasks" | "overdueInvoices";
+type NavCountKey = "openTasks";
 type NavItem = {
   href: string;
   label: string;
@@ -16,14 +16,17 @@ type NavItem = {
   countKey?: NavCountKey;
 };
 
+// Ordem fixada na Task 6 da Fase 3A: Hoje · Pipeline · Kanban · Metas ·
+// Playbooks. O CRM antigo saiu do menu (a rota inteira foi removida, não só
+// o item) — as tabelas que ele lia continuam no banco, sem tela até a 3C.
 const workItems: NavItem[] = [
-  { href: "/inicio", label: "Início", icon: HomeIcon },
+  { href: "/hoje", label: "Hoje", icon: HomeIcon },
+  { href: "/pipeline", label: "Pipeline", icon: PipelineIcon },
   { href: "/kanban", label: "Kanban", icon: KanbanIcon, countKey: "openTasks" },
 ];
 
 const businessItems: NavItem[] = [
   { href: "/metas", label: "Metas", icon: TargetIcon },
-  { href: "/crm", label: "CRM", icon: CrmIcon, countKey: "overdueInvoices" },
   { href: "/playbooks", label: "Playbooks", icon: PlaybookIcon },
 ];
 
@@ -45,7 +48,7 @@ export function Sidebar({
 }: {
   profile: { full_name: string; role_title: string | null; initials: string };
   /** `null` num contador significa "não deu para ler" — nunca zero. */
-  counts: { openTasks: number | null; overdueInvoices: number | null };
+  counts: { openTasks: number | null };
   open: boolean;
   onClose: () => void;
 }) {
@@ -87,7 +90,7 @@ export function Sidebar({
             <span
               className={clsx(
                 "ml-auto font-mono text-[10px] font-semibold",
-                item.countKey === "overdueInvoices" ? "text-red" : active ? "text-accent" : "text-faint"
+                active ? "text-accent" : "text-faint"
               )}
             >
               {count}
@@ -207,12 +210,10 @@ function TargetIcon() {
     </svg>
   );
 }
-function CrmIcon() {
+function PipelineIcon() {
   return (
     <svg {...iconProps()}>
-      <circle cx="6.2" cy="6" r="2.3" />
-      <path d="M2.4 13.2c0-2 1.7-3.3 3.8-3.3s3.8 1.3 3.8 3.3" />
-      <path d="M11 4.6a2.2 2.2 0 0 1 0 4" />
+      <path d="M2.4 2.8h11.2L9.4 8.2v4.3L6.6 14V8.2z" />
     </svg>
   );
 }

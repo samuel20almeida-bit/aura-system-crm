@@ -31,7 +31,7 @@ export default function LoginPage() {
         setError(error.message === "Invalid login credentials" ? "E-mail ou senha incorretos." : error.message);
         return;
       }
-      router.push("/inicio");
+      router.push("/hoje");
       router.refresh();
       return;
     }
@@ -47,7 +47,7 @@ export default function LoginPage() {
       return;
     }
     if (data.session) {
-      router.push("/inicio");
+      router.push("/hoje");
       router.refresh();
       return;
     }
