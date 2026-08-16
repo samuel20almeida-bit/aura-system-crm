@@ -7,28 +7,14 @@ import { PageHeader } from "@/components/layout/PageBody";
 import { Avatar } from "@/components/ui/Avatar";
 import { Unavailable } from "@/components/ui/Unavailable";
 import { LiveActivity, type LiveActivityItem } from "@/components/hoje/LiveActivity";
-import { rotuloVencimento, type SaudeNegocio } from "@/lib/negocios";
+import { CLASSE_DO_PONTO_DE_SAUDE, ROTULO_DA_SAUDE, rotuloVencimento } from "@/lib/negocios";
 import { negocioParaItemHoje, ordenarPorUrgencia, tarefaParaItemHoje, type ItemHoje } from "@/lib/hoje";
 import type { NegocioHoje, TarefaHoje } from "@/lib/data/hoje";
 import type { Tables } from "@/lib/supabase/database.types";
 
-/**
- * Mesma linguagem visual do ponto de saúde do Pipeline (`NegocioCard.tsx`):
- * verde em dia, contorno neutro pede atenção, vermelho pulsando é podre. A
- * classe do pulso é a que o sino já usa (`animate-pulse-soft`, globals.css) —
- * reusada, não reinventada.
- */
-const CLASSE_DO_PONTO: Record<SaudeNegocio, string> = {
-  ok: "bg-accent",
-  atencao: "border-[1.5px] border-faint",
-  podre: "bg-red animate-pulse-soft",
-};
-
-const TITULO_DO_PONTO: Record<SaudeNegocio, string> = {
-  ok: "Em dia",
-  atencao: "Pede atenção",
-  podre: "Apodrecendo",
-};
+// Mesma linguagem visual do ponto de saúde do Pipeline (`NegocioCard.tsx`):
+// cor e rótulo vêm de `src/lib/negocios.ts`, para as duas telas nunca
+// discordarem sobre o mesmo negócio.
 
 export function HojeClient({
   negocios,
@@ -152,8 +138,8 @@ export function HojeClient({
                   className="flex items-center gap-3 border-b border-border-soft px-3.5 py-2.75 text-[13px] last:border-b-0 hover:bg-neutral-tint"
                 >
                   <span
-                    title={TITULO_DO_PONTO[item.saude]}
-                    className={clsx("h-2 w-2 flex-none rounded-full", CLASSE_DO_PONTO[item.saude])}
+                    title={ROTULO_DA_SAUDE[item.saude]}
+                    className={clsx("h-2 w-2 flex-none rounded-full", CLASSE_DO_PONTO_DE_SAUDE[item.saude])}
                   />
                   <div className="min-w-0 flex-1">
                     <div className="truncate font-medium">{item.texto}</div>

@@ -16,6 +16,26 @@ import { calendarDaysBetweenInAppTz, todayInAppTz } from "./timezone";
  */
 export type SaudeNegocio = "ok" | "atencao" | "podre";
 
+/**
+ * O vocabulário visual da saúde — cor do ponto e rótulo. Vivia triplicado
+ * (`NegocioCard.tsx`, `HojeClient.tsx`, `NegocioDrawer.tsx`, cada um com sua
+ * própria cópia), o mesmo antipadrão que `calendarDaysBetweenInAppTz`
+ * (`src/lib/timezone.ts`) e `ESTAGIOS` (`PipelineBoard.tsx`) já hoistearam por
+ * este exato motivo: mudar a cor do "em dia" exigia lembrar de três arquivos,
+ * e `/hoje` podia discordar do Pipeline sobre o mesmo negócio.
+ */
+export const CLASSE_DO_PONTO_DE_SAUDE: Record<SaudeNegocio, string> = {
+  ok: "bg-accent",
+  atencao: "border-[1.5px] border-faint",
+  podre: "bg-red animate-pulse-soft",
+};
+
+export const ROTULO_DA_SAUDE: Record<SaudeNegocio, string> = {
+  ok: "Em dia",
+  atencao: "Pede atenção",
+  podre: "Apodrecendo",
+};
+
 /** Parado além disto, o negócio apodrece. Do protótipo: `d.dias > 7`. */
 export const DIAS_ATE_PODRE = 7;
 /** Parado além disto, ainda não é podre, mas já pede atenção. Do protótipo: `d.dias > 4`. */

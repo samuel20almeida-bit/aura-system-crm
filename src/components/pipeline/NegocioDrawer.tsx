@@ -9,15 +9,9 @@ import { Avatar } from "@/components/ui/Avatar";
 import { useToast } from "@/components/ui/Toast";
 import { beginMutation } from "@/lib/realtime/mutation-gate";
 import { atualizarNegocio, ganharNegocio, moverNegocioParaEstagio, perderNegocio } from "@/lib/actions/deals";
-import { diasParado, rotuloVencimento, saudeDoNegocio } from "@/lib/negocios";
+import { ROTULO_DA_SAUDE, diasParado, rotuloVencimento, saudeDoNegocio } from "@/lib/negocios";
 import { ESTAGIOS, type EstagioId } from "./PipelineBoard";
 import type { NegocioAberto } from "@/lib/data/deals";
-
-const ROTULO_DA_SAUDE = {
-  ok: "Em dia",
-  atencao: "Pede atenção",
-  podre: "Apodrecendo",
-} as const;
 
 function Linha({ rotulo, valor }: { rotulo: string; valor: string | null | undefined }) {
   return (

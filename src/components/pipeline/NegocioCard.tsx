@@ -5,28 +5,22 @@ import { CSS } from "@dnd-kit/utilities";
 import clsx from "clsx";
 import { Avatar } from "@/components/ui/Avatar";
 import { formatCurrency, formatCurrencyCompact } from "@/lib/format";
-import { diasParado, rotuloVencimento, saudeDoNegocio, type SaudeNegocio } from "@/lib/negocios";
+import {
+  CLASSE_DO_PONTO_DE_SAUDE,
+  ROTULO_DA_SAUDE,
+  diasParado,
+  rotuloVencimento,
+  saudeDoNegocio,
+} from "@/lib/negocios";
 import type { NegocioAberto } from "@/lib/data/deals";
 
-/**
- * O ponto de saúde — a assinatura visual da tela.
- *
- * Verde: em dia. Contorno neutro: já pede atenção. Vermelho pulsando: podre. A
- * classe do pulso é a que o sino já usa (`animate-pulse-soft`, globals.css);
- * `motion-safe:` não gera CSS neste projeto e o bloco global de
- * `prefers-reduced-motion` já cobre quem pediu menos movimento.
- */
-const CLASSE_DO_PONTO: Record<SaudeNegocio, string> = {
-  ok: "bg-accent",
-  atencao: "border-[1.5px] border-faint",
-  podre: "bg-red animate-pulse-soft",
-};
-
-const TITULO_DO_PONTO: Record<SaudeNegocio, string> = {
-  ok: "Em dia",
-  atencao: "Pede atenção",
-  podre: "Apodrecendo",
-};
+// O ponto de saúde — a assinatura visual da tela. Cor e rótulo vêm de
+// `src/lib/negocios.ts`, não daqui: um segundo vocabulário neste arquivo
+// divergiria de `/hoje` com o tempo (já aconteceu, corrigido na revisão
+// final da 3A). A classe do pulso é a que o sino já usa
+// (`animate-pulse-soft`, globals.css); `motion-safe:` não gera CSS neste
+// projeto e o bloco global de `prefers-reduced-motion` já cobre quem pediu
+// menos movimento.
 
 function valorDoNegocio(negocio: { setup: number | null; mrr: number | null }): string | null {
   const partes: string[] = [];
@@ -81,8 +75,8 @@ export function NegocioCard({
       <div className="flex items-start justify-between gap-2">
         <div className="flex min-w-0 items-center gap-2">
           <span
-            title={TITULO_DO_PONTO[saude]}
-            className={clsx("h-2 w-2 flex-none rounded-full", CLASSE_DO_PONTO[saude])}
+            title={ROTULO_DA_SAUDE[saude]}
+            className={clsx("h-2 w-2 flex-none rounded-full", CLASSE_DO_PONTO_DE_SAUDE[saude])}
           />
           <span className="truncate text-[13px] font-medium">{negocio.conta?.nome ?? "Conta sem nome"}</span>
         </div>

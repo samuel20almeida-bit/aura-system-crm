@@ -108,6 +108,17 @@ describe("ordenarPorUrgencia", () => {
     expect(ordenarPorUrgencia([zebra, abelha]).map((i) => i.id)).toEqual(["n-abelha", "t-zebra"]);
   });
 
+  it("desempata por texto usando ordem alfabética de pt-BR, não por code point", () => {
+    // "Á" (U+00C1) vem DEPOIS de "B" (U+0042) em code point — um desempate por
+    // `<`/`>` ordinal colocaria "Barros" antes de "Ávila", invertido da ordem
+    // alfabética que um leitor em pt-BR espera. Prova a correção de 35aeb7a
+    // (localeCompare), que antes deste teste não tinha nenhuma cobertura que
+    // reprovasse se alguém revertesse para comparação ordinal.
+    const barros = tarefa({ id: "t-barros", titulo: "Barros", dueDate: null });
+    const avila = negocio({ id: "n-avila", proximoPasso: "Ávila", proximoPassoEm: null });
+    expect(ordenarPorUrgencia([barros, avila]).map((i) => i.id)).toEqual(["n-avila", "t-barros"]);
+  });
+
   it("não muta o array recebido", () => {
     const itens: ItemHoje[] = [tarefa({ id: "b", dueDate: "2026-08-20" }), negocio({ id: "a", proximoPassoEm: "2026-08-10" })];
     const original = [...itens];

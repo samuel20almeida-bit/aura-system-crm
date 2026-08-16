@@ -77,6 +77,10 @@ export async function criarContaComNegocio(input: {
   if (negocioError) throw negocioError;
 
   revalidatePath("/pipeline");
+  // `/hoje` também lê `negocios` (Task 5) — sem isto, voltar do Pipeline para
+  // lá pelo botão Voltar do navegador podia reaparecer com o ponto de saúde
+  // antigo: o Router Cache do Next não sabe que este negócio mudou.
+  revalidatePath("/hoje");
 }
 
 export async function moverNegocioParaEstagio(negocioId: string, estagio: Estagio) {
@@ -89,6 +93,10 @@ export async function moverNegocioParaEstagio(negocioId: string, estagio: Estagi
   if (error) throw error;
 
   revalidatePath("/pipeline");
+  // `/hoje` também lê `negocios` (Task 5) — sem isto, voltar do Pipeline para
+  // lá pelo botão Voltar do navegador podia reaparecer com o ponto de saúde
+  // antigo: o Router Cache do Next não sabe que este negócio mudou.
+  revalidatePath("/hoje");
 }
 
 export async function atualizarNegocio(input: {
@@ -118,6 +126,10 @@ export async function atualizarNegocio(input: {
   if (error) throw error;
 
   revalidatePath("/pipeline");
+  // `/hoje` também lê `negocios` (Task 5) — sem isto, voltar do Pipeline para
+  // lá pelo botão Voltar do navegador podia reaparecer com o ponto de saúde
+  // antigo: o Router Cache do Next não sabe que este negócio mudou.
+  revalidatePath("/hoje");
 }
 
 /**
@@ -163,6 +175,10 @@ export async function ganharNegocio(negocioId: string) {
   if (error) throw error;
 
   revalidatePath("/pipeline");
+  // `/hoje` também lê `negocios` (Task 5) — sem isto, voltar do Pipeline para
+  // lá pelo botão Voltar do navegador podia reaparecer com o ponto de saúde
+  // antigo: o Router Cache do Next não sabe que este negócio mudou.
+  revalidatePath("/hoje");
 }
 
 export async function perderNegocio(negocioId: string, motivo: string) {
@@ -201,4 +217,8 @@ export async function perderNegocio(negocioId: string, motivo: string) {
   if (error) throw error;
 
   revalidatePath("/pipeline");
+  // `/hoje` também lê `negocios` (Task 5) — sem isto, voltar do Pipeline para
+  // lá pelo botão Voltar do navegador podia reaparecer com o ponto de saúde
+  // antigo: o Router Cache do Next não sabe que este negócio mudou.
+  revalidatePath("/hoje");
 }

@@ -57,7 +57,7 @@ export async function createTask(input: {
 
   await logActivity(supabase, user.id, "criou a tarefa", task.title, task.id);
   revalidatePath("/kanban");
-  revalidatePath("/inicio");
+  revalidatePath("/hoje");
   return task;
 }
 
@@ -99,7 +99,7 @@ export async function updateTaskPosition(input: {
   }
 
   revalidatePath("/kanban");
-  revalidatePath("/inicio");
+  revalidatePath("/hoje");
 }
 
 export async function updateTask(
@@ -135,7 +135,7 @@ export async function updateTask(
   }
 
   revalidatePath("/kanban");
-  revalidatePath("/inicio");
+  revalidatePath("/hoje");
 }
 
 export async function deleteTask(taskId: string) {
@@ -143,7 +143,7 @@ export async function deleteTask(taskId: string) {
   const { error } = await supabase.from("tasks").delete().eq("id", taskId);
   if (error) throw error;
   revalidatePath("/kanban");
-  revalidatePath("/inicio");
+  revalidatePath("/hoje");
 }
 
 export async function addChecklistItem(taskId: string, title: string) {
