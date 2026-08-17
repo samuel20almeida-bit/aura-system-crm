@@ -48,7 +48,12 @@ export default async function PainelPage() {
         <Kpi
           label="Ticket médio"
           value={metricas.ticketMedio === null ? "—" : formatCurrency(metricas.ticketMedio)}
-          sub={metricas.ticketMedio === null ? "sem negócio aberto" : undefined}
+          // Achado na revisão final: "ticket médio" sem qualificação lê como
+          // o valor do negócio inteiro (setup + mensalidade), mas a conta é
+          // só a mensalidade — um negócio de R$ 2.500 de setup + R$ 399/mês
+          // apareceria como "R$ 399" nu, sem dizer que o setup ficou de
+          // fora. O `sub` fica sempre visível, não só quando null.
+          sub={metricas.ticketMedio === null ? "sem negócio aberto" : "MRR por negócio aberto"}
         />
         <Kpi
           label="Apodrecendo"
@@ -64,7 +69,16 @@ export default async function PainelPage() {
         <Kpi
           label="Setup na receita"
           value={metricas.setupNaReceita === null ? "—" : `${Math.round(metricas.setupNaReceita * 100)}%`}
-          sub={metricas.setupNaReceita === null ? "sem negócio ganho" : "desde o início, não mensal"}
+          // Achado na revisão final, duas correções:
+          // (a) o denominador é setup contra UM mês de MRR, não contra o MRR
+          // acumulado até hoje — "desde o início" sugeria acumulado, o que a
+          // conta não faz; sem histórico de assinatura (3C não existe), não
+          // dá pra fazer a conta acumulada, então o rótulo tem que ser
+          // honesto sobre o que está sendo comparado.
+          // (b) `null` também acontece com negócio ganho mas sem preço
+          // registrado (setup e mrr em branco) — "sem negócio ganho" seria
+          // falso nesse caso.
+          sub={metricas.setupNaReceita === null ? "sem valor registrado nos ganhos" : "setup vs. 1 mês de MRR"}
         />
       </div>
 

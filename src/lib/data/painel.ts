@@ -20,9 +20,15 @@ export async function listDadosDoPainel() {
   const supabase = await createClient();
 
   const [negociosRes, contasRes, implantacoesRes] = await Promise.all([
+    // `.order("criado_em")`: `origemReceita` (`src/lib/painel.ts`) exibe a
+    // grafia da PRIMEIRA ocorrência normalizada e desempata o `sort` por
+    // ordem de leitura — sem ordenar aqui, o Postgres devolve na ordem que
+    // quiser, e isso já era observável: duas origens empatadas em R$0
+    // podiam trocar de lugar na tabela entre dois F5, sem nada ter mudado.
     supabase
       .from("negocios")
-      .select("id, conta_id, resultado, mrr, setup, proximo_passo, proximo_passo_em, mexido_em"),
+      .select("id, conta_id, resultado, mrr, setup, proximo_passo, proximo_passo_em, mexido_em")
+      .order("criado_em", { ascending: true }),
     supabase.from("contas").select("id, fase, origem"),
     supabase.from("implantacoes").select("negocio_id, concluida_em"),
   ]);

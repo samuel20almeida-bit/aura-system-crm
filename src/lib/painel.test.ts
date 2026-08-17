@@ -161,6 +161,20 @@ describe("calcularMetricasPainel — mrrEsperandoGoLive", () => {
     const metricas = calcularMetricasPainel(negocios, [], [], AGORA);
     expect(metricas.mrrEsperandoGoLive).toBe(0);
   });
+
+  it("conta já cliente com implantação ainda aberta (janela entre as duas escritas de concluirImplantacao) não soma duas vezes", () => {
+    // concluirImplantacao escreve contas.fase='cliente' ANTES de
+    // implantacoes.concluida_em — se a segunda escrita falhar, existe um
+    // instante real em que as duas condições são verdadeiras ao mesmo
+    // tempo. Sem a checagem de fase aqui, o mesmo MRR apareceria em
+    // mrrAtivo E em mrrEsperandoGoLive.
+    const negocios = [negocio({ id: "n1", contaId: "c1", resultado: "ganho", mrr: 1000 })];
+    const contas = [conta({ id: "c1", fase: "cliente" })];
+    const implantacoes = [implantacao({ negocioId: "n1", concluidaEm: null })];
+    const metricas = calcularMetricasPainel(negocios, contas, implantacoes, AGORA);
+    expect(metricas.mrrAtivo).toBe(1000);
+    expect(metricas.mrrEsperandoGoLive).toBe(0);
+  });
 });
 
 describe("calcularMetricasPainel — setupNaReceita", () => {

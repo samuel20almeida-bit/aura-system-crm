@@ -100,9 +100,20 @@ export function calcularMetricasPainel(
   // que tenha mais de um negócio ganho associado.
   const clientesAtivos = contas.filter((c) => c.fase === "cliente").length;
 
+  // Achado na revisão final: as duas escritas de `concluirImplantacao`
+  // (contas.fase='cliente', depois implantacoes.concluida_em) não são
+  // atômicas — se a segunda falhar, existe uma janela real (rara,
+  // auto-curável no retry) em que a conta já é 'cliente' MAS a implantação
+  // ainda aparece aberta. Sem esta checagem, o mesmo MRR entraria em
+  // mrrAtivo E em mrrEsperandoGoLive ao mesmo tempo. `fase === "cliente"`
+  // é o sinal mais forte (a passagem de bastão terminou), então ele
+  // desempata: uma vez cliente, não conta mais como "esperando".
   let mrrEsperandoGoLive = 0;
   for (const n of negociosGanhos) {
-    if (negocioIdsComImplantacaoAberta.has(n.id)) mrrEsperandoGoLive += n.mrr ?? 0;
+    const conta = contaPorId.get(n.contaId);
+    if (negocioIdsComImplantacaoAberta.has(n.id) && conta?.fase !== "cliente") {
+      mrrEsperandoGoLive += n.mrr ?? 0;
+    }
   }
 
   // Setup na receita: só entre os ganhos, e só desde o início (não mensal —
