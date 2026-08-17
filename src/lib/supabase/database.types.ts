@@ -377,6 +377,68 @@ export type Database = {
         }
         Relationships: []
       }
+      implantacoes: {
+        Row: {
+          concluida_em: string | null
+          conta_id: string
+          criado_em: string
+          dono_id: string | null
+          etapa: number
+          etapa_desde: string
+          id: string
+          negocio_id: string
+        }
+        Insert: {
+          concluida_em?: string | null
+          conta_id: string
+          criado_em?: string
+          dono_id?: string | null
+          etapa?: number
+          etapa_desde?: string
+          id?: string
+          negocio_id: string
+        }
+        Update: {
+          concluida_em?: string | null
+          conta_id?: string
+          criado_em?: string
+          dono_id?: string | null
+          etapa?: number
+          etapa_desde?: string
+          id?: string
+          negocio_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "implantacoes_conta_id_fkey"
+            columns: ["conta_id"]
+            isOneToOne: false
+            referencedRelation: "contas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "implantacoes_dono_id_fkey"
+            columns: ["dono_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "implantacoes_etapa_fkey"
+            columns: ["etapa"]
+            isOneToOne: false
+            referencedRelation: "implantacao_etapas"
+            referencedColumns: ["posicao"]
+          },
+          {
+            foreignKeyName: "implantacoes_negocio_id_fkey"
+            columns: ["negocio_id"]
+            isOneToOne: true
+            referencedRelation: "negocios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invoices: {
         Row: {
           amount: number
