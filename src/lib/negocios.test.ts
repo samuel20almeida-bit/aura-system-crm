@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { diasParado, rotuloVencimento, saudeDoNegocio } from "./negocios";
+import { diasParado, rotuloVencimento, saudeDaTarefa, saudeDoNegocio } from "./negocios";
 
 // São Paulo é UTC-3 o ano todo. 15:00Z = 12:00 em SP, bem longe da virada.
 const MEIO_DIA = new Date("2026-08-14T15:00:00Z");
@@ -72,6 +72,24 @@ describe("saudeDoNegocio", () => {
   it("passo sem data nenhuma não apodrece por vencimento, só por abandono", () => {
     expect(saudeDoNegocio(negocio({ proximoPassoEm: null }), MEIO_DIA)).toBe("ok");
     expect(saudeDoNegocio(negocio({ proximoPassoEm: null, mexidoEm: "2026-08-01T12:00:00Z" }), MEIO_DIA)).toBe("podre");
+  });
+});
+
+describe("saudeDaTarefa", () => {
+  it("apodrece com prazo vencido ontem", () => {
+    expect(saudeDaTarefa("2026-08-13", MEIO_DIA)).toBe("podre");
+  });
+
+  it("pede atenção vencendo hoje", () => {
+    expect(saudeDaTarefa("2026-08-14", MEIO_DIA)).toBe("atencao");
+  });
+
+  it("está ok vencendo no futuro", () => {
+    expect(saudeDaTarefa("2026-08-20", MEIO_DIA)).toBe("ok");
+  });
+
+  it("está ok sem due_date — nenhuma tela do projeto trata isso como alarme", () => {
+    expect(saudeDaTarefa(null, MEIO_DIA)).toBe("ok");
   });
 });
 

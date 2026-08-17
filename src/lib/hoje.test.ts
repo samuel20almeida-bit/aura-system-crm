@@ -2,7 +2,6 @@ import { describe, it, expect } from "vitest";
 import {
   negocioParaItemHoje,
   ordenarPorUrgencia,
-  saudeDaTarefa,
   tarefaParaItemHoje,
   type ItemHoje,
 } from "./hoje";
@@ -38,24 +37,6 @@ function tarefa(over: Partial<Parameters<typeof tarefaParaItemHoje>[0]> = {}) {
     MEIO_DIA
   );
 }
-
-describe("saudeDaTarefa", () => {
-  it("apodrece com prazo vencido ontem", () => {
-    expect(saudeDaTarefa("2026-08-13", MEIO_DIA)).toBe("podre");
-  });
-
-  it("pede atenção vencendo hoje", () => {
-    expect(saudeDaTarefa("2026-08-14", MEIO_DIA)).toBe("atencao");
-  });
-
-  it("está ok vencendo no futuro", () => {
-    expect(saudeDaTarefa("2026-08-20", MEIO_DIA)).toBe("ok");
-  });
-
-  it("está ok sem due_date — nenhuma tela do projeto trata isso como alarme", () => {
-    expect(saudeDaTarefa(null, MEIO_DIA)).toBe("ok");
-  });
-});
 
 describe("negocioParaItemHoje", () => {
   it("apodrece sem próximo passo, reusando o comportamento já testado de saudeDoNegocio", () => {

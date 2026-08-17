@@ -1,5 +1,4 @@
-import { saudeDoNegocio, type SaudeNegocio } from "./negocios";
-import { todayInAppTz } from "./timezone";
+import { saudeDaTarefa, saudeDoNegocio, type SaudeNegocio } from "./negocios";
 
 /**
  * A unificação de `/hoje`: negócio (próximo passo) e tarefa (não concluída)
@@ -19,23 +18,6 @@ export type ItemHoje = {
   saude: SaudeNegocio;
   origem: "negocio" | "tarefa";
 };
-
-/**
- * A saúde de uma tarefa, no mesmo vocabulário de `saudeDoNegocio`.
- *
- * Assimétrica com negócio DE PROPÓSITO: lá, sem próximo passo é `"podre"`
- * desde o nascimento. Aqui, tarefa sem `due_date` é `"ok"` — nenhuma tela do
- * projeto jamais tratou tarefa sem prazo como alarme (`TaskCard.tsx`:
- * `task.due_date && ...` curto-circuita em falso), e esta função só isola o
- * comportamento que já está em produção, não inventa um novo.
- */
-export function saudeDaTarefa(dueDate: string | null, agora: Date = new Date()): SaudeNegocio {
-  if (!dueDate) return "ok";
-  const hoje = todayInAppTz(agora);
-  if (dueDate < hoje) return "podre";
-  if (dueDate === hoje) return "atencao";
-  return "ok";
-}
 
 export type NegocioParaItemHoje = {
   id: string;
