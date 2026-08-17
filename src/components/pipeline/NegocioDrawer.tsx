@@ -8,19 +8,11 @@ import { Button } from "@/components/ui/Button";
 import { Avatar } from "@/components/ui/Avatar";
 import { useToast } from "@/components/ui/Toast";
 import { beginMutation } from "@/lib/realtime/mutation-gate";
-import { atualizarNegocio, ganharNegocio, moverNegocioParaEstagio, perderNegocio } from "@/lib/actions/deals";
+import { atualizarConta, atualizarNegocio, ganharNegocio, moverNegocioParaEstagio, perderNegocio } from "@/lib/actions/deals";
+import { normalizeLinkUrl } from "@/lib/links";
 import { ROTULO_DA_SAUDE, diasParado, rotuloVencimento, saudeDoNegocio } from "@/lib/negocios";
 import { ESTAGIOS, type EstagioId } from "./PipelineBoard";
 import type { NegocioAberto } from "@/lib/data/deals";
-
-function Linha({ rotulo, valor }: { rotulo: string; valor: string | null | undefined }) {
-  return (
-    <>
-      <span className="text-muted">{rotulo}</span>
-      <span className={valor ? "" : "text-faint"}>{valor || "—"}</span>
-    </>
-  );
-}
 
 /**
  * A gaveta do negócio: abre sobre o quadro, não navega.
@@ -48,6 +40,17 @@ export function NegocioDrawer({
   const [mrr, setMrr] = useState(negocio.mrr === null ? "" : String(negocio.mrr));
   const [pedindoMotivo, setPedindoMotivo] = useState(false);
   const [motivo, setMotivo] = useState("");
+
+  const [contaNome, setContaNome] = useState(negocio.conta?.nome ?? "");
+  const [contaNicho, setContaNicho] = useState(negocio.conta?.nicho ?? "");
+  const [contaCidade, setContaCidade] = useState(negocio.conta?.cidade ?? "");
+  const [contaUf, setContaUf] = useState(negocio.conta?.uf ?? "");
+  const [contaDecisor, setContaDecisor] = useState(negocio.conta?.decisor_nome ?? "");
+  const [contaSoftware, setContaSoftware] = useState(negocio.conta?.software_atual ?? "");
+  const [contaOrigem, setContaOrigem] = useState(negocio.conta?.origem ?? "");
+  const [contaEmail, setContaEmail] = useState(negocio.conta?.email ?? "");
+  const [contaTelefone, setContaTelefone] = useState(negocio.conta?.telefone ?? "");
+  const [contaSite, setContaSite] = useState(negocio.conta?.site ?? "");
 
   const saude = saudeDoNegocio(
     {
@@ -91,6 +94,15 @@ export function NegocioDrawer({
   // deixar de estar vazio.
   const valoresInvalidos = (numeroOuNulo(setup) ?? 0) < 0 || (numeroOuNulo(mrr) ?? 0) < 0;
 
+  // Vira link só quando o valor digitado dá um endereço de verdade — mesma
+  // normalização do link de anexo (src/lib/links.ts), aqui só para decidir se
+  // o "abrir site" aparece, não para validar (isso o servidor já faz ao
+  // salvar).
+  const emailHref = contaEmail.trim() ? `mailto:${contaEmail.trim()}` : null;
+  const telefoneHref = contaTelefone.trim() ? `tel:${contaTelefone.trim()}` : null;
+  const siteNormalizado = contaSite.trim() ? normalizeLinkUrl(contaSite) : null;
+  const siteHref = siteNormalizado?.ok ? siteNormalizado.url : null;
+
   return (
     <Slideover onClose={onClose}>
       <div className="flex items-start gap-2.5 border-b border-border px-5.5 py-4">
@@ -107,18 +119,91 @@ export function NegocioDrawer({
       </div>
 
       <div className="flex flex-1 flex-col gap-4.5 overflow-y-auto scrollbar-thin px-5.5 py-4">
-        <div>
-          <div className="label mb-2">A CONTA</div>
-          <div className="grid grid-cols-[112px_1fr] gap-x-3 gap-y-2 text-[13px]">
-            <Linha rotulo="Nicho" valor={negocio.conta?.nicho} />
-            <Linha
-              rotulo="Cidade"
-              valor={[negocio.conta?.cidade, negocio.conta?.uf].filter(Boolean).join(" · ") || null}
-            />
-            <Linha rotulo="Decisor" valor={negocio.conta?.decisor_nome} />
-            <Linha rotulo="Software atual" valor={negocio.conta?.software_atual} />
-            <Linha rotulo="Origem" valor={negocio.conta?.origem} />
-            <Linha rotulo="Dono" valor={negocio.dono?.full_name} />
+        <div className="flex flex-col gap-3.5">
+          <div className="label">A CONTA</div>
+          <Field label="NOME">
+            <Input value={contaNome} onChange={(e) => setContaNome(e.target.value)} />
+          </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="NICHO">
+              <Input value={contaNicho} onChange={(e) => setContaNicho(e.target.value)} />
+            </Field>
+            <div className="grid grid-cols-[1fr_72px] gap-3">
+              <Field label="CIDADE">
+                <Input value={contaCidade} onChange={(e) => setContaCidade(e.target.value)} />
+              </Field>
+              <Field label="UF">
+                <Input value={contaUf} onChange={(e) => setContaUf(e.target.value.toUpperCase())} maxLength={2} />
+              </Field>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="DECISOR">
+              <Input value={contaDecisor} onChange={(e) => setContaDecisor(e.target.value)} />
+            </Field>
+            <Field label="SOFTWARE ATUAL">
+              <Input value={contaSoftware} onChange={(e) => setContaSoftware(e.target.value)} />
+            </Field>
+          </div>
+          <Field label="ORIGEM">
+            <Input value={contaOrigem} onChange={(e) => setContaOrigem(e.target.value)} />
+          </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="E-MAIL">
+              <Input type="email" value={contaEmail} onChange={(e) => setContaEmail(e.target.value)} />
+              {emailHref && (
+                <a href={emailHref} className="text-[11px] text-accent hover:underline">
+                  enviar e-mail
+                </a>
+              )}
+            </Field>
+            <Field label="TELEFONE">
+              <Input type="tel" value={contaTelefone} onChange={(e) => setContaTelefone(e.target.value)} />
+              {telefoneHref && (
+                <a href={telefoneHref} className="text-[11px] text-accent hover:underline">
+                  ligar
+                </a>
+              )}
+            </Field>
+          </div>
+          <Field label="SITE">
+            <Input value={contaSite} onChange={(e) => setContaSite(e.target.value)} placeholder="cliente.com.br" />
+            {siteHref && (
+              <a
+                href={siteHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[11px] text-accent hover:underline"
+              >
+                abrir site
+              </a>
+            )}
+          </Field>
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[12px] text-muted">Dono: {negocio.dono?.full_name ?? "—"}</span>
+            <Button
+              variant="ghost"
+              disabled={pendente || !contaNome.trim()}
+              onClick={() =>
+                executar("salvar a conta", () =>
+                  atualizarConta({
+                    contaId: negocio.conta_id,
+                    nome: contaNome,
+                    nicho: contaNicho.trim() || null,
+                    cidade: contaCidade.trim() || null,
+                    uf: contaUf.trim() || null,
+                    decisorNome: contaDecisor.trim() || null,
+                    softwareAtual: contaSoftware.trim() || null,
+                    origem: contaOrigem.trim() || null,
+                    email: contaEmail.trim() || null,
+                    telefone: contaTelefone.trim() || null,
+                    site: contaSite.trim() || null,
+                  })
+                )
+              }
+            >
+              {pendente ? "Salvando…" : "Salvar conta"}
+            </Button>
           </div>
         </div>
 

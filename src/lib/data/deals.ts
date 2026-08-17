@@ -14,7 +14,7 @@ export async function listNegociosAbertos() {
   const { data, error } = await supabase
     .from("negocios")
     .select(
-      "*, conta:contas(id, nome, nicho, cidade, uf, decisor_nome, software_atual, origem, fase), dono:profiles(id, full_name, initials)"
+      "*, conta:contas(id, nome, nicho, cidade, uf, decisor_nome, software_atual, origem, email, telefone, site, fase), dono:profiles(id, full_name, initials)"
     )
     // O quadro é o funil ABERTO. Ganho e perdido saem de cena: um negócio
     // fechado no meio da coluna de Proposta faria a coluna mentir sobre quanto

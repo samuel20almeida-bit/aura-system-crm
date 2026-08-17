@@ -38,6 +38,9 @@ export function NovoNegocioModal({
   const [decisor, setDecisor] = useState("");
   const [software, setSoftware] = useState("");
   const [origem, setOrigem] = useState("");
+  const [email, setEmail] = useState("");
+  const [telefone, setTelefone] = useState("");
+  const [site, setSite] = useState("");
   const [setup, setSetup] = useState("");
   const [mrr, setMrr] = useState("");
   const [proximoPasso, setProximoPasso] = useState("");
@@ -75,6 +78,9 @@ export function NovoNegocioModal({
                 decisorNome: textoOuNulo(decisor),
                 softwareAtual: textoOuNulo(software),
                 origem: textoOuNulo(origem),
+                email: textoOuNulo(email),
+                telefone: textoOuNulo(telefone),
+                site: textoOuNulo(site),
                 setup: numeroOuNulo(setup),
                 mrr: numeroOuNulo(mrr),
                 proximoPasso: textoOuNulo(proximoPasso),
@@ -143,6 +149,18 @@ export function NovoNegocioModal({
             </Select>
           </Field>
         </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="E-MAIL">
+            <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="contato@cliente.com" />
+          </Field>
+          <Field label="TELEFONE">
+            <Input type="tel" value={telefone} onChange={(e) => setTelefone(e.target.value)} placeholder="(11) 99999-9999" />
+          </Field>
+        </div>
+        <Field label="SITE">
+          <Input value={site} onChange={(e) => setSite(e.target.value)} placeholder="cliente.com.br" />
+        </Field>
 
         <div className="grid grid-cols-2 gap-3">
           <Field label="SETUP (R$)">

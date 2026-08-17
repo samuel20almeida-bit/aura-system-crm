@@ -173,12 +173,15 @@ export type Database = {
           criado_em: string
           decisor_nome: string | null
           dono_id: string | null
+          email: string | null
           fase: Database["public"]["Enums"]["conta_fase"]
           id: string
           nicho: string | null
           nome: string
           origem: string | null
+          site: string | null
           software_atual: string | null
+          telefone: string | null
           uf: string | null
         }
         Insert: {
@@ -186,12 +189,15 @@ export type Database = {
           criado_em?: string
           decisor_nome?: string | null
           dono_id?: string | null
+          email?: string | null
           fase?: Database["public"]["Enums"]["conta_fase"]
           id?: string
           nicho?: string | null
           nome: string
           origem?: string | null
+          site?: string | null
           software_atual?: string | null
+          telefone?: string | null
           uf?: string | null
         }
         Update: {
@@ -199,12 +205,15 @@ export type Database = {
           criado_em?: string
           decisor_nome?: string | null
           dono_id?: string | null
+          email?: string | null
           fase?: Database["public"]["Enums"]["conta_fase"]
           id?: string
           nicho?: string | null
           nome?: string
           origem?: string | null
+          site?: string | null
           software_atual?: string | null
+          telefone?: string | null
           uf?: string | null
         }
         Relationships: [

@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { todayInAppTz } from "@/lib/timezone";
+import { normalizeLinkUrl } from "@/lib/links";
 import type { Database } from "@/lib/supabase/database.types";
 
 type Estagio = Database["public"]["Enums"]["negocio_estagio"];
@@ -25,6 +26,9 @@ export async function criarContaComNegocio(input: {
   decisorNome: string | null;
   softwareAtual: string | null;
   origem: string | null;
+  email: string | null;
+  telefone: string | null;
+  site: string | null;
   setup: number | null;
   mrr: number | null;
   proximoPasso: string | null;
@@ -39,6 +43,12 @@ export async function criarContaComNegocio(input: {
   if ((input.setup ?? 0) < 0) throw new Error("O setup não pode ser negativo.");
   if ((input.mrr ?? 0) < 0) throw new Error("A mensalidade não pode ser negativa.");
 
+  // Mesma normalização do link de anexo (src/lib/links.ts): sem esquema vira
+  // https://, e javascript:/data: são recusados antes de o valor virar um
+  // href clicável na gaveta.
+  const siteNormalizado = input.site?.trim() ? normalizeLinkUrl(input.site) : null;
+  if (siteNormalizado && !siteNormalizado.ok) throw new Error(siteNormalizado.message);
+
   const supabase = await createClient();
 
   const { data: conta, error: contaError } = await supabase
@@ -51,6 +61,9 @@ export async function criarContaComNegocio(input: {
       decisor_nome: input.decisorNome,
       software_atual: input.softwareAtual,
       origem: input.origem,
+      email: input.email,
+      telefone: input.telefone,
+      site: siteNormalizado ? siteNormalizado.url : null,
       fase: "prospect",
       dono_id: input.donoId,
     })
@@ -129,6 +142,61 @@ export async function atualizarNegocio(input: {
   // `/hoje` também lê `negocios` (Task 5) — sem isto, voltar do Pipeline para
   // lá pelo botão Voltar do navegador podia reaparecer com o ponto de saúde
   // antigo: o Router Cache do Next não sabe que este negócio mudou.
+  revalidatePath("/hoje");
+}
+
+/**
+ * Edita a conta em si (nome, dados de contato, decisor…) — até aqui "A CONTA"
+ * na gaveta do Pipeline era só leitura, e não existia onde guardar e-mail,
+ * telefone ou site do cliente. Ação separada de `atualizarNegocio` porque são
+ * duas entidades diferentes (conta × negócio) com botões "Salvar" também
+ * separados na gaveta.
+ */
+export async function atualizarConta(input: {
+  contaId: string;
+  nome: string;
+  nicho: string | null;
+  cidade: string | null;
+  uf: string | null;
+  decisorNome: string | null;
+  softwareAtual: string | null;
+  origem: string | null;
+  email: string | null;
+  telefone: string | null;
+  site: string | null;
+}) {
+  const nomeLimpo = input.nome.trim();
+  if (!nomeLimpo) throw new Error("O nome da conta é obrigatório.");
+
+  // Mesma normalização do link de anexo (src/lib/links.ts): sem esquema vira
+  // https://, e javascript:/data: são recusados antes de o valor virar um
+  // href clicável na gaveta.
+  const siteNormalizado = input.site?.trim() ? normalizeLinkUrl(input.site) : null;
+  if (siteNormalizado && !siteNormalizado.ok) throw new Error(siteNormalizado.message);
+
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("contas")
+    .update({
+      nome: nomeLimpo,
+      nicho: input.nicho,
+      cidade: input.cidade,
+      uf: input.uf,
+      decisor_nome: input.decisorNome,
+      software_atual: input.softwareAtual,
+      origem: input.origem,
+      email: input.email,
+      telefone: input.telefone,
+      site: siteNormalizado ? siteNormalizado.url : null,
+    })
+    .eq("id", input.contaId);
+  if (error) throw error;
+
+  revalidatePath("/pipeline");
+  // `/hoje` também lê `negocios(conta:...)` (Task 5) — sem isto, voltar do
+  // Pipeline para lá pelo botão Voltar do navegador podia reaparecer com o
+  // dado antigo da conta: o Router Cache do Next não sabe que ela mudou.
   revalidatePath("/hoje");
 }
 
