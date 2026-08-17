@@ -8,8 +8,14 @@ import { Avatar } from "@/components/ui/Avatar";
 import { Unavailable } from "@/components/ui/Unavailable";
 import { LiveActivity, type LiveActivityItem } from "@/components/hoje/LiveActivity";
 import { CLASSE_DO_PONTO_DE_SAUDE, ROTULO_DA_SAUDE, rotuloVencimento } from "@/lib/negocios";
-import { negocioParaItemHoje, ordenarPorUrgencia, tarefaParaItemHoje, type ItemHoje } from "@/lib/hoje";
-import type { NegocioHoje, TarefaHoje } from "@/lib/data/hoje";
+import {
+  implantacaoParaItemHoje,
+  negocioParaItemHoje,
+  ordenarPorUrgencia,
+  tarefaParaItemHoje,
+  type ItemHoje,
+} from "@/lib/hoje";
+import type { ImplantacaoHoje, NegocioHoje, TarefaHoje } from "@/lib/data/hoje";
 import type { Tables } from "@/lib/supabase/database.types";
 
 // Mesma linguagem visual do ponto de saúde do Pipeline (`NegocioCard.tsx`):
@@ -19,6 +25,7 @@ import type { Tables } from "@/lib/supabase/database.types";
 export function HojeClient({
   negocios,
   tarefas,
+  implantacoes,
   profiles,
   donoOptions,
   donoAtual,
@@ -27,6 +34,7 @@ export function HojeClient({
 }: {
   negocios: NegocioHoje[];
   tarefas: TarefaHoje[];
+  implantacoes: ImplantacaoHoje[];
   profiles: Tables<"profiles">[];
   donoOptions: { key: string; label: string; href: string }[];
   donoAtual: string;
@@ -35,11 +43,12 @@ export function HojeClient({
   unavailable?: boolean;
 }) {
   // Um instante só para a tela inteira — mesmo raciocínio de `PipelineClient`:
-  // reancorado a cada leitura nova (`negocios`/`tarefas` como sinal de "dado
-  // novo chegou"), não fotografado uma vez para a vida do componente. Sem
-  // isso, uma aba deixada aberta de um dia para o outro nunca envelheceria.
+  // reancorado a cada leitura nova (`negocios`/`tarefas`/`implantacoes` como
+  // sinal de "dado novo chegou"), não fotografado uma vez para a vida do
+  // componente. Sem isso, uma aba deixada aberta de um dia para o outro nunca
+  // envelheceria.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const agora = useMemo(() => new Date(), [negocios, tarefas]);
+  const agora = useMemo(() => new Date(), [negocios, tarefas, implantacoes]);
 
   const itens = useMemo<ItemHoje[]>(() => {
     const doNegocio = negocios.map((n) =>
@@ -67,8 +76,22 @@ export function HojeClient({
         agora
       )
     );
-    return ordenarPorUrgencia([...doNegocio, ...daTarefa]);
-  }, [negocios, tarefas, agora]);
+    const daImplantacao = implantacoes.map((i) =>
+      implantacaoParaItemHoje(
+        {
+          id: i.id,
+          etapaNome: i.etapaNome,
+          etapaDesde: i.etapa_desde,
+          slaDias: i.slaDias,
+          espera: i.espera,
+          donoId: i.dono?.id ?? null,
+          contaNome: i.conta?.nome ?? null,
+        },
+        agora
+      )
+    );
+    return ordenarPorUrgencia([...doNegocio, ...daTarefa, ...daImplantacao]);
+  }, [negocios, tarefas, implantacoes, agora]);
 
   const profilePorId = useMemo(() => new Map(profiles.map((p) => [p.id, p])), [profiles]);
 
@@ -129,7 +152,12 @@ export function HojeClient({
             {itens.map((item) => {
               const dono = item.donoId ? profilePorId.get(item.donoId) : undefined;
               const vencimento = rotuloVencimento(item.vencimento, agora);
-              const href = item.origem === "negocio" ? `/pipeline?negocio=${item.id}` : `/kanban?task=${item.id}`;
+              const href =
+                item.origem === "negocio"
+                  ? `/pipeline?negocio=${item.id}`
+                  : item.origem === "implantacao"
+                    ? "/implantacao"
+                    : `/kanban?task=${item.id}`;
 
               return (
                 <Link

@@ -1,4 +1,5 @@
 import { saudeDaTarefa, saudeDoNegocio, type SaudeNegocio } from "./negocios";
+import { saudeDaImplantacao, vencimentoDaEtapa } from "./implantacoes";
 
 /**
  * A unificação de `/hoje`: negócio (próximo passo) e tarefa (não concluída)
@@ -16,7 +17,7 @@ export type ItemHoje = {
   vencimento: string | null;
   /** Reusa o vocabulário de `saudeDoNegocio` — não um segundo léxico de cores. */
   saude: SaudeNegocio;
-  origem: "negocio" | "tarefa";
+  origem: "negocio" | "tarefa" | "implantacao";
 };
 
 export type NegocioParaItemHoje = {
@@ -66,6 +67,29 @@ export function tarefaParaItemHoje(tarefa: TarefaParaItemHoje, agora: Date = new
     vencimento: tarefa.dueDate,
     saude: saudeDaTarefa(tarefa.dueDate, agora),
     origem: "tarefa",
+  };
+}
+
+export type ImplantacaoParaItemHoje = {
+  id: string;
+  etapaNome: string;
+  etapaDesde: string;
+  slaDias: number;
+  espera: "nos" | "cliente";
+  donoId: string | null;
+  contaNome: string | null;
+};
+
+export function implantacaoParaItemHoje(implantacao: ImplantacaoParaItemHoje, agora: Date = new Date()): ItemHoje {
+  const vencimento = vencimentoDaEtapa(implantacao.etapaDesde, implantacao.slaDias);
+  return {
+    id: implantacao.id,
+    texto: implantacao.etapaNome,
+    contexto: implantacao.contaNome,
+    donoId: implantacao.donoId,
+    vencimento,
+    saude: saudeDaImplantacao(vencimento, implantacao.espera, agora),
+    origem: "implantacao",
   };
 }
 

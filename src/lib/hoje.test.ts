@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
+  implantacaoParaItemHoje,
   negocioParaItemHoje,
   ordenarPorUrgencia,
   tarefaParaItemHoje,
@@ -38,6 +39,22 @@ function tarefa(over: Partial<Parameters<typeof tarefaParaItemHoje>[0]> = {}) {
   );
 }
 
+function implantacao(over: Partial<Parameters<typeof implantacaoParaItemHoje>[0]> = {}) {
+  return implantacaoParaItemHoje(
+    {
+      id: "i1",
+      etapaNome: "Coleta de acessos",
+      etapaDesde: "2026-08-14T12:00:00Z",
+      slaDias: 1,
+      espera: "cliente",
+      donoId: "u1",
+      contaNome: "Nimbus",
+      ...over,
+    },
+    MEIO_DIA
+  );
+}
+
 describe("negocioParaItemHoje", () => {
   it("apodrece sem próximo passo, reusando o comportamento já testado de saudeDoNegocio", () => {
     const item = negocio({ proximoPasso: null });
@@ -61,11 +78,49 @@ describe("tarefaParaItemHoje", () => {
   });
 });
 
+describe("implantacaoParaItemHoje", () => {
+  // A regra em si (vencimentoDaEtapa somando SLA, saudeDaImplantacao capando
+  // em "atencao" para espera: "cliente") já está coberta em detalhe em
+  // implantacoes.test.ts — aqui só confere que o mapeador liga as duas
+  // funções certas e carrega os campos certos no ItemHoje.
+  it("calcula vencimento (etapaDesde + slaDias) e saude (saudeDaImplantacao) corretamente", () => {
+    const item = implantacao({ etapaDesde: "2026-08-14T12:00:00Z", slaDias: 1, espera: "nos" });
+    expect(item.vencimento).toBe("2026-08-15");
+    expect(item.saude).toBe("ok");
+    expect(item.texto).toBe("Coleta de acessos");
+    expect(item.contexto).toBe("Nimbus");
+    expect(item.donoId).toBe("u1");
+    expect(item.origem).toBe("implantacao");
+  });
+
+  it("etapa 'espera: cliente' vencida nunca apodrece — capa em 'atencao'", () => {
+    const item = implantacao({ etapaDesde: "2026-08-10T12:00:00Z", slaDias: 1, espera: "cliente" });
+    expect(item.vencimento).toBe("2026-08-11");
+    expect(item.saude).toBe("atencao");
+  });
+});
+
 describe("ordenarPorUrgencia", () => {
   it("negócio podre vem antes de tarefa em dia", () => {
     const podre = negocio({ proximoPasso: null });
     const emDia = tarefa({ dueDate: "2026-09-01" });
     expect(ordenarPorUrgencia([emDia, podre]).map((i) => i.origem)).toEqual(["negocio", "tarefa"]);
+  });
+
+  it("implantação 'espera: cliente' vencida (atencao) vem depois de negócio podre e antes de tarefa em dia", () => {
+    // Prova que o "atencao" devolvido por saudeDaImplantacao participa da
+    // mesma ordenação das outras duas fontes sem tratamento especial em
+    // ordenarPorUrgencia — a função não sabe (nem precisa saber) que esta
+    // origem existe.
+    const podre = negocio({ proximoPasso: null });
+    const emAtencao = implantacao({ etapaDesde: "2026-08-10T12:00:00Z", slaDias: 1, espera: "cliente" });
+    const emDia = tarefa({ dueDate: "2026-09-01" });
+    expect(emAtencao.saude).toBe("atencao");
+    expect(ordenarPorUrgencia([emDia, emAtencao, podre]).map((i) => i.origem)).toEqual([
+      "negocio",
+      "implantacao",
+      "tarefa",
+    ]);
   });
 
   it("tarefa vencida vem antes de negócio 'atencao'", () => {

@@ -57,6 +57,7 @@ export default async function HojePage({
         <HojeClient
           negocios={[]}
           tarefas={[]}
+          implantacoes={[]}
           profiles={profiles}
           donoOptions={donoOptions}
           donoAtual={dono ?? ""}
@@ -72,6 +73,7 @@ export default async function HojePage({
       <HojeClient
         negocios={dados.negocios}
         tarefas={dados.tarefas}
+        implantacoes={dados.implantacoes}
         profiles={profiles}
         donoOptions={donoOptions}
         donoAtual={dono ?? ""}
