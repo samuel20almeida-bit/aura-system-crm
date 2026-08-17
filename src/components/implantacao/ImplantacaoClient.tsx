@@ -33,12 +33,19 @@ export function ImplantacaoClient({
     return mapa;
   }, [etapas]);
 
-  const podres = implantacoes.filter((implantacao) => {
+  const saudeDeCada = implantacoes.map((implantacao) => {
     const etapa = etapaPorPosicao.get(implantacao.etapa);
-    if (!etapa) return false;
+    if (!etapa) return null;
     const vencimento = vencimentoDaEtapa(implantacao.etapa_desde, etapa.sla_dias);
-    return saudeDaImplantacao(vencimento, etapa.espera, agora) === "podre";
-  }).length;
+    return { saude: saudeDaImplantacao(vencimento, etapa.espera, agora), espera: etapa.espera };
+  });
+
+  const podres = saudeDeCada.filter((s) => s?.saude === "podre").length;
+  // Achado na revisão final: etapa esperando cliente nunca vira "podre" (de
+  // propósito — não é atraso nosso), então "N apodrecendo" sozinho deixava
+  // uma implantação travada há semanas invisível no resumo. Um segundo
+  // número cobre exatamente o que o primeiro não pode contar.
+  const esperandoCliente = saudeDeCada.filter((s) => s?.espera === "cliente" && s.saude === "atencao").length;
 
   const selecionado = idSelecionado ? implantacoes.find((i) => i.id === idSelecionado) ?? null : null;
   const etapaDoSelecionado = selecionado ? etapaPorPosicao.get(selecionado.etapa) ?? null : null;
@@ -50,7 +57,7 @@ export function ImplantacaoClient({
         sub={
           unavailable
             ? "A leitura da esteira falhou — recarregue a página em instantes."
-            : `${implantacoes.length} ${implantacoes.length === 1 ? "implantação em andamento" : "implantações em andamento"} · ${podres} apodrecendo`
+            : `${implantacoes.length} ${implantacoes.length === 1 ? "implantação em andamento" : "implantações em andamento"} · ${podres} apodrecendo · ${esperandoCliente} travadas esperando cliente`
         }
       />
 

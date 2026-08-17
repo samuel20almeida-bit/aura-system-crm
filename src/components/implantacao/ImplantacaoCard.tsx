@@ -4,7 +4,7 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import clsx from "clsx";
 import { Avatar } from "@/components/ui/Avatar";
-import { CLASSE_DO_PONTO_DE_SAUDE, ROTULO_DA_SAUDE, diasParado } from "@/lib/negocios";
+import { CLASSE_DO_PONTO_DE_SAUDE, ROTULO_DA_SAUDE, diasParado, rotuloVencimento } from "@/lib/negocios";
 import { saudeDaImplantacao, vencimentoDaEtapa } from "@/lib/implantacoes";
 import type { Etapa, ImplantacaoAberta } from "@/lib/data/implantacoes";
 
@@ -42,6 +42,11 @@ export function ImplantacaoCard({
   const vencimento = vencimentoDaEtapa(implantacao.etapa_desde, etapa.sla_dias);
   const saude = saudeDaImplantacao(vencimento, etapa.espera, agora);
   const parado = diasParado(implantacao.etapa_desde, agora);
+  // Achado na revisão final: "{parado}d" sozinho não responde "estourou o
+  // prazo?" (o próprio propósito desta tela, spec) — 14d é normal numa
+  // etapa de SLA 14 e grave numa de SLA 1. O rótulo de vencimento é o
+  // mesmo que /pipeline e /hoje já usam para a mesma pergunta.
+  const rotulo = rotuloVencimento(vencimento, agora);
   const contexto = [implantacao.conta?.nicho, implantacao.conta?.cidade].filter(Boolean).join(" · ");
 
   return (
@@ -78,7 +83,14 @@ export function ImplantacaoCard({
         >
           {ROTULO_ESPERA[etapa.espera]}
         </span>
-        <Avatar initials={implantacao.dono?.initials} size="sm" ghost={!implantacao.dono} />
+        <div className="flex flex-none items-center gap-2">
+          {rotulo && (
+            <span className={clsx("font-mono text-[11px]", saude === "podre" ? "text-red" : "text-muted")}>
+              {rotulo}
+            </span>
+          )}
+          <Avatar initials={implantacao.dono?.initials} size="sm" ghost={!implantacao.dono} />
+        </div>
       </div>
     </div>
   );

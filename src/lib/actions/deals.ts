@@ -158,10 +158,20 @@ export async function ganharNegocio(negocioId: string) {
   // implantação. Se falhar, nada aconteceu ainda.
   const { data: negocio, error: leituraError } = await supabase
     .from("negocios")
-    .select("conta_id, dono_id")
+    .select("conta_id, dono_id, resultado")
     .eq("id", negocioId)
     .single();
   if (leituraError) throw leituraError;
+
+  // Achado na revisão final da 3B: repetir "Ganhar" sobre um negócio que já
+  // tem resultado (ganho por uma aba desatualizada, ou já perdido) não pode
+  // reescrever nada — `negocios` não é publicada em tempo real, então uma
+  // aba aberta de véspera continua mostrando o botão clicável. Sem esta
+  // guarda, "Ganhar" de novo rebaixava `contas.fase` de volta para
+  // 'implantacao' mesmo numa conta que já tinha virado 'cliente', e
+  // reescrevia `fechado_em` com a data de hoje — corrompendo a única data
+  // que a 3C vai usar para a série histórica do Painel.
+  if (negocio.resultado) return;
 
   // Nasce a implantação ANTES de marcar o negócio como ganho — se isto
   // falhar, o negócio continua visível e o botão continua clicável.

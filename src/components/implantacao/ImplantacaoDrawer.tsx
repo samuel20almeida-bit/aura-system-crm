@@ -9,7 +9,7 @@ import { Avatar } from "@/components/ui/Avatar";
 import { useToast } from "@/components/ui/Toast";
 import { beginMutation } from "@/lib/realtime/mutation-gate";
 import { concluirImplantacao, moverEtapa } from "@/lib/actions/implantacoes";
-import { ROTULO_DA_SAUDE, diasParado } from "@/lib/negocios";
+import { ROTULO_DA_SAUDE, diasParado, rotuloVencimento } from "@/lib/negocios";
 import { saudeDaImplantacao, vencimentoDaEtapa } from "@/lib/implantacoes";
 import type { Etapa, ImplantacaoAberta } from "@/lib/data/implantacoes";
 
@@ -115,9 +115,14 @@ export function ImplantacaoDrawer({
               ))}
             </Select>
           </Field>
-          <div className="grid grid-cols-2 gap-3 font-mono text-[11px] text-muted">
-            <div>na etapa há {diasParado(implantacao.etapa_desde, agora)}d</div>
-            <div>{vencimento ? `SLA vence ${vencimento}` : "sem SLA"}</div>
+          <div className="grid grid-cols-2 gap-3 font-mono text-[11px]">
+            <div className="text-muted">na etapa há {diasParado(implantacao.etapa_desde, agora)}d</div>
+            {/* Mesmo rótulo que /pipeline e /hoje usam para "estourou o
+                prazo?" — achado na revisão final: "SLA vence 2026-08-03"
+                cru era a única das três telas sem essa gramática. */}
+            <div className={saude === "podre" ? "text-red" : "text-muted"}>
+              {vencimento ? rotuloVencimento(vencimento, agora) : "sem SLA"}
+            </div>
           </div>
         </div>
       </div>
