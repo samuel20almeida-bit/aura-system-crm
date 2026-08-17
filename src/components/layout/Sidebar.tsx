@@ -16,12 +16,14 @@ type NavItem = {
   countKey?: NavCountKey;
 };
 
-// Ordem fixada na Task 6 da Fase 3A, estendida na Task 6 da 3B: Hoje ·
-// Pipeline · Implantação · Kanban · Metas · Playbooks — Implantação entra
-// entre Pipeline e Kanban, seguindo a ordem do funil completo (venda →
-// build) que o spec da Fase 3 descreve. O CRM antigo saiu do menu (a rota
-// inteira foi removida, não só o item) — as tabelas que ele lia continuam
-// no banco, sem tela até a 3C.
+// Ordem fixada na Task 6 da Fase 3A, estendida na Task 6 da 3B e na Task 3
+// da 3D: Hoje · Pipeline · Implantação · Kanban · Painel · Metas ·
+// Playbooks — Implantação entra entre Pipeline e Kanban, seguindo a ordem
+// do funil completo (venda → build) que o spec da Fase 3 descreve. Painel
+// abre o grupo NEGÓCIO como visão geral de métricas, antes de Metas e
+// Playbooks. O CRM antigo saiu do menu (a rota inteira foi removida, não
+// só o item) — as tabelas que ele lia continuam no banco, sem tela até a
+// 3C.
 const workItems: NavItem[] = [
   { href: "/hoje", label: "Hoje", icon: HomeIcon },
   { href: "/pipeline", label: "Pipeline", icon: PipelineIcon },
@@ -30,6 +32,7 @@ const workItems: NavItem[] = [
 ];
 
 const businessItems: NavItem[] = [
+  { href: "/painel", label: "Painel", icon: PainelIcon },
   { href: "/metas", label: "Metas", icon: TargetIcon },
   { href: "/playbooks", label: "Playbooks", icon: PlaybookIcon },
 ];
@@ -210,6 +213,13 @@ function ImplantacaoIcon() {
   return (
     <svg {...iconProps()}>
       <path d="M2.6 3.4h4.2M2.6 8h7M2.6 12.6h10" />
+    </svg>
+  );
+}
+function PainelIcon() {
+  return (
+    <svg {...iconProps()}>
+      <path d="M3.2 12.8V8.4M8 12.8V3.2M12.8 12.8V6.4" />
     </svg>
   );
 }
