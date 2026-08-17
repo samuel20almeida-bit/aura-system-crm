@@ -7,11 +7,13 @@ import { listEtapas, listImplantacoesAbertas } from "@/lib/data/implantacoes";
  * paralelas.
  *
  * Sem filtro de dono, todas trazem tudo — o filtro por dono na URL
- * (Step 3, `/app/(app)/hoje/page.tsx`) empurra `donoId` pra cá, para a
- * página não ter que filtrar em JavaScript uma lista que o banco já sabe
- * filtrar. Implantação não tem filtro por dono aqui: a esteira é dado
- * pequeno (Task 4 da 3B) e o cruzamento com etapas já é feito em memória,
- * então filtrar em JS junto dessa junção não duplica lógica de consulta.
+ * (Step 3, `/app/(app)/hoje/page.tsx`) empurra `donoId` pra cá. Negócio e
+ * tarefa filtram no próprio `.eq()` da consulta, porque o banco já sabe
+ * filtrar. Implantação filtra em JavaScript, DEPOIS do cruzamento com
+ * etapas (abaixo) — a esteira é dado pequeno (Task 4 da 3B), e sem esse
+ * filtro escolher "Samuel" no seletor de `/hoje` continuaria mostrando
+ * implantações do Saymon, que é exatamente a inconsistência que este filtro
+ * existe para evitar nas outras duas fontes.
  */
 export async function getItensHoje(donoId?: string) {
   const supabase = await createClient();
@@ -62,6 +64,7 @@ export async function getItensHoje(donoId?: string) {
   // raciocínio do comentário em `src/lib/data/implantacoes.ts`.
   const etapaPorPosicao = new Map(etapasRes.etapas.map((e) => [e.posicao, e]));
   const implantacoes = implantacoesRes.implantacoes.flatMap((imp) => {
+    if (donoId && imp.dono?.id !== donoId) return [];
     const etapa = etapaPorPosicao.get(imp.etapa);
     // Etapa referenciada não encontrada não deveria acontecer (FK garante a
     // integridade), mas se acontecer, a implantação não pode virar item sem
