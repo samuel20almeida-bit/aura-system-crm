@@ -133,34 +133,50 @@ export async function atualizarNegocio(input: {
 }
 
 /**
- * Ganhar é passagem de bastão, não uma sexta coluna: o negócio sai do funil e a
- * conta entra em implantação.
+ * Ganhar é passagem de bastão, não uma sexta coluna: o negócio sai do funil, a
+ * conta entra em implantação e uma implantação nasce sozinha para conduzir o
+ * pós-venda (Fase 3B).
  *
- * NÃO nasce linha de implantação aqui — a tabela `implantacoes` é da Fase 3B e
- * ainda não existe. Até ela existir, o negócio ganho fica sem tela, o que é
- * esperado e está registrado no ledger da fase.
- *
- * A ORDEM DAS DUAS ESCRITAS IMPORTA. A conta é atualizada PRIMEIRO, e o
- * negócio (que tira ele do quadro, via `resultado is null` na leitura) por
- * último. Se a segunda falhar, o negócio continua visível e o botão continua
- * clicável — o usuário só tenta de novo, e atualizar `contas.fase` outra vez é
- * inofensivo. Na ordem inversa, uma falha na segunda escrita deixaria o
- * negócio marcado como ganho e já invisível no quadro, mas a conta parada em
- * "prospect" — inconsistente e sem nenhuma tela para consertar, porque a 3B
- * não existe ainda.
+ * A ORDEM DAS TRÊS ESCRITAS IMPORTA. Primeiro a implantação, depois a conta,
+ * e o negócio (que tira ele do quadro, via `resultado is null` na leitura)
+ * por último. Nenhuma delas tira o negócio de vista antes da última — se
+ * qualquer uma falhar no meio, o negócio continua visível e o botão continua
+ * clicável, e repetir "Ganhar" é seguro: `implantacoes.negocio_id` é `unique`,
+ * então uma segunda tentativa que ache a implantação já criada esbarra na
+ * constraint (23505) em vez de duplicar, e o código trata esse código
+ * especificamente como "já existe, segue em frente". Atualizar `contas.fase`
+ * de novo também é inofensivo. Na ordem inversa, uma falha na última escrita
+ * deixaria o negócio marcado como ganho e já invisível no quadro, mas a conta
+ * e a implantação incompletas — inconsistente e sem retry possível pela
+ * tela.
  */
 export async function ganharNegocio(negocioId: string) {
   const supabase = await createClient();
   const hoje = todayInAppTz();
 
-  // Leitura, sem mutação: só para saber qual conta atualizar. Se falhar,
-  // nada aconteceu ainda.
+  // Leitura, sem mutação: só para saber qual conta atualizar e quem herda a
+  // implantação. Se falhar, nada aconteceu ainda.
   const { data: negocio, error: leituraError } = await supabase
     .from("negocios")
-    .select("conta_id")
+    .select("conta_id, dono_id")
     .eq("id", negocioId)
     .single();
   if (leituraError) throw leituraError;
+
+  // Nasce a implantação ANTES de marcar o negócio como ganho — se isto
+  // falhar, o negócio continua visível e o botão continua clicável.
+  // `dono_id` herda do negócio (quem vendeu); a gaveta da implantação deixa
+  // trocar depois.
+  const { error: implantacaoError } = await supabase.from("implantacoes").insert({
+    conta_id: negocio.conta_id,
+    negocio_id: negocioId,
+    dono_id: negocio.dono_id,
+  });
+  // 23505 = unique_violation. Repetir "Ganhar" depois de a implantação já ter
+  // nascido (e a escrita seguinte ter falhado da vez anterior) não pode virar
+  // um erro assustador — a implantação já existe, é exatamente o que se
+  // queria.
+  if (implantacaoError && implantacaoError.code !== "23505") throw implantacaoError;
 
   const { error: contaError } = await supabase
     .from("contas")
@@ -179,6 +195,10 @@ export async function ganharNegocio(negocioId: string) {
   // lá pelo botão Voltar do navegador podia reaparecer com o ponto de saúde
   // antigo: o Router Cache do Next não sabe que este negócio mudou.
   revalidatePath("/hoje");
+  // A tela de Implantação (Task 4 desta fase) ainda não existe fisicamente,
+  // mas `revalidatePath` de uma rota inexistente é inofensivo no Next.js —
+  // chamar antecipadamente evita esquecer isto quando a rota nascer.
+  revalidatePath("/implantacao");
 }
 
 export async function perderNegocio(negocioId: string, motivo: string) {
