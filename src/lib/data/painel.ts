@@ -46,8 +46,14 @@ export async function listDadosDoPainel() {
     id: n.id,
     contaId: n.conta_id,
     resultado: n.resultado,
-    mrr: n.mrr,
-    setup: n.setup,
+    // O tipo gerado diz `number`, mas colunas `numeric` do Postgres voltam do
+    // PostgREST como STRING (preserva precisão decimal) — o resto do projeto
+    // já lida com isso coagindo no ponto de uso (`Number(n.mrr ?? 0)` em
+    // `PipelineClient.tsx`/`NegocioCard.tsx`). Aqui a coerção acontece na
+    // leitura, uma vez só, para `calcularMetricasPainel` poder somar com `+`
+    // sem cada soma virar concatenação de string a partir do segundo negócio.
+    mrr: n.mrr === null ? null : Number(n.mrr),
+    setup: n.setup === null ? null : Number(n.setup),
     proximoPasso: n.proximo_passo,
     proximoPassoEm: n.proximo_passo_em,
     mexidoEm: n.mexido_em,
