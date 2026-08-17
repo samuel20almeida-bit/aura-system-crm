@@ -16,12 +16,16 @@ type NavItem = {
   countKey?: NavCountKey;
 };
 
-// Ordem fixada na Task 6 da Fase 3A: Hoje · Pipeline · Kanban · Metas ·
-// Playbooks. O CRM antigo saiu do menu (a rota inteira foi removida, não só
-// o item) — as tabelas que ele lia continuam no banco, sem tela até a 3C.
+// Ordem fixada na Task 6 da Fase 3A, estendida na Task 6 da 3B: Hoje ·
+// Pipeline · Implantação · Kanban · Metas · Playbooks — Implantação entra
+// entre Pipeline e Kanban, seguindo a ordem do funil completo (venda →
+// build) que o spec da Fase 3 descreve. O CRM antigo saiu do menu (a rota
+// inteira foi removida, não só o item) — as tabelas que ele lia continuam
+// no banco, sem tela até a 3C.
 const workItems: NavItem[] = [
   { href: "/hoje", label: "Hoje", icon: HomeIcon },
   { href: "/pipeline", label: "Pipeline", icon: PipelineIcon },
+  { href: "/implantacao", label: "Implantação", icon: ImplantacaoIcon },
   { href: "/kanban", label: "Kanban", icon: KanbanIcon, countKey: "openTasks" },
 ];
 
@@ -199,6 +203,13 @@ function KanbanIcon() {
   return (
     <svg {...iconProps()}>
       <path d="M2.6 3h3.2v10.2H2.6zM6.9 3h3.2v6.6H6.9zM11.2 3h2.2v10.2h-2.2z" />
+    </svg>
+  );
+}
+function ImplantacaoIcon() {
+  return (
+    <svg {...iconProps()}>
+      <path d="M2.6 3.4h4.2M2.6 8h7M2.6 12.6h10" />
     </svg>
   );
 }
