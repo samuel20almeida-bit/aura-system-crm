@@ -271,7 +271,7 @@ function NewPlaybookModal({ categoryId, onClose }: { categoryId: string; onClose
         <Field label="NOME">
           <Input autoFocus value={name} onChange={(e) => setName(e.target.value)} required />
         </Field>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Field label="TIPO">
             <Select value={type} onChange={(e) => setType(e.target.value)}>
               <option value="executable">Executável (gera tarefas)</option>
