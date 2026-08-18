@@ -59,7 +59,7 @@ export function NovoNegocioModal({
   }
 
   return (
-    <Modal onClose={onClose} widthClass="w-full sm:w-[560px]">
+    <Modal onClose={onClose} widthClass="w-full md:w-[560px]">
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -111,7 +111,7 @@ export function NovoNegocioModal({
           />
         </Field>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <Field label="NICHO">
             <Input value={nicho} onChange={(e) => setNicho(e.target.value)} placeholder="Odontologia, barbearia…" />
           </Field>
@@ -125,7 +125,7 @@ export function NovoNegocioModal({
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <Field label="DECISOR">
             <Input value={decisor} onChange={(e) => setDecisor(e.target.value)} />
           </Field>
@@ -134,7 +134,7 @@ export function NovoNegocioModal({
           </Field>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <Field label="ORIGEM">
             <Input value={origem} onChange={(e) => setOrigem(e.target.value)} placeholder="Indicação, prospecção…" />
           </Field>
@@ -150,7 +150,7 @@ export function NovoNegocioModal({
           </Field>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <Field label="E-MAIL">
             <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="contato@cliente.com" />
           </Field>
@@ -162,7 +162,7 @@ export function NovoNegocioModal({
           <Input value={site} onChange={(e) => setSite(e.target.value)} placeholder="cliente.com.br" />
         </Field>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <Field label="SETUP (R$)">
             <Input type="number" min="0" step="0.01" value={setup} onChange={(e) => setSetup(e.target.value)} />
           </Field>

@@ -163,7 +163,7 @@ export function NewGoalModal({
             <Input value={customArea} onChange={(e) => setCustomArea(e.target.value)} required />
           </Field>
         )}
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <Field label="ATUAL">
             <Input value={current} onChange={(e) => setCurrent(e.target.value)} />
           </Field>

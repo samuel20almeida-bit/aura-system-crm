@@ -124,7 +124,7 @@ export function NegocioDrawer({
           <Field label="NOME">
             <Input value={contaNome} onChange={(e) => setContaNome(e.target.value)} />
           </Field>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <Field label="NICHO">
               <Input value={contaNicho} onChange={(e) => setContaNicho(e.target.value)} />
             </Field>
@@ -137,7 +137,7 @@ export function NegocioDrawer({
               </Field>
             </div>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <Field label="DECISOR">
               <Input value={contaDecisor} onChange={(e) => setContaDecisor(e.target.value)} />
             </Field>
@@ -148,7 +148,7 @@ export function NegocioDrawer({
           <Field label="ORIGEM">
             <Input value={contaOrigem} onChange={(e) => setContaOrigem(e.target.value)} />
           </Field>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <Field label="E-MAIL">
               <Input type="email" value={contaEmail} onChange={(e) => setContaEmail(e.target.value)} />
               {emailHref && (
@@ -237,7 +237,7 @@ export function NegocioDrawer({
               placeholder="Ligar para confirmar a proposta"
             />
           </Field>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <Field label="QUANDO">
               <Input type="date" value={proximoPassoEm} onChange={(e) => setProximoPassoEm(e.target.value)} />
             </Field>
@@ -245,7 +245,7 @@ export function NegocioDrawer({
               {vencimento ? `vence ${vencimento}` : "sem data"}
             </div>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <Field label="SETUP (R$)">
               <Input type="number" min="0" step="0.01" value={setup} onChange={(e) => setSetup(e.target.value)} />
             </Field>

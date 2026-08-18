@@ -115,7 +115,7 @@ export function ImplantacaoDrawer({
               ))}
             </Select>
           </Field>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 font-mono text-[11px]">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 font-mono text-[11px]">
             <div className="text-muted">na etapa há {diasParado(implantacao.etapa_desde, agora)}d</div>
             {/* Mesmo rótulo que /pipeline e /hoje usam para "estourou o
                 prazo?" — achado na revisão final: "SLA vence 2026-08-03"
