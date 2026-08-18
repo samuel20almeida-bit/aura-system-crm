@@ -1,7 +1,5 @@
--- Contato do prospect: a 0015 desenhou `contas` sem telefone/endereço/site,
--- mas o negócio vende agentes de WhatsApp — sem telefone não existe outreach.
--- Colunas nascem vazias, preenchidas à medida que a prospecção roda.
+-- `telefone`, `site` e `email` já existem no banco (adicionados fora do
+-- histórico de migrations); só falta `endereco` para o dado de prospecção
+-- de mapas/local business, que sempre vem com endereço completo.
 alter table public.contas
-  add column telefone text,
-  add column endereco text,
-  add column site text;
+  add column endereco text;
