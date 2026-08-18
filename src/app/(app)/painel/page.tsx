@@ -36,7 +36,7 @@ export default async function PainelPage() {
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
         <Kpi
-          label="MRR ativo"
+          label="Mensalidade ativa"
           value={formatCurrency(metricas.mrrAtivo)}
           sub={`${metricas.clientesAtivos} ${metricas.clientesAtivos === 1 ? "cliente ativo" : "clientes ativos"}`}
         />
@@ -53,7 +53,7 @@ export default async function PainelPage() {
           // só a mensalidade — um negócio de R$ 2.500 de setup + R$ 399/mês
           // apareceria como "R$ 399" nu, sem dizer que o setup ficou de
           // fora. O `sub` fica sempre visível, não só quando null.
-          sub={metricas.ticketMedio === null ? "sem negócio aberto" : "MRR por negócio aberto"}
+          sub={metricas.ticketMedio === null ? "sem negócio aberto" : "Mensalidade por negócio aberto"}
         />
         <Kpi
           label="Apodrecendo"
@@ -64,21 +64,21 @@ export default async function PainelPage() {
         <Kpi
           label="Esperando go-live"
           value={formatCurrency(metricas.mrrEsperandoGoLive)}
-          sub="MRR ganho, implantação ainda aberta"
+          sub="Mensalidade ganha, implantação ainda aberta"
         />
         <Kpi
           label="Setup na receita"
           value={metricas.setupNaReceita === null ? "—" : `${Math.round(metricas.setupNaReceita * 100)}%`}
           // Achado na revisão final, duas correções:
-          // (a) o denominador é setup contra UM mês de MRR, não contra o MRR
-          // acumulado até hoje — "desde o início" sugeria acumulado, o que a
+          // (a) o denominador é setup contra UM mês de mensalidade, não contra a mensalidade
+          // acumulada até hoje — "desde o início" sugeria acumulado, o que a
           // conta não faz; sem histórico de assinatura (3C não existe), não
           // dá pra fazer a conta acumulada, então o rótulo tem que ser
           // honesto sobre o que está sendo comparado.
           // (b) `null` também acontece com negócio ganho mas sem preço
           // registrado (setup e mrr em branco) — "sem negócio ganho" seria
           // falso nesse caso.
-          sub={metricas.setupNaReceita === null ? "sem valor registrado nos ganhos" : "setup vs. 1 mês de MRR"}
+          sub={metricas.setupNaReceita === null ? "sem valor registrado nos ganhos" : "setup vs. 1 mês de mensalidade"}
         />
       </div>
 
@@ -94,7 +94,7 @@ export default async function PainelPage() {
                   <th className="py-1.5 pr-3 font-normal">Origem</th>
                   <th className="py-1.5 pr-3 font-normal">Leads</th>
                   <th className="py-1.5 pr-3 font-normal">Ganhos</th>
-                  <th className="py-1.5 pr-3 font-normal">MRR</th>
+                  <th className="py-1.5 pr-3 font-normal">Mensalidade</th>
                 </tr>
               </thead>
               <tbody>
