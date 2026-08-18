@@ -59,7 +59,7 @@ export function NovoNegocioModal({
   }
 
   return (
-    <Modal onClose={onClose} widthClass="w-[560px]">
+    <Modal onClose={onClose} widthClass="w-full sm:w-[560px]">
       <form
         onSubmit={(e) => {
           e.preventDefault();
