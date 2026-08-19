@@ -62,6 +62,7 @@ type ItemTooltip = {
   name?: string | number;
   value?: number;
   color?: string;
+  payload?: unknown;
 };
 
 export function ChartTooltipContent({
@@ -69,14 +70,18 @@ export function ChartTooltipContent({
   payload,
   label,
   formatter,
+  renderExtra,
 }: {
   active?: boolean;
   payload?: readonly ItemTooltip[];
   label?: string;
   formatter?: (value: number) => string;
+  renderExtra?: (dadoPonto: unknown) => React.ReactNode;
 }) {
   const { config } = useChart();
   if (!active || !payload?.length) return null;
+
+  const extra = renderExtra ? renderExtra(payload[0]?.payload) : null;
 
   return (
     <div className="rounded-lg border border-border bg-surface px-2.5 py-1.5 text-[12px] shadow-lg">
@@ -96,6 +101,7 @@ export function ChartTooltipContent({
           );
         })}
       </div>
+      {extra && <div className="mt-1 border-t border-border-soft pt-1 text-muted">{extra}</div>}
     </div>
   );
 }

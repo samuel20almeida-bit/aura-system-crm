@@ -83,6 +83,7 @@ export function PainelHistoricoClient({
 
   return (
     <div className="flex flex-col gap-3">
+      <div className="text-[13px] font-medium">Tendência no período</div>
       <div className="flex flex-wrap items-center gap-2">
         <div className="flex overflow-hidden rounded-lg border border-border">
           {PRESETS.map((p) => (
@@ -123,7 +124,18 @@ export function PainelHistoricoClient({
               <CartesianGrid vertical={false} strokeDasharray="4 4" stroke="var(--color-border)" />
               <XAxis dataKey="rotulo" tickLine={false} axisLine={false} fontSize={11} />
               <YAxis hide />
-              <ChartTooltip content={<ChartTooltipContent formatter={formatCurrency} />} />
+              <ChartTooltip
+                content={
+                  <ChartTooltipContent
+                    formatter={formatCurrency}
+                    renderExtra={(dadoPonto) => {
+                      const ganhos = (dadoPonto as { ganhos?: number } | undefined)?.ganhos;
+                      if (ganhos === undefined) return null;
+                      return `${ganhos} ${ganhos === 1 ? "negócio ganho" : "negócios ganhos"}`;
+                    }}
+                  />
+                }
+              />
               <Area
                 type="monotone"
                 dataKey="mrrGanho"

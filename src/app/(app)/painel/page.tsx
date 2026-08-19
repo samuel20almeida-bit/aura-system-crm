@@ -22,7 +22,7 @@ export default async function PainelPage() {
   if (dados.unavailable) {
     return (
       <PageBody>
-        <PageHeader title="Painel" sub="Hoje, sem histórico — de onde vem o próximo real." />
+        <PageHeader title="Painel" sub="Hoje no topo, tendência embaixo — de onde vem o próximo real." />
         <Unavailable title="Não foi possível carregar o painel agora" />
       </PageBody>
     );
@@ -33,7 +33,7 @@ export default async function PainelPage() {
 
   return (
     <PageBody>
-      <PageHeader title="Painel" sub="Hoje, sem histórico — de onde vem o próximo real." />
+      <PageHeader title="Painel" sub="Hoje no topo, tendência embaixo — de onde vem o próximo real." />
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
         <Kpi
@@ -83,7 +83,7 @@ export default async function PainelPage() {
         />
       </div>
 
-      <div className="flex-1 overflow-y-auto rounded-xl border border-border bg-surface p-4 scrollbar-thin">
+      <div className="max-h-[420px] overflow-y-auto rounded-xl border border-border bg-surface p-4 scrollbar-thin">
         <div className="mb-2 text-[13px] font-medium">Origem → receita</div>
         {metricas.origemReceita.length === 0 ? (
           <div className="text-[12.5px] text-faint">Nenhum negócio cadastrado ainda.</div>
