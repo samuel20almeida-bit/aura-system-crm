@@ -121,4 +121,39 @@ describe("createAutoSaver", () => {
     expect(states).toEqual(["idle"]);
     expect(save).toHaveBeenCalledTimes(1);
   });
+
+  it("reverter para o valor já salvo enquanto outro save está em voo não descarta a reversão", async () => {
+    let resolvePrimeiro!: () => void;
+    let resolveSegundo!: () => void;
+    const save = vi
+      .fn()
+      .mockImplementationOnce(() => new Promise<void>((resolve) => (resolvePrimeiro = resolve)))
+      .mockImplementationOnce(() => new Promise<void>((resolve) => (resolveSegundo = resolve)))
+      .mockResolvedValueOnce(undefined);
+    const auto = createAutoSaver<string>(save, () => {});
+
+    // "x" já confirmado como último salvo.
+    auto.onChange("x");
+    await vi.advanceTimersByTimeAsync(800);
+    expect(save).toHaveBeenCalledTimes(1);
+    resolvePrimeiro();
+    await vi.advanceTimersByTimeAsync(0);
+
+    // Edita pra "a" (entra em voo, não resolve ainda).
+    auto.onChange("a");
+    await vi.advanceTimersByTimeAsync(800);
+    expect(save).toHaveBeenCalledTimes(2); // "a" disparou, mas ainda não resolveu
+
+    // Enquanto "a" está em voo, reverte pra "x" — o mesmo valor que JÁ era
+    // o último salvo antes de "a" começar.
+    auto.onChange("x");
+    await vi.advanceTimersByTimeAsync(800);
+    expect(save).toHaveBeenCalledTimes(2); // ainda não pode disparar: "a" segue em voo
+
+    // "a" assenta — a reversão pra "x" precisa disparar um terceiro save.
+    resolveSegundo();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(save).toHaveBeenCalledTimes(3);
+    expect(save).toHaveBeenLastCalledWith("x");
+  });
 });

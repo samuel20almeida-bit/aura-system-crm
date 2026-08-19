@@ -41,17 +41,19 @@ export function createAutoSaver<T>(
   }
 
   function tentar(value: T) {
-    if (ultimoSalvo !== NAO_HA_VALOR_SALVO && isEqual(value, ultimoSalvo)) {
-      onStateChange("idle");
+    if (salvando) {
+      // Um save já está em voo — `ultimoSalvo` ainda não é definitivo (só
+      // atualiza quando ESSE save assentar), então comparar com ele agora
+      // compararia contra um valor prestes a ficar obsoleto. Enfileira e
+      // deixa a checagem de igualdade rodar de novo depois, com o
+      // `ultimoSalvo` já atualizado.
+      valorPendenteDuranteSave = value;
+      temPendenteDuranteSave = true;
       return;
     }
 
-    if (salvando) {
-      // Um save já está em voo — guarda o valor mais recente e refaz assim
-      // que ele assentar, sem esperar mais um período de debounce. Editar
-      // durante o save não pode perder a edição.
-      valorPendenteDuranteSave = value;
-      temPendenteDuranteSave = true;
+    if (ultimoSalvo !== NAO_HA_VALOR_SALVO && isEqual(value, ultimoSalvo)) {
+      onStateChange("idle");
       return;
     }
 
