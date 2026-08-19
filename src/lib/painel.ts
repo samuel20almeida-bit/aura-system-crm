@@ -16,12 +16,17 @@ export type NegocioParaPainel = {
   proximoPasso: string | null;
   proximoPassoEm: string | null;
   mexidoEm: string;
+  /** Usado pela Fase 4E (`painel-historico.ts`) pra agrupar negócios ganhos por período. */
+  criadoEm: string;
+  fechadoEm: string | null;
 };
 
 export type ContaParaPainel = {
   id: string;
   fase: "prospect" | "implantacao" | "cliente" | "perdido" | "churn";
   origem: string | null;
+  /** Usado pela Fase 4E (`painel-historico.ts`) pra agrupar novas contas por período. */
+  criadoEm: string;
 };
 
 export type ImplantacaoParaPainel = {

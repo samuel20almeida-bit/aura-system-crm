@@ -21,6 +21,8 @@ function negocio(over: Partial<NegocioParaPainel> = {}): NegocioParaPainel {
     proximoPasso: "Ligar para a sócia financeira",
     proximoPassoEm: "2026-08-20",
     mexidoEm: "2026-08-14T12:00:00Z",
+    criadoEm: "2026-08-01T12:00:00Z",
+    fechadoEm: null,
     ...over,
   };
 }
@@ -30,6 +32,7 @@ function conta(over: Partial<ContaParaPainel> = {}): ContaParaPainel {
     id: "conta-1",
     fase: "prospect",
     origem: null,
+    criadoEm: "2026-08-01T12:00:00Z",
     ...over,
   };
 }

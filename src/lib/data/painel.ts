@@ -27,9 +27,11 @@ export async function listDadosDoPainel() {
     // podiam trocar de lugar na tabela entre dois F5, sem nada ter mudado.
     supabase
       .from("negocios")
-      .select("id, conta_id, resultado, mrr, setup, proximo_passo, proximo_passo_em, mexido_em")
+      .select(
+        "id, conta_id, resultado, mrr, setup, proximo_passo, proximo_passo_em, mexido_em, criado_em, fechado_em"
+      )
       .order("criado_em", { ascending: true }),
-    supabase.from("contas").select("id, fase, origem"),
+    supabase.from("contas").select("id, fase, origem, criado_em"),
     supabase.from("implantacoes").select("negocio_id, concluida_em"),
   ]);
 
@@ -63,12 +65,15 @@ export async function listDadosDoPainel() {
     proximoPasso: n.proximo_passo,
     proximoPassoEm: n.proximo_passo_em,
     mexidoEm: n.mexido_em,
+    criadoEm: n.criado_em,
+    fechadoEm: n.fechado_em,
   }));
 
   const contas: ContaParaPainel[] = (contasRes.data ?? []).map((c) => ({
     id: c.id,
     fase: c.fase,
     origem: c.origem,
+    criadoEm: c.criado_em,
   }));
 
   const implantacoes: ImplantacaoParaPainel[] = (implantacoesRes.data ?? []).map((i) => ({
