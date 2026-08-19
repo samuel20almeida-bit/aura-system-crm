@@ -4,6 +4,7 @@ import { Unavailable } from "@/components/ui/Unavailable";
 import { listDadosDoPainel } from "@/lib/data/painel";
 import { calcularMetricasPainel } from "@/lib/painel";
 import { formatCurrency, formatCurrencyCompact } from "@/lib/format";
+import { PainelHistoricoClient } from "@/components/painel/PainelHistoricoClient";
 
 /**
  * O Painel: leitura pura, sem interação nenhuma (nada de arraste, filtro,
@@ -111,6 +112,8 @@ export default async function PainelPage() {
           </div>
         )}
       </div>
+
+      <PainelHistoricoClient negocios={dados.negocios} contas={dados.contas} implantacoes={dados.implantacoes} />
     </PageBody>
   );
 }
