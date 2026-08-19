@@ -101,13 +101,16 @@ export function NegocioDrawer({
       notify("error", "Não foi possível salvar a conta. Tente de novo — se persistir, me avise.");
     },
   });
+  const contaEmErro = !contaNomeValido || contaAutoSaveStatus === "erro";
   const contaStatusTexto = !contaNomeValido
     ? "nome não pode ficar vazio"
-    : contaAutoSaveStatus === "salvando"
-      ? "salvando…"
-      : contaAutoSaveStatus === "salvo"
-        ? "salvo"
-        : "";
+    : contaAutoSaveStatus === "erro"
+      ? "não foi possível salvar"
+      : contaAutoSaveStatus === "salvando"
+        ? "salvando…"
+        : contaAutoSaveStatus === "salvo"
+          ? "salvo"
+          : "";
 
   const saude = saudeDoNegocio(
     {
@@ -130,6 +133,7 @@ export function NegocioDrawer({
       } catch (erro) {
         console.error(`[pipeline] falha ao ${oQue}:`, erro);
         notify("error", `Não foi possível ${oQue}. Tente de novo — se persistir, me avise.`);
+        setAcaoAtual(null);
       } finally {
         end();
       }
@@ -178,13 +182,16 @@ export function NegocioDrawer({
       notify("error", "Não foi possível salvar o próximo passo. Tente de novo — se persistir, me avise.");
     },
   });
+  const negocioEmErro = valoresInvalidos || negocioAutoSaveStatus === "erro";
   const negocioStatusTexto = valoresInvalidos
     ? "valores não podem ser negativos"
-    : negocioAutoSaveStatus === "salvando"
-      ? "salvando…"
-      : negocioAutoSaveStatus === "salvo"
-        ? "salvo"
-        : "";
+    : negocioAutoSaveStatus === "erro"
+      ? "não foi possível salvar"
+      : negocioAutoSaveStatus === "salvando"
+        ? "salvando…"
+        : negocioAutoSaveStatus === "salvo"
+          ? "salvo"
+          : "";
 
   // Vira link só quando o valor digitado dá um endereço de verdade — mesma
   // normalização do link de anexo (src/lib/links.ts), aqui só para decidir se
@@ -273,7 +280,9 @@ export function NegocioDrawer({
           </Field>
           <div className="flex items-center justify-between gap-2">
             <span className="text-[12px] text-muted">Dono: {negocio.dono?.full_name ?? "—"}</span>
-            <span className="font-mono text-[11px] text-muted">{contaStatusTexto}</span>
+            <span className={`font-mono text-[11px] ${contaEmErro ? "text-red" : "text-muted"}`}>
+              {contaStatusTexto}
+            </span>
           </div>
         </div>
 
@@ -324,7 +333,9 @@ export function NegocioDrawer({
             </Field>
           </div>
           <div className="flex justify-end">
-            <span className="font-mono text-[11px] text-muted">{negocioStatusTexto}</span>
+            <span className={`font-mono text-[11px] ${negocioEmErro ? "text-red" : "text-muted"}`}>
+              {negocioStatusTexto}
+            </span>
           </div>
         </div>
 

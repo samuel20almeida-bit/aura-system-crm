@@ -53,7 +53,11 @@ describe("createAutoSaver", () => {
     states.length = 0;
     auto.onChange("a"); // mesmo valor de novo
     await vi.advanceTimersByTimeAsync(800);
-    expect(states).toEqual(["idle"]);
+    // Com a checagem de conteúdo em `agendar()` (achados C2/I3), a segunda
+    // chamada nem chega a `tentar()` — é filtrada antes, então `onStateChange`
+    // não dispara nenhuma vez aqui. O que importa (nenhum save duplicado)
+    // continua garantido.
+    expect(states).toEqual([]);
     expect(save).toHaveBeenCalledTimes(1); // não chamou de novo
   });
 
@@ -118,7 +122,9 @@ describe("createAutoSaver", () => {
     states.length = 0;
     auto.onChange({ n: 1 }); // objeto novo, mesmo conteúdo
     await vi.advanceTimersByTimeAsync(800);
-    expect(states).toEqual(["idle"]);
+    // Mesmo motivo do teste anterior: a checagem de conteúdo em `agendar()`
+    // filtra a chamada repetida antes de chegar a `onStateChange`.
+    expect(states).toEqual([]);
     expect(save).toHaveBeenCalledTimes(1);
   });
 
@@ -155,5 +161,56 @@ describe("createAutoSaver", () => {
     await vi.advanceTimersByTimeAsync(0);
     expect(save).toHaveBeenCalledTimes(3);
     expect(save).toHaveBeenLastCalledWith("x");
+  });
+
+  it("com initialValue, o primeiro onChange igual ao valor inicial não agenda nem dispara save", async () => {
+    const save = vi.fn().mockResolvedValue(undefined);
+    const auto = createAutoSaver<string>(save, () => {}, { initialValue: "x" });
+
+    auto.onChange("x"); // valor que já veio "do servidor", sem edição real
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(save).not.toHaveBeenCalled();
+  });
+
+  it("com initialValue, um onChange com valor DIFERENTE dispara save normalmente", async () => {
+    const save = vi.fn().mockResolvedValue(undefined);
+    const auto = createAutoSaver<string>(save, () => {}, { initialValue: "x" });
+
+    auto.onChange("y");
+    await vi.advanceTimersByTimeAsync(800);
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(save).toHaveBeenCalledWith("y");
+  });
+
+  it("um save que falha não é reagendado automaticamente por chamadas repetidas com o mesmo conteúdo (simula re-render do React após erro)", async () => {
+    const save = vi.fn().mockRejectedValue(new Error("falha persistente"));
+    const auto = createAutoSaver<string>(save, () => {});
+
+    auto.onChange("a");
+    await vi.advanceTimersByTimeAsync(800);
+    expect(save).toHaveBeenCalledTimes(1);
+
+    // Simula o componente React re-renderizando com o MESMO conteúdo (ex: o
+    // próprio estado de erro do autosave mudou, disparando um re-render, que
+    // reconstrói o objeto de valor sem nenhuma edição nova).
+    auto.onChange("a");
+    await vi.advanceTimersByTimeAsync(800);
+    auto.onChange("a");
+    await vi.advanceTimersByTimeAsync(800);
+
+    expect(save).toHaveBeenCalledTimes(1); // não tentou de novo sozinho
+  });
+
+  it("o erro real chega em onStateChange, não um erro sintético", async () => {
+    const erroReal = new Error("motivo específico da falha");
+    const save = vi.fn().mockRejectedValueOnce(erroReal);
+    let erroRecebido: unknown;
+    const auto = createAutoSaver<string>(save, (s, erro) => {
+      if (s === "erro") erroRecebido = erro;
+    });
+
+    auto.onChange("a");
+    await vi.advanceTimersByTimeAsync(800);
+    expect(erroRecebido).toBe(erroReal);
   });
 });

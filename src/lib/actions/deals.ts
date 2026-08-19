@@ -112,6 +112,17 @@ export async function moverNegocioParaEstagio(negocioId: string, estagio: Estagi
   revalidatePath("/hoje");
 }
 
+/**
+ * Com autosave (Fase 4B), esta função pode rodar concorrentemente com
+ * `ganharNegocio`/`perderNegocio` sobre o MESMO negócio (o usuário edita um
+ * campo enquanto clica em Ganhar/Perder). Isso é seguro hoje porque os
+ * conjuntos de colunas escritas são disjuntos — `atualizarNegocio` só toca
+ * `proximo_passo`/`proximo_passo_em`/`setup`/`mrr`/`mexido_em`;
+ * `ganharNegocio`/`perderNegocio` só tocam `resultado`/`fechado_em`/
+ * `mexido_em` (+ `contas.fase`/`implantacoes`). Se um dia esta função passar
+ * a escrever `resultado` ou `fase`, essa garantia quebra — revisar a
+ * concorrência com autosave nesse momento.
+ */
 export async function atualizarNegocio(input: {
   negocioId: string;
   proximoPasso: string | null;
@@ -149,8 +160,8 @@ export async function atualizarNegocio(input: {
  * Edita a conta em si (nome, dados de contato, decisor…) — até aqui "A CONTA"
  * na gaveta do Pipeline era só leitura, e não existia onde guardar e-mail,
  * telefone ou site do cliente. Ação separada de `atualizarNegocio` porque são
- * duas entidades diferentes (conta × negócio) com botões "Salvar" também
- * separados na gaveta.
+ * duas entidades diferentes (conta × negócio) — cada uma com seu próprio
+ * autosave na gaveta (Fase 4B).
  */
 export async function atualizarConta(input: {
   contaId: string;

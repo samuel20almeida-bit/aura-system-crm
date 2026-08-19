@@ -35,12 +35,21 @@ export function useAutoSave<T>({
     isEqualRef.current = isEqual;
   }, [onSave, onError, isEqual]);
 
-  // `onStateChange` pode disparar depois do componente desmontar — o
-  // `cancel()` da Task 1 só cancela o temporizador de debounce, não um save
-  // já em voo nem um valor que ficou pendente-durante-esse-save (é
-  // comportamento intencional do módulo puro). Sem esta guarda, um
-  // `setState` chamado após o desmonte seria um bug real.
+  // `setState` não pode rodar depois do componente desmontar, mas o `onError`
+  // (log + toast) continua válido mesmo com a gaveta fechada — é uma falha
+  // real acontecendo em segundo plano, e o usuário se beneficia de saber.
+  // Só o `setState` é exclusivo de componente vivo (achado M5 da revisão
+  // final: a versão anterior bloqueava os dois, e uma falha depois do
+  // desmonte não avisava ninguém — nem toast, nem log).
   const montadoRef = useRef(true);
+
+  // Capturado só na primeira renderização (`useRef` ignora o argumento em
+  // renders seguintes) — semeia `createAutoSaver` pra o primeiro `onChange`
+  // (disparado no mount, com o valor que já veio do servidor) não contar
+  // como edição. Ver achado C1 da revisão final da Fase 4B: abrir a gaveta
+  // do Pipeline só pra olhar estava gravando no banco e zerando `mexido_em`,
+  // o relógio do apodrecimento do sistema inteiro.
+  const valorInicialRef = useRef(value);
 
   // O controller precisa ser criado uma única vez (sobrevive a
   // re-renderizações sem recriar o temporizador de debounce em voo), mas
@@ -60,14 +69,14 @@ export function useAutoSave<T>({
     montadoRef.current = true;
     const controller = createAutoSaver<T>(
       (v) => onSaveRef.current(v),
-      (s) => {
-        if (!montadoRef.current) return;
-        setState(s);
-        if (s === "erro") onErrorRef.current?.(new Error("autosave falhou"));
+      (s, erro) => {
+        if (montadoRef.current) setState(s);
+        if (s === "erro") onErrorRef.current?.(erro);
       },
       {
         delayMs,
         isEqual: (a, b) => (isEqualRef.current ? isEqualRef.current(a, b) : Object.is(a, b)),
+        initialValue: valorInicialRef.current,
       }
     );
     controllerRef.current = controller;
