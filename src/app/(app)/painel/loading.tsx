@@ -30,7 +30,7 @@ export default function Loading() {
           </div>
         ))}
       </div>
-      <div className="max-h-[420px] rounded-xl border border-border bg-surface p-4">
+      <div className="max-h-[420px] shrink-0 rounded-xl border border-border bg-surface p-4">
         <Skeleton className="mb-3 h-2.5 w-32" />
         {Array.from({ length: 4 }).map((_, i) => (
           <Skeleton key={i} className="mb-2 h-3 w-full" />

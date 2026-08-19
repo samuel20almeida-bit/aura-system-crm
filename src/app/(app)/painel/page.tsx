@@ -83,7 +83,7 @@ export default async function PainelPage() {
         />
       </div>
 
-      <div className="max-h-[420px] overflow-y-auto rounded-xl border border-border bg-surface p-4 scrollbar-thin">
+      <div className="max-h-[420px] shrink-0 overflow-y-auto rounded-xl border border-border bg-surface p-4 scrollbar-thin">
         <div className="mb-2 text-[13px] font-medium">Origem → receita</div>
         {metricas.origemReceita.length === 0 ? (
           <div className="text-[12.5px] text-faint">Nenhum negócio cadastrado ainda.</div>
