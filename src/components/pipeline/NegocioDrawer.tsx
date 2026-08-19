@@ -11,6 +11,7 @@ import { beginMutation } from "@/lib/realtime/mutation-gate";
 import { atualizarConta, atualizarNegocio, ganharNegocio, moverNegocioParaEstagio, perderNegocio } from "@/lib/actions/deals";
 import { normalizeLinkUrl } from "@/lib/links";
 import { ROTULO_DA_SAUDE, diasParado, rotuloVencimento, saudeDoNegocio } from "@/lib/negocios";
+import { useAutoSave } from "@/lib/use-autosave";
 import { ESTAGIOS, type EstagioId } from "./PipelineBoard";
 import type { NegocioAberto } from "@/lib/data/deals";
 
@@ -40,6 +41,7 @@ export function NegocioDrawer({
   const [mrr, setMrr] = useState(negocio.mrr === null ? "" : String(negocio.mrr));
   const [pedindoMotivo, setPedindoMotivo] = useState(false);
   const [motivo, setMotivo] = useState("");
+  const [acaoAtual, setAcaoAtual] = useState<"ganhar" | "perder" | null>(null);
 
   const [contaNome, setContaNome] = useState(negocio.conta?.nome ?? "");
   const [contaNicho, setContaNicho] = useState(negocio.conta?.nicho ?? "");
@@ -51,6 +53,61 @@ export function NegocioDrawer({
   const [contaEmail, setContaEmail] = useState(negocio.conta?.email ?? "");
   const [contaTelefone, setContaTelefone] = useState(negocio.conta?.telefone ?? "");
   const [contaSite, setContaSite] = useState(negocio.conta?.site ?? "");
+
+  const contaNomeValido = contaNome.trim() !== "";
+  const contaAutoSaveStatus = useAutoSave({
+    value: {
+      nome: contaNome,
+      nicho: contaNicho,
+      cidade: contaCidade,
+      uf: contaUf,
+      decisorNome: contaDecisor,
+      softwareAtual: contaSoftware,
+      origem: contaOrigem,
+      email: contaEmail,
+      telefone: contaTelefone,
+      site: contaSite,
+    },
+    enabled: contaNomeValido,
+    isEqual: (a, b) => JSON.stringify(a) === JSON.stringify(b),
+    onSave: async (v) => {
+      // Mesmo padrão de `executar()` (beginMutation/end + refresh) — o
+      // autosave não é uma exceção à regra do portão. Sem `catch` aqui de
+      // propósito: o erro precisa SUBIR para `createAutoSaver` decidir que o
+      // save falhou e chamar `onError` — engolir o erro aqui faria o módulo
+      // achar que salvou com sucesso.
+      const end = beginMutation();
+      try {
+        await atualizarConta({
+          contaId: negocio.conta_id,
+          nome: v.nome,
+          nicho: v.nicho.trim() || null,
+          cidade: v.cidade.trim() || null,
+          uf: v.uf.trim() || null,
+          decisorNome: v.decisorNome.trim() || null,
+          softwareAtual: v.softwareAtual.trim() || null,
+          origem: v.origem.trim() || null,
+          email: v.email.trim() || null,
+          telefone: v.telefone.trim() || null,
+          site: v.site.trim() || null,
+        });
+        router.refresh();
+      } finally {
+        end();
+      }
+    },
+    onError: (erro) => {
+      console.error("[pipeline] falha ao salvar a conta:", erro);
+      notify("error", "Não foi possível salvar a conta. Tente de novo — se persistir, me avise.");
+    },
+  });
+  const contaStatusTexto = !contaNomeValido
+    ? "nome não pode ficar vazio"
+    : contaAutoSaveStatus === "salvando"
+      ? "salvando…"
+      : contaAutoSaveStatus === "salvo"
+        ? "salvo"
+        : "";
 
   const saude = saudeDoNegocio(
     {
@@ -93,6 +150,41 @@ export function NegocioDrawer({
   // mesmo raciocínio do botão "Confirmar perda", desabilitado até o motivo
   // deixar de estar vazio.
   const valoresInvalidos = (numeroOuNulo(setup) ?? 0) < 0 || (numeroOuNulo(mrr) ?? 0) < 0;
+
+  const negocioAutoSaveStatus = useAutoSave({
+    value: { proximoPasso, proximoPassoEm, setup, mrr },
+    enabled: !valoresInvalidos,
+    isEqual: (a, b) => JSON.stringify(a) === JSON.stringify(b),
+    onSave: async (v) => {
+      // Mesmo padrão de `executar()` (beginMutation/end + refresh); sem
+      // `catch` pelo mesmo motivo do onSave da conta acima — o erro precisa
+      // chegar em `createAutoSaver`.
+      const end = beginMutation();
+      try {
+        await atualizarNegocio({
+          negocioId: negocio.id,
+          proximoPasso: v.proximoPasso.trim() || null,
+          proximoPassoEm: v.proximoPassoEm || null,
+          setup: numeroOuNulo(v.setup),
+          mrr: numeroOuNulo(v.mrr),
+        });
+        router.refresh();
+      } finally {
+        end();
+      }
+    },
+    onError: (erro) => {
+      console.error("[pipeline] falha ao salvar o próximo passo:", erro);
+      notify("error", "Não foi possível salvar o próximo passo. Tente de novo — se persistir, me avise.");
+    },
+  });
+  const negocioStatusTexto = valoresInvalidos
+    ? "valores não podem ser negativos"
+    : negocioAutoSaveStatus === "salvando"
+      ? "salvando…"
+      : negocioAutoSaveStatus === "salvo"
+        ? "salvo"
+        : "";
 
   // Vira link só quando o valor digitado dá um endereço de verdade — mesma
   // normalização do link de anexo (src/lib/links.ts), aqui só para decidir se
@@ -181,29 +273,7 @@ export function NegocioDrawer({
           </Field>
           <div className="flex items-center justify-between gap-2">
             <span className="text-[12px] text-muted">Dono: {negocio.dono?.full_name ?? "—"}</span>
-            <Button
-              variant="ghost"
-              disabled={pendente || !contaNome.trim()}
-              onClick={() =>
-                executar("salvar a conta", () =>
-                  atualizarConta({
-                    contaId: negocio.conta_id,
-                    nome: contaNome,
-                    nicho: contaNicho.trim() || null,
-                    cidade: contaCidade.trim() || null,
-                    uf: contaUf.trim() || null,
-                    decisorNome: contaDecisor.trim() || null,
-                    softwareAtual: contaSoftware.trim() || null,
-                    origem: contaOrigem.trim() || null,
-                    email: contaEmail.trim() || null,
-                    telefone: contaTelefone.trim() || null,
-                    site: contaSite.trim() || null,
-                  })
-                )
-              }
-            >
-              {pendente ? "Salvando…" : "Salvar conta"}
-            </Button>
+            <span className="font-mono text-[11px] text-muted">{contaStatusTexto}</span>
           </div>
         </div>
 
@@ -253,6 +323,9 @@ export function NegocioDrawer({
               <Input type="number" min="0" step="0.01" value={mrr} onChange={(e) => setMrr(e.target.value)} />
             </Field>
           </div>
+          <div className="flex justify-end">
+            <span className="font-mono text-[11px] text-muted">{negocioStatusTexto}</span>
+          </div>
         </div>
 
         {pedindoMotivo && (
@@ -283,47 +356,31 @@ export function NegocioDrawer({
             <Button
               variant="danger"
               disabled={pendente || motivo.trim() === ""}
-              onClick={() =>
-                executar("marcar o negócio como perdido", () => perderNegocio(negocio.id, motivo.trim()), onClose)
-              }
+              onClick={() => {
+                setAcaoAtual("perder");
+                executar("marcar o negócio como perdido", () => perderNegocio(negocio.id, motivo.trim()), onClose);
+              }}
             >
-              Confirmar perda
+              {pendente && acaoAtual === "perder" ? "Marcando como perdido…" : "Confirmar perda"}
             </Button>
           </>
         ) : (
-          <>
+          <div className="ml-auto flex items-center gap-2">
             <Button
-              disabled={pendente || valoresInvalidos}
-              onClick={() =>
-                executar("salvar o próximo passo", () =>
-                  atualizarNegocio({
-                    negocioId: negocio.id,
-                    proximoPasso: proximoPasso.trim() || null,
-                    proximoPassoEm: proximoPassoEm || null,
-                    setup: numeroOuNulo(setup),
-                    mrr: numeroOuNulo(mrr),
-                  })
-                )
-              }
+              variant="ghost"
+              disabled={pendente}
+              onClick={() => {
+                if (!confirm("Marcar como ganho? Isso vira uma implantação depois.")) return;
+                setAcaoAtual("ganhar");
+                executar("marcar o negócio como ganho", () => ganharNegocio(negocio.id), onClose);
+              }}
             >
-              {pendente ? "Salvando…" : "Definir próximo passo"}
+              {pendente && acaoAtual === "ganhar" ? "Marcando como ganho…" : "Ganhar"}
             </Button>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                disabled={pendente}
-                onClick={() => {
-                  if (!confirm("Marcar como ganho? Isso vira uma implantação depois.")) return;
-                  executar("marcar o negócio como ganho", () => ganharNegocio(negocio.id), onClose);
-                }}
-              >
-                Ganhar
-              </Button>
-              <Button variant="danger" disabled={pendente} onClick={() => setPedindoMotivo(true)}>
-                Perder
-              </Button>
-            </div>
-          </>
+            <Button variant="danger" disabled={pendente} onClick={() => setPedindoMotivo(true)}>
+              Perder
+            </Button>
+          </div>
         )}
       </div>
     </Slideover>
