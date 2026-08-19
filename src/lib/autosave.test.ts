@@ -1,0 +1,124 @@
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { createAutoSaver, type AutoSaveState } from "./autosave";
+
+describe("createAutoSaver", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("não dispara antes do período de silêncio, dispara depois", async () => {
+    const save = vi.fn().mockResolvedValue(undefined);
+    const states: AutoSaveState[] = [];
+    const auto = createAutoSaver<string>(save, (s) => states.push(s));
+
+    auto.onChange("a");
+    await vi.advanceTimersByTimeAsync(799);
+    expect(save).not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(1);
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(save).toHaveBeenCalledWith("a");
+    expect(states).toContain("salvando");
+    expect(states).toContain("salvo");
+  });
+
+  it("reinicia o debounce a cada mudança — só o último valor é salvo", async () => {
+    const save = vi.fn().mockResolvedValue(undefined);
+    const auto = createAutoSaver<string>(save, () => {});
+
+    auto.onChange("a");
+    await vi.advanceTimersByTimeAsync(500);
+    auto.onChange("b");
+    await vi.advanceTimersByTimeAsync(500);
+    expect(save).not.toHaveBeenCalled(); // só 500ms desde "b", precisa de 800
+
+    await vi.advanceTimersByTimeAsync(300);
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(save).toHaveBeenCalledWith("b");
+  });
+
+  it("pula o save se o valor não mudou desde o último salvo com sucesso", async () => {
+    const save = vi.fn().mockResolvedValue(undefined);
+    const states: AutoSaveState[] = [];
+    const auto = createAutoSaver<string>(save, (s) => states.push(s));
+
+    auto.onChange("a");
+    await vi.advanceTimersByTimeAsync(800);
+    expect(save).toHaveBeenCalledTimes(1);
+
+    states.length = 0;
+    auto.onChange("a"); // mesmo valor de novo
+    await vi.advanceTimersByTimeAsync(800);
+    expect(states).toEqual(["idle"]);
+    expect(save).toHaveBeenCalledTimes(1); // não chamou de novo
+  });
+
+  it("edição durante um save em voo dispara outro ciclo com o valor mais recente, sem esperar o debounce de novo", async () => {
+    let resolvePrimeiro!: () => void;
+    const save = vi
+      .fn()
+      .mockImplementationOnce(() => new Promise<void>((resolve) => (resolvePrimeiro = resolve)))
+      .mockResolvedValueOnce(undefined);
+    const auto = createAutoSaver<string>(save, () => {});
+
+    auto.onChange("a");
+    await vi.advanceTimersByTimeAsync(800);
+    expect(save).toHaveBeenCalledTimes(1); // "a" está em voo, ainda não resolveu
+
+    auto.onChange("b");
+    await vi.advanceTimersByTimeAsync(800); // debounce venceria aqui, mas "a" ainda está em voo
+    expect(save).toHaveBeenCalledTimes(1); // não iniciou um segundo save concorrente
+
+    resolvePrimeiro();
+    await vi.advanceTimersByTimeAsync(0); // sem timer novo pra avançar; só flush do microtask da resolução manual
+    expect(save).toHaveBeenCalledTimes(2);
+    expect(save).toHaveBeenLastCalledWith("b"); // o valor mais recente não se perdeu
+  });
+
+  it("erro no save não trava o módulo — chamado de novo, tenta de novo", async () => {
+    const save = vi.fn().mockRejectedValueOnce(new Error("falhou")).mockResolvedValueOnce(undefined);
+    const states: AutoSaveState[] = [];
+    const auto = createAutoSaver<string>(save, (s) => states.push(s));
+
+    auto.onChange("a");
+    await vi.advanceTimersByTimeAsync(800);
+    expect(states).toContain("erro");
+
+    auto.onChange("b");
+    await vi.advanceTimersByTimeAsync(800);
+    expect(save).toHaveBeenCalledTimes(2);
+    expect(save).toHaveBeenLastCalledWith("b");
+  });
+
+  it("cancel() cancela um save agendado e não disparado", async () => {
+    const save = vi.fn().mockResolvedValue(undefined);
+    const auto = createAutoSaver<string>(save, () => {});
+
+    auto.onChange("a");
+    auto.cancel();
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(save).not.toHaveBeenCalled();
+  });
+
+  it("isEqual customizado é respeitado", async () => {
+    const save = vi.fn().mockResolvedValue(undefined);
+    const states: AutoSaveState[] = [];
+    const auto = createAutoSaver<{ n: number }>(save, (s) => states.push(s), {
+      isEqual: (a, b) => a.n === b.n,
+    });
+
+    auto.onChange({ n: 1 });
+    await vi.advanceTimersByTimeAsync(800);
+    expect(save).toHaveBeenCalledTimes(1);
+
+    states.length = 0;
+    auto.onChange({ n: 1 }); // objeto novo, mesmo conteúdo
+    await vi.advanceTimersByTimeAsync(800);
+    expect(states).toEqual(["idle"]);
+    expect(save).toHaveBeenCalledTimes(1);
+  });
+});
