@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/Card";
 import { Tag } from "@/components/ui/Tag";
@@ -58,6 +58,11 @@ export function PlaybooksBody({
   const [activePlaybookId, setActivePlaybookId] = useState(initialActivePlaybookId);
   const [detail, setDetail] = useState(initialDetail);
   const [detailPending, startDetailTransition] = useTransition();
+  // Guarda contra resposta obsoleta: se o usuário clicar em outro playbook ou
+  // trocar de categoria antes de getPlaybookDetailAction responder, a resposta
+  // atrasada não pode sobrescrever o estado já atualizado por um clique mais
+  // recente.
+  const ultimoPlaybookSolicitadoRef = useRef<string | null>(null);
 
   const activeCategory = categories.find((c) => c.id === activeCategoryId);
   // Filtro em memória — mesmo padrão de calcularMetricasPainel/filtro de
@@ -71,6 +76,7 @@ export function PlaybooksBody({
     setActiveCategoryId(categoryId);
     setActivePlaybookId(null);
     setDetail(null);
+    ultimoPlaybookSolicitadoRef.current = null;
     router.replace(`/playbooks?category=${categoryId}`, { scroll: false });
   }
 
@@ -79,12 +85,15 @@ export function PlaybooksBody({
     const detailAnterior = detail;
     setActivePlaybookId(playbookId);
     setDetail(null);
+    ultimoPlaybookSolicitadoRef.current = playbookId;
     startDetailTransition(async () => {
       try {
         const d = await getPlaybookDetailAction(playbookId);
+        if (ultimoPlaybookSolicitadoRef.current !== playbookId) return;
         setDetail(d);
         router.replace(`/playbooks?category=${activeCategoryId}&playbook=${playbookId}`, { scroll: false });
       } catch {
+        if (ultimoPlaybookSolicitadoRef.current !== playbookId) return;
         setActivePlaybookId(playbookAnterior);
         setDetail(detailAnterior);
         notify("error", "Não foi possível carregar o playbook. Tente de novo.");
