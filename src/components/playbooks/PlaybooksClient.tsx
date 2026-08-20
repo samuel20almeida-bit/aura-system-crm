@@ -382,6 +382,7 @@ function RunPlaybookModal({
   onClose: () => void;
   onRun: () => Promise<void>;
 }) {
+  const { notify } = useToast();
   const [pending, startTransition] = useTransition();
   const [clientId, setClientId] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -393,12 +394,22 @@ function RunPlaybookModal({
           e.preventDefault();
           setError(null);
           startTransition(async () => {
+            // `runPlaybook` e a atualização da tela (`onRun`) são separados
+            // de propósito: se o playbook já rodou (execução + tarefas do
+            // Kanban criadas) mas só o refetch seguinte falhar, o modal não
+            // pode continuar mostrando "não foi possível rodar" — isso
+            // convidaria a um reenvio que duplicaria a execução inteira.
             try {
               await runPlaybook(playbookId, clientId || null);
-              await onRun();
-              onClose();
             } catch {
               setError("Não foi possível rodar o playbook. Tente novamente.");
+              return;
+            }
+            onClose();
+            try {
+              await onRun();
+            } catch {
+              notify("error", "O playbook rodou, mas não foi possível atualizar a tela. Recarregue a página.");
             }
           });
         }}
