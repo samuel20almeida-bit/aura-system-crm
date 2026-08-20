@@ -11,12 +11,11 @@ export async function listCategoriesWithCounts() {
   return (categories ?? []).map((c) => ({ ...c, count: counts[c.id] ?? 0 }));
 }
 
-export async function listPlaybooksInCategory(categoryId: string) {
+export async function listAllPlaybooks() {
   const supabase = await createClient();
   const { data } = await supabase
     .from("playbooks")
     .select("*, updated_by_profile:profiles!playbooks_updated_by_fkey(id, full_name, initials)")
-    .eq("category_id", categoryId)
     .order("updated_at", { ascending: false });
   return data ?? [];
 }

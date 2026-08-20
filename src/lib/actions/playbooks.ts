@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { nextTaskCodes } from "@/lib/data/tasks";
+import { getPlaybookDetail } from "@/lib/data/playbooks";
 
 export async function createCategory(name: string) {
   const supabase = await createClient();
@@ -142,4 +143,8 @@ export async function toggleRunStep(runStepId: string, done: boolean) {
   }
 
   revalidatePath("/playbooks");
+}
+
+export async function getPlaybookDetailAction(id: string) {
+  return getPlaybookDetail(id);
 }
