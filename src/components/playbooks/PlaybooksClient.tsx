@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import Link from "next/link";
+import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/Card";
 import { Tag } from "@/components/ui/Tag";
@@ -9,13 +8,14 @@ import { Button } from "@/components/ui/Button";
 import { Avatar } from "@/components/ui/Avatar";
 import { Modal } from "@/components/ui/Overlay";
 import { Field, Input, Select, Textarea } from "@/components/ui/Field";
-import { createCategory, createPlaybook, runPlaybook, toggleRunStep } from "@/lib/actions/playbooks";
+import { createCategory, createPlaybook, runPlaybook, toggleRunStep, getPlaybookDetailAction } from "@/lib/actions/playbooks";
 import { formatDate } from "@/lib/format";
 import { useToast } from "@/components/ui/Toast";
 
 type Category = { id: string; name: string; count: number };
 type PlaybookListItem = {
   id: string;
+  category_id: string;
   name: string;
   type: string;
   estimated_days: number | null;
@@ -30,15 +30,15 @@ const typeTone: Record<string, "accent" | "neutral"> = { executable: "accent", d
 
 export function PlaybooksBody({
   categories,
-  activeCategoryId,
-  playbooks,
-  activePlaybookId,
-  detail,
+  activeCategoryId: initialActiveCategoryId,
+  allPlaybooks,
+  activePlaybookId: initialActivePlaybookId,
+  detail: initialDetail,
   clients,
 }: {
   categories: Category[];
   activeCategoryId: string | null;
-  playbooks: PlaybookListItem[];
+  allPlaybooks: PlaybookListItem[];
   activePlaybookId: string | null;
   detail: { playbook: { id: string; name: string } | null; steps: Step[]; runs: Run[] } | null;
   clients: { id: string; name: string }[];
@@ -51,23 +51,62 @@ export function PlaybooksBody({
   const [showRun, setShowRun] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
 
+  // Estado local: seedado pelos props do primeiro render (link direto pra um
+  // playbook específico continua funcionando via SSR), depois só muda por
+  // clique — sem depender de navegação de página pra atualizar a tela.
+  const [activeCategoryId, setActiveCategoryId] = useState(initialActiveCategoryId);
+  const [activePlaybookId, setActivePlaybookId] = useState(initialActivePlaybookId);
+  const [detail, setDetail] = useState(initialDetail);
+  const [detailPending, startDetailTransition] = useTransition();
+
   const activeCategory = categories.find((c) => c.id === activeCategoryId);
+  // Filtro em memória — mesmo padrão de calcularMetricasPainel/filtro de
+  // tarefas do Kanban. Trocar de categoria não faz nenhuma chamada de rede.
+  const playbooks = useMemo(
+    () => allPlaybooks.filter((p) => p.category_id === activeCategoryId),
+    [allPlaybooks, activeCategoryId]
+  );
+
+  function selecionarCategoria(categoryId: string) {
+    setActiveCategoryId(categoryId);
+    setActivePlaybookId(null);
+    setDetail(null);
+    router.replace(`/playbooks?category=${categoryId}`, { scroll: false });
+  }
+
+  function selecionarPlaybook(playbookId: string) {
+    const playbookAnterior = activePlaybookId;
+    const detailAnterior = detail;
+    setActivePlaybookId(playbookId);
+    setDetail(null);
+    startDetailTransition(async () => {
+      try {
+        const d = await getPlaybookDetailAction(playbookId);
+        setDetail(d);
+        router.replace(`/playbooks?category=${activeCategoryId}&playbook=${playbookId}`, { scroll: false });
+      } catch {
+        setActivePlaybookId(playbookAnterior);
+        setDetail(detailAnterior);
+        notify("error", "Não foi possível carregar o playbook. Tente de novo.");
+      }
+    });
+  }
 
   return (
     <div className="flex flex-1 overflow-hidden">
       <div className="flex w-[200px] flex-none flex-col gap-0.5 border-r border-border bg-surface p-3">
         <span className="label px-2 pb-2">CATEGORIAS</span>
         {categories.map((c) => (
-          <Link
+          <button
             key={c.id}
-            href={`/playbooks?category=${c.id}`}
-            className={`flex items-center gap-2 rounded-lg px-2.5 py-2 text-[13px] font-medium ${
+            onClick={() => selecionarCategoria(c.id)}
+            className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[13px] font-medium ${
               c.id === activeCategoryId ? "bg-accent-tint text-accent" : "text-muted hover:bg-neutral-tint"
             }`}
           >
             {c.name}
             <span className="ml-auto font-mono text-[10px] text-faint">{c.count}</span>
-          </Link>
+          </button>
         ))}
         <button onClick={() => setShowNewCategory(true)} className="mt-1.5 px-2.5 text-left text-[13px] text-faint hover:text-ink">
           + Nova categoria
@@ -93,10 +132,10 @@ export function PlaybooksBody({
             </div>
             <div className="flex-1 overflow-y-auto scrollbar-thin">
               {playbooks.map((p) => (
-                <Link
+                <button
                   key={p.id}
-                  href={`/playbooks?category=${activeCategoryId}&playbook=${p.id}`}
-                  className={`grid grid-cols-[1.9fr_.8fr_.9fr_34px] items-center gap-2 border-b border-border-soft py-2.5 text-[13px] hover:bg-neutral-tint ${
+                  onClick={() => selecionarPlaybook(p.id)}
+                  className={`grid w-full grid-cols-[1.9fr_.8fr_.9fr_34px] items-center gap-2 border-b border-border-soft py-2.5 text-left text-[13px] hover:bg-neutral-tint ${
                     p.id === activePlaybookId ? "bg-neutral-tint" : ""
                   }`}
                 >
@@ -107,7 +146,7 @@ export function PlaybooksBody({
                   <Tag tone={typeTone[p.type]}>{typeLabel[p.type]}</Tag>
                   <div className="font-mono text-[11px] text-muted">{formatDate(p.updated_at)}</div>
                   <Avatar initials={p.updated_by_profile?.initials} size="sm" ghost />
-                </Link>
+                </button>
               ))}
               {playbooks.length === 0 && (
                 <div className="py-8 text-center text-[13px] text-faint">
@@ -118,7 +157,11 @@ export function PlaybooksBody({
           </Card>
 
           <div className="flex min-h-0 flex-col gap-3.5">
-            {detail?.playbook ? (
+            {detailPending ? (
+              <Card className="flex flex-1 items-center justify-center p-4 text-center text-[12.5px] text-faint">
+                Carregando…
+              </Card>
+            ) : detail?.playbook ? (
               <>
                 <Card className="flex flex-col gap-2.5 p-4">
                   <span className="label">{detail.playbook.name.toUpperCase()}</span>

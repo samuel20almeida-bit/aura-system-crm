@@ -14,14 +14,13 @@ export default async function PlaybooksPage({
     listClientsLite(),
   ]);
   const activeCategoryId = category ?? categories[0]?.id ?? null;
-  const playbooks = activeCategoryId ? allPlaybooks.filter((p) => p.category_id === activeCategoryId) : [];
   const detail = playbook ? await getPlaybookDetail(playbook) : null;
 
   return (
     <PlaybooksBody
       categories={categories}
       activeCategoryId={activeCategoryId}
-      playbooks={playbooks}
+      allPlaybooks={allPlaybooks}
       activePlaybookId={playbook ?? null}
       detail={detail}
       clients={clients}
