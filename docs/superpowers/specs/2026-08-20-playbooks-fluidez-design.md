@@ -78,8 +78,16 @@ Verificação via `npm test` (suíte existente não deve quebrar), `tsc --noEmit
 
 ## Fora de escopo
 
-- Criar categoria/playbook continua fazendo navegação de página cheia após o
-  sucesso — não é o que foi reportado como "travado".
+- Criar categoria/playbook/rodar um playbook continuam usando
+  `router.refresh()`/`router.push()` para o mesmo `/playbooks` depois do
+  sucesso — **essa premissa estava errada na primeira versão deste spec**: no
+  App Router, navegar para a mesma rota só com search params diferentes NÃO
+  remonta o componente (o "state key" que decide remontagem não inclui search
+  params), então esses handlers, herdados sem mudança, deixaram de atualizar
+  a tela quando a Task 2 moveu `detail`/`activeCategoryId`/`activePlaybookId`
+  para `useState` local — achado Critical da revisão final, corrigido fazendo
+  essas mutações atualizarem o estado local diretamente, em vez de depender
+  do fluxo de props para "trazer dado novo".
 - Nenhuma mudança de schema, nenhuma migração.
 - Nenhuma mudança no `loading.tsx` da rota (o esqueleto de primeiro
   carregamento continua servindo seu propósito — o problema era a navegação
