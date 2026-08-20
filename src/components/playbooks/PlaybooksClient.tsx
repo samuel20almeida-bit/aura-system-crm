@@ -219,7 +219,23 @@ export function PlaybooksBody({
                                   startTransition(async () => {
                                     try {
                                       await toggleRunStep(rs.id, !rs.done);
-                                      router.refresh();
+                                      setDetail((atual) =>
+                                        atual
+                                          ? {
+                                              ...atual,
+                                              runs: atual.runs.map((run) =>
+                                                run.id !== r.id
+                                                  ? run
+                                                  : {
+                                                      ...run,
+                                                      run_steps: run.run_steps.map((s) =>
+                                                        s.id === rs.id ? { ...s, done: !s.done } : s
+                                                      ),
+                                                    }
+                                              ),
+                                            }
+                                          : atual
+                                      );
                                     } catch {
                                       notify("error", "Não foi possível atualizar a etapa. Tente novamente.");
                                     }
@@ -258,6 +274,10 @@ export function PlaybooksBody({
                 const cat = await createCategory(newCategoryName.trim());
                 setNewCategoryName("");
                 setShowNewCategory(false);
+                setActiveCategoryId(cat.id);
+                setActivePlaybookId(null);
+                setDetail(null);
+                ultimoPlaybookSolicitadoRef.current = null;
                 router.push(`/playbooks?category=${cat.id}`);
               });
             }}
@@ -284,6 +304,10 @@ export function PlaybooksBody({
           playbookId={detail.playbook.id}
           clients={clients}
           onClose={() => setShowRun(false)}
+          onRun={async () => {
+            const fresh = await getPlaybookDetailAction(detail.playbook!.id);
+            setDetail(fresh);
+          }}
         />
       )}
     </div>
@@ -351,12 +375,13 @@ function RunPlaybookModal({
   playbookId,
   clients,
   onClose,
+  onRun,
 }: {
   playbookId: string;
   clients: { id: string; name: string }[];
   onClose: () => void;
+  onRun: () => Promise<void>;
 }) {
-  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [clientId, setClientId] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -370,7 +395,7 @@ function RunPlaybookModal({
           startTransition(async () => {
             try {
               await runPlaybook(playbookId, clientId || null);
-              router.refresh();
+              await onRun();
               onClose();
             } catch {
               setError("Não foi possível rodar o playbook. Tente novamente.");
