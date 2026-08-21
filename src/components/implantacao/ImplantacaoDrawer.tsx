@@ -146,6 +146,9 @@ export function ImplantacaoDrawer({
         </div>
       </div>
 
+      {/* `disabled` aqui não é espera de leitura — é guarda contra clique
+          duplo numa ação que muda a fase da conta. Os seletores otimistas
+          desta gaveta não usam mais `disabled`. */}
       <div className="flex items-center justify-end border-t border-border px-5.5 py-3">
         <Button
           disabled={pendente}
