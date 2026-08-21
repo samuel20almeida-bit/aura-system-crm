@@ -369,6 +369,9 @@ export function NegocioDrawer({
         )}
       </div>
 
+      {/* `disabled` aqui não é espera de leitura — é guarda contra clique
+          duplo numa ação que muda a fase da conta. Os seletores otimistas
+          desta gaveta não usam mais `disabled`. */}
       <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border px-5.5 py-3">
         {pedindoMotivo ? (
           <>
