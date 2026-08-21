@@ -32,6 +32,11 @@ export function NegocioDrawer({
 }) {
   const { notify } = useToast();
   const [pendente, startTransition] = useTransition();
+  // Transição própria para o seletor otimista: `pendente` é o estado dos
+  // botões "Ganhar"/"Perder" do rodapé, e uma troca de estágio não pode
+  // desabilitá-los nem trocar seus rótulos enquanto nada está sendo ganho ou
+  // perdido.
+  const [, startTrocaEstagio] = useTransition();
 
   // O estágio responde no clique. `useOptimistic` reverte sozinho quando a
   // transição termina: se a escrita deu certo, o payload novo da action já
@@ -41,7 +46,7 @@ export function NegocioDrawer({
   const [estagioOtimista, setEstagioOtimista] = useOptimistic(negocio.estagio);
 
   function trocarEstagio(novo: EstagioId) {
-    startTransition(async () => {
+    startTrocaEstagio(async () => {
       setEstagioOtimista(novo);
       const end = beginMutation();
       try {
@@ -147,8 +152,9 @@ export function NegocioDrawer({
   // disso renderizaria a rota inteira uma segunda vez — ~9 idas ao servidor
   // repetidas com a gaveta travada. Ver a auditoria action × rota no plano da
   // 5F. `moverNegocioParaEstagio` segue o mesmo raciocínio, mas por um
-  // caminho próprio — `trocarEstagio`, acima — porque a resposta some no
-  // `useOptimistic` em vez de passar por aqui.
+  // caminho e uma transição próprios — `trocarEstagio`/`startTrocaEstagio`,
+  // acima — porque a resposta some no `useOptimistic` em vez de passar por
+  // aqui.
   /** As escritas da gaveta que não têm valor otimista próprio passam por aqui: portão, aviso em caso de falha, e a janela continua aberta. */
   function executar(oQue: string, acao: () => Promise<unknown>, depois?: () => void) {
     startTransition(async () => {
@@ -370,8 +376,10 @@ export function NegocioDrawer({
       </div>
 
       {/* `disabled` aqui não é espera de leitura — é guarda contra clique
-          duplo numa ação que muda a fase da conta. Os seletores otimistas
-          desta gaveta não usam mais `disabled`. */}
+          duplo numa ação que muda a fase da conta. O seletor de estágio,
+          acima, tem transição própria (`startTrocaEstagio`) e não mexe em
+          `pendente`: trocar de estágio não pode deixar "Ganhar"/"Perder"
+          desabilitados ou trocando de rótulo. */}
       <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border px-5.5 py-3">
         {pedindoMotivo ? (
           <>

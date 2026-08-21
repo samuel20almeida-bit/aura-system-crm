@@ -8,11 +8,11 @@ import { calendarDaysBetweenInAppTz, todayInAppTz } from "./timezone";
  * há tempo demais, é uma venda que já começou a morrer e ninguém percebeu.
  *
  * Vem do protótipo do Samuel, onde a condição é a assinatura visual da tela: o
- * ponto que pulsa em vermelho. Aqui ela é função pura, testada, e **derivada da
- * data** — nunca de um status que alguém precisa lembrar de marcar. É a mesma
- * disciplina de `saudeDoNegocio`, logo abaixo, e pelo mesmo motivo: na Fase 1 a
- * fatura vencida dependia de marcação manual e o sino dizia "tudo em dia" com
- * uma fatura 24 dias vencida.
+ * ponto que pulsa em vermelho. Aqui ela é função pura, testada, e **derivada
+ * da data** — nunca de um status que alguém precisa lembrar de marcar. A
+ * lição vem da fatura vencida da Fase 1, que dependia de marcação manual: o
+ * sino dizia "tudo em dia" com uma fatura 24 dias vencida. (A regra da fatura
+ * saiu na Fase 5F junto com a tabela sem tela; a disciplina fica.)
  */
 export type SaudeNegocio = "ok" | "atencao" | "podre";
 

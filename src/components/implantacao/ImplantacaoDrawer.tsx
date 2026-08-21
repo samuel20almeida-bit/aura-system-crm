@@ -40,6 +40,10 @@ export function ImplantacaoDrawer({
 }) {
   const { notify } = useToast();
   const [pendente, startTransition] = useTransition();
+  // Transição própria para o seletor otimista: `pendente` é o estado do botão
+  // do rodapé ("Concluindo…"), e uma troca de etapa não pode fazê-lo dizer
+  // isso enquanto nada está sendo concluído.
+  const [, startTrocaEtapa] = useTransition();
 
   // Deliberadamente NÃO usam o valor otimista: dependem de `etapa_desde`, que
   // só o servidor sabe zerar. Um SLA otimista mostraria um prazo que ainda
@@ -54,7 +58,7 @@ export function ImplantacaoDrawer({
   const [etapaOtimista, setEtapaOtimista] = useOptimistic(implantacao.etapa);
 
   function trocarEtapa(nova: number) {
-    startTransition(async () => {
+    startTrocaEtapa(async () => {
       setEtapaOtimista(nova);
       const end = beginMutation();
       try {
@@ -72,9 +76,9 @@ export function ImplantacaoDrawer({
   // `revalidatePath("/implantacao")`, e o Next devolve o payload novo desta
   // rota junto com a resposta da action. Um refresh depois disso renderizaria
   // a rota inteira uma segunda vez. Ver a auditoria action × rota no plano da
-  // 5F. `moverEtapa` segue o mesmo raciocínio, mas por um caminho próprio —
-  // `trocarEtapa`, acima — porque a resposta some no `useOptimistic` em vez de
-  // passar por aqui.
+  // 5F. `moverEtapa` segue o mesmo raciocínio, mas por um caminho e uma
+  // transição próprios — `trocarEtapa`/`startTrocaEtapa`, acima — porque a
+  // resposta some no `useOptimistic` em vez de passar por aqui.
   /** As escritas da gaveta que não têm valor otimista próprio passam por aqui: portão, aviso em caso de falha, e a janela continua aberta. */
   function executar(oQue: string, acao: () => Promise<unknown>, depois?: () => void) {
     startTransition(async () => {
@@ -147,8 +151,9 @@ export function ImplantacaoDrawer({
       </div>
 
       {/* `disabled` aqui não é espera de leitura — é guarda contra clique
-          duplo numa ação que muda a fase da conta. Os seletores otimistas
-          desta gaveta não usam mais `disabled`. */}
+          duplo numa ação que muda a fase da conta. O seletor de etapa, acima,
+          tem transição própria (`startTrocaEtapa`) e não mexe em `pendente`:
+          trocar de etapa não pode deixar este botão dizendo "Concluindo…". */}
       <div className="flex items-center justify-end border-t border-border px-5.5 py-3">
         <Button
           disabled={pendente}

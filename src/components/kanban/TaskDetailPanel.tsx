@@ -26,10 +26,6 @@ import { useToast } from "@/components/ui/Toast";
 
 type Profile = Tables<"profiles">;
 
-// Nenhuma escrita deste painel chama `router.refresh()`: todas as actions de
-// tarefa chamam `revalidatePath("/kanban")`, e o Next devolve o payload novo
-// desta rota junto com a resposta da action. Ver a auditoria action × rota no
-// plano da 5F.
 type TaskDetail = {
   task: (Tables<"tasks"> & {
     client: { id: string; name: string; color: string; code_prefix: string } | null;
@@ -41,7 +37,10 @@ type TaskDetail = {
   history: (Tables<"activity_log"> & { user: { id: string; full_name: string; initials: string } | null })[];
 };
 
-
+// Nenhuma escrita deste painel chama `router.refresh()`: todas as actions de
+// tarefa chamam `revalidatePath("/kanban")`, e o Next devolve o payload novo
+// desta rota junto com a resposta da action. Ver a auditoria action × rota no
+// plano da 5F.
 export function TaskDetailPanel({ detail, profiles }: { detail: TaskDetail; profiles: Profile[] }) {
   const router = useRouter();
   const { notify } = useToast();
