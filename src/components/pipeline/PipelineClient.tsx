@@ -35,9 +35,11 @@ export function PipelineClient({
   // — não fotografado uma vez para a vida inteira do componente. Com deps
   // vazias, uma aba deixada aberta de um dia para o outro nunca envelhece: um
   // negócio que cruzou os 7 dias parado continuaria desenhado "ok" mesmo depois
-  // de um router.refresh() trazer dados novos, porque o React preserva o
-  // estado do componente entre renders. A tela que existe para gritar sobre
-  // negócio esquecido ficaria ela mesma esquecida.
+  // de `negocios` chegar atualizado — seja no payload que a Server Action
+  // devolve junto da resposta (a action revalida `/pipeline`), seja pelo
+  // `router.refresh()` que ainda existe no caminho de erro do arraste —,
+  // porque o React preserva o estado do componente entre renders. A tela que
+  // existe para gritar sobre negócio esquecido ficaria ela mesma esquecida.
   // `negocios` é usado como sinal de "leitura nova chegou", não como valor lido
   // dentro do memo — daí o disable, na linha certa, logo antes do código.
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -54,8 +56,10 @@ export function PipelineClient({
   const mrrEmJogo = negocios.reduce((soma, n) => soma + Number(n.mrr ?? 0), 0);
 
   // A gaveta lê da lista do servidor, não de uma cópia: depois de salvar, o
-  // `router.refresh()` traz o dado novo e a gaveta acompanha. Se o negócio saiu
-  // do funil (ganho ou perdido), ela simplesmente não encontra mais e fecha.
+  // payload novo da rota chega junto com a resposta da Server Action (que
+  // revalida `/pipeline`), `negocios` é atualizado e a gaveta acompanha. Se o
+  // negócio saiu do funil (ganho ou perdido), ela simplesmente não encontra
+  // mais e fecha.
   const selecionado = idSelecionado ? negocios.find((n) => n.id === idSelecionado) ?? null : null;
 
   return (
