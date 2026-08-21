@@ -1,6 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
 import { buildNotifications, type AppNotification } from "@/lib/notifications";
-import { UNPAID_INVOICE_STATUSES } from "@/lib/invoices";
 import { todayInAppTz } from "@/lib/timezone";
 
 /**
@@ -22,52 +21,22 @@ const UNAVAILABLE: AppNotification[] = [
 export async function getNotifications(userId: string): Promise<AppNotification[]> {
   const supabase = await createClient();
   const today = todayInAppTz();
-  const in30Days = new Date(new Date(today + "T00:00:00Z").getTime() + 30 * 86400000).toISOString().slice(0, 10);
 
-  const [invoicesRes, tasksRes, contractsRes] = await Promise.all([
-    supabase
-      .from("invoices")
-      .select("id, client_id, amount, due_date, status, client:clients(name)")
-      .in("status", UNPAID_INVOICE_STATUSES)
-      .order("due_date"),
-    supabase
-      .from("tasks")
-      .select("id, title, due_date")
-      .eq("assignee_id", userId)
-      .neq("status", "done")
-      .order("due_date"),
-    supabase
-      .from("contracts")
-      .select("id, client_id, end_date, client:clients(name)")
-      .eq("status", "active")
-      .not("end_date", "is", null)
-      .lte("end_date", in30Days)
-      .gte("end_date", today),
-  ]);
+  const tasksRes = await supabase
+    .from("tasks")
+    .select("id, title, due_date")
+    .eq("assignee_id", userId)
+    .neq("status", "done")
+    .order("due_date");
 
-  const failure = [invoicesRes, tasksRes, contractsRes].find((r) => r.error);
-  if (failure) {
-    console.error("[avisos] falha ao consultar o Supabase:", failure.error);
+  if (tasksRes.error) {
+    console.error("[avisos] falha ao consultar o Supabase:", tasksRes.error);
     return UNAVAILABLE;
   }
 
   return buildNotifications(
     {
-      openInvoices: (invoicesRes.data ?? []).map((i) => ({
-        id: i.id,
-        clientId: i.client_id,
-        clientName: i.client?.name ?? "Cliente",
-        amount: Number(i.amount),
-        dueDate: i.due_date,
-        status: i.status,
-      })),
       myOpenTasks: (tasksRes.data ?? []).map((t) => ({ id: t.id, title: t.title, dueDate: t.due_date })),
-      endingContracts: (contractsRes.data ?? []).map((c) => ({
-        id: c.id,
-        clientId: c.client_id,
-        clientName: c.client?.name ?? "Cliente",
-        endDate: c.end_date!,
-      })),
     },
     today
   );

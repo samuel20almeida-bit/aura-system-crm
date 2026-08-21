@@ -10,9 +10,9 @@ import { calendarDaysBetweenInAppTz, todayInAppTz } from "./timezone";
  * Vem do protótipo do Samuel, onde a condição é a assinatura visual da tela: o
  * ponto que pulsa em vermelho. Aqui ela é função pura, testada, e **derivada da
  * data** — nunca de um status que alguém precisa lembrar de marcar. É a mesma
- * disciplina de `isInvoiceOverdue` (`src/lib/invoices.ts`), e pelo mesmo motivo:
- * na Fase 1 a fatura vencida dependia de marcação manual e o sino dizia "tudo em
- * dia" com uma fatura 24 dias vencida.
+ * disciplina de `saudeDoNegocio`, logo abaixo, e pelo mesmo motivo: na Fase 1 a
+ * fatura vencida dependia de marcação manual e o sino dizia "tudo em dia" com
+ * uma fatura 24 dias vencida.
  */
 export type SaudeNegocio = "ok" | "atencao" | "podre";
 

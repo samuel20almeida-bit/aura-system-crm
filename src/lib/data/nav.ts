@@ -3,9 +3,9 @@ import { createClient } from "@/lib/supabase/server";
 /**
  * `overdueInvoices` saiu na Task 6 da Fase 3A junto com o item CRM do menu —
  * era o único consumidor do contador. As faturas continuam no banco, só sem
- * tela; o sino (`src/lib/data/notifications.ts`) ainda deriva o mesmo atraso
- * para o aviso, então a lógica de `isInvoiceOverdue` não morreu, só não
- * alimenta mais este contador.
+ * tela; o sino (`src/lib/data/notifications.ts`) também parou de consultá-las
+ * na Task 1 da Fase 5F — a lógica de atraso derivado da data não tinha mais
+ * consumidor e saiu junto.
  */
 export async function getNavCounts() {
   const supabase = await createClient();
