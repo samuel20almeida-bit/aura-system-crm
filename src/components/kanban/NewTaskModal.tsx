@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Modal } from "@/components/ui/Overlay";
 import { Field, Input, Select, Textarea } from "@/components/ui/Field";
@@ -20,7 +19,6 @@ export function NewTaskModal({
   profiles: Tables<"profiles">[];
   onClose: () => void;
 }) {
-  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [title, setTitle] = useState("");
   const [isInternal, setIsInternal] = useState(clients.length === 0);
@@ -47,7 +45,6 @@ export function NewTaskModal({
           dueDate: dueDate || null,
           description: description || null,
         });
-        router.refresh();
         onClose();
       } finally {
         end();

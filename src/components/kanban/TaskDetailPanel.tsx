@@ -26,6 +26,10 @@ import { useToast } from "@/components/ui/Toast";
 
 type Profile = Tables<"profiles">;
 
+// Nenhuma escrita deste painel chama `router.refresh()`: todas as actions de
+// tarefa chamam `revalidatePath("/kanban")`, e o Next devolve o payload novo
+// desta rota junto com a resposta da action. Ver a auditoria action × rota no
+// plano da 5F.
 type TaskDetail = {
   task: (Tables<"tasks"> & {
     client: { id: string; name: string; color: string; code_prefix: string } | null;
@@ -73,7 +77,6 @@ export function TaskDetailPanel({ detail, profiles }: { detail: TaskDetail; prof
               const end = beginMutation();
               try {
                 await updateTask(t.id, { status: e.target.value });
-                router.refresh();
               } finally {
                 end();
               }
@@ -118,7 +121,6 @@ export function TaskDetailPanel({ detail, profiles }: { detail: TaskDetail; prof
                 const end = beginMutation();
                 try {
                   await updateTask(t.id, { title: e.target.value.trim() });
-                  router.refresh();
                 } finally {
                   end();
                 }
@@ -159,7 +161,6 @@ export function TaskDetailPanel({ detail, profiles }: { detail: TaskDetail; prof
                     const end = beginMutation();
                     try {
                       await updateTask(t.id, { assignee_id: e.target.value || null });
-                      router.refresh();
                     } finally {
                       end();
                     }
@@ -185,7 +186,6 @@ export function TaskDetailPanel({ detail, profiles }: { detail: TaskDetail; prof
                       const end = beginMutation();
                       try {
                         await updateTask(t.id, { due_date: e.target.value || null });
-                        router.refresh();
                       } finally {
                         end();
                       }
@@ -208,7 +208,6 @@ export function TaskDetailPanel({ detail, profiles }: { detail: TaskDetail; prof
                     const end = beginMutation();
                     try {
                       await updateTask(t.id, { priority: e.target.value });
-                      router.refresh();
                     } finally {
                       end();
                     }
@@ -265,7 +264,6 @@ export function TaskDetailPanel({ detail, profiles }: { detail: TaskDetail; prof
                           const end = beginMutation();
                           try {
                             await toggleChecklistItem(item.id, !item.done);
-                            router.refresh();
                           } catch {
                             notify("error", "Não foi possível atualizar a subtarefa. Tente novamente.");
                           } finally {
@@ -288,7 +286,6 @@ export function TaskDetailPanel({ detail, profiles }: { detail: TaskDetail; prof
                           const end = beginMutation();
                           try {
                             await deleteChecklistItem(item.id);
-                            router.refresh();
                           } catch {
                             notify("error", "Não foi possível remover a subtarefa. Tente novamente.");
                           } finally {
@@ -311,7 +308,6 @@ export function TaskDetailPanel({ detail, profiles }: { detail: TaskDetail; prof
                       try {
                         await addChecklistItem(t.id, newItem.trim());
                         setNewItem("");
-                        router.refresh();
                       } finally {
                         end();
                       }
@@ -383,7 +379,6 @@ export function TaskDetailPanel({ detail, profiles }: { detail: TaskDetail; prof
             try {
               await addComment(t.id, newComment.trim());
               setNewComment("");
-              router.refresh();
             } finally {
               end();
             }
