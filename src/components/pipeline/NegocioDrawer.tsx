@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useOptimistic, useState, useTransition } from "react";
 import { Slideover } from "@/components/ui/Overlay";
 import { Field, Input, Select, Textarea } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Button";
@@ -32,6 +32,28 @@ export function NegocioDrawer({
 }) {
   const { notify } = useToast();
   const [pendente, startTransition] = useTransition();
+
+  // O estágio responde no clique. `useOptimistic` reverte sozinho quando a
+  // transição termina: se a escrita deu certo, o payload novo da action já
+  // traz `negocio.estagio` igual ao otimista e a troca é imperceptível; se
+  // falhou, o valor volta ao anterior e o toast explica. Mesmo padrão do
+  // progresso da meta (`MetasClient.tsx`) e do arraste dos quadros.
+  const [estagioOtimista, setEstagioOtimista] = useOptimistic(negocio.estagio);
+
+  function trocarEstagio(novo: EstagioId) {
+    startTransition(async () => {
+      setEstagioOtimista(novo);
+      const end = beginMutation();
+      try {
+        await moverNegocioParaEstagio(negocio.id, novo);
+      } catch (erro) {
+        console.error("[pipeline] falha ao mover o negócio de estágio:", erro);
+        notify("error", "Não foi possível mover o negócio de estágio. Tente de novo — se persistir, me avise.");
+      } finally {
+        end();
+      }
+    });
+  }
 
   const [proximoPasso, setProximoPasso] = useState(negocio.proximo_passo ?? "");
   const [proximoPassoEm, setProximoPassoEm] = useState(negocio.proximo_passo_em ?? "");
@@ -293,15 +315,7 @@ export function NegocioDrawer({
               KeyboardSensor, e o arraste fica desabilitado no celular. Sem
               isto, o Pipeline vira somente-leitura fora do desktop com mouse. */}
           <Field label="ESTÁGIO">
-            <Select
-              value={negocio.estagio}
-              disabled={pendente}
-              onChange={(e) =>
-                executar("mover o negócio de estágio", () =>
-                  moverNegocioParaEstagio(negocio.id, e.target.value as EstagioId)
-                )
-              }
-            >
+            <Select value={estagioOtimista} onChange={(e) => trocarEstagio(e.target.value as EstagioId)}>
               {ESTAGIOS.map((estagio) => (
                 <option key={estagio.id} value={estagio.id}>
                   {estagio.label}
