@@ -243,7 +243,14 @@ export async function removeAttachment(attachmentId: string) {
     .eq("id", attachmentId)
     .maybeSingle();
   if (readError) throw readError;
-  if (!row) return; // já removido por outra aba
+  if (!row) {
+    // A escrita é no-op, mas a TELA não é: quem clicou ✕ está vendo um anexo
+    // que já sumiu do banco (outra aba removeu primeiro). Sem revalidar, o
+    // item fica na lista e o ✕ parece simplesmente não fazer nada — era o
+    // `router.refresh()` removido na Task 2 da 5F que cobria este caminho.
+    revalidatePath("/kanban");
+    return;
+  }
 
   // A linha primeiro, o objeto depois. Na ordem inversa, um delete que falhasse
   // depois de um remove() bem-sucedido deixaria a linha apontando para um

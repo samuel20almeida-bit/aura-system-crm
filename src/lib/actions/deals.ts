@@ -250,7 +250,14 @@ export async function ganharNegocio(negocioId: string) {
   // 'implantacao' mesmo numa conta que já tinha virado 'cliente', e
   // reescrevia `fechado_em` com a data de hoje — corrompendo a única data
   // que a 3C vai usar para a série histórica do Painel.
-  if (negocio.resultado) return;
+  if (negocio.resultado) {
+    // A escrita é no-op, mas a TELA não é: quem clicou está vendo um negócio
+    // que já saiu do funil. Sem revalidar, o cartão fica lá até um F5 — era o
+    // `router.refresh()` removido na Task 2 da 5F que cobria este caminho.
+    revalidatePath("/pipeline");
+    revalidatePath("/hoje");
+    return;
+  }
 
   // Nasce a implantação ANTES de marcar o negócio como ganho — se isto
   // falhar, o negócio continua visível e o botão continua clicável.
