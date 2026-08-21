@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { CSSProperties } from "react";
 import { useRouter } from "next/navigation";
 import {
   DndContext,
@@ -285,13 +286,11 @@ export function ImplantacaoBoard({
     >
       {/* No celular as colunas empilham e quem rola é a grade; no desktop a
           grade fica parada e cada coluna rola por dentro. */}
-      {/* O número de colunas é dado (`etapas.length`), não um `md:grid-cols-N`
-          fixo — o mesmo raciocínio da Task 4: a contagem de etapas pode mudar
-          sem deploy. `isMobile` decide se a grade vira colunas empilhadas
-          (estilo ausente, cai no `grid-cols-1` da classe) ou lado a lado. */}
+      {/* O número de colunas é dado (`etapas.length`) e chega por `--colunas`;
+          o ponto de corte mora em `globals.css`, não aqui — ver `.board-etapas`. */}
       <div
-        className="grid flex-1 grid-cols-1 gap-3.5 overflow-y-auto scrollbar-thin md:overflow-hidden"
-        style={isMobile ? undefined : { gridTemplateColumns: `repeat(${Math.max(etapas.length, 1)}, minmax(0, 1fr))` }}
+        className="board-etapas flex-1 gap-3.5 overflow-y-auto scrollbar-thin md:overflow-hidden"
+        style={{ "--colunas": Math.max(etapas.length, 1) } as CSSProperties}
       >
         {etapas.map((etapa) => {
           const id = String(etapa.posicao);
