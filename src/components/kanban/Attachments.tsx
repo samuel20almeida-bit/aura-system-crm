@@ -1,7 +1,6 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { addFileAttachment, addLinkAttachment, removeAttachment } from "@/lib/actions/tasks";
 import { beginMutation } from "@/lib/realtime/mutation-gate";
@@ -30,7 +29,6 @@ export function Attachments({
   taskId: string;
   attachments: Tables<"task_attachments">[];
 }) {
-  const router = useRouter();
   const { notify } = useToast();
   const [pending, startTransition] = useTransition();
   const [uploading, setUploading] = useState(false);
@@ -58,7 +56,6 @@ export function Attachments({
       try {
         await addFileAttachment(taskId, file.name, path);
         notify("success", "Arquivo anexado.");
-        router.refresh();
       } catch {
         // Sem isto o objeto ficava no bucket sem nenhuma linha apontando para
         // ele: invisível na interface, ocupando espaço para sempre.
@@ -96,7 +93,6 @@ export function Attachments({
                   const end = beginMutation();
                   try {
                     await removeAttachment(a.id);
-                    router.refresh();
                   } catch {
                     notify("error", "Não foi possível remover o anexo.");
                   } finally {
@@ -156,7 +152,6 @@ export function Attachments({
                 setLinkName("");
                 setLinkOpen(false);
                 notify("success", "Link anexado.");
-                router.refresh();
               } catch {
                 notify("error", "Não foi possível anexar o link.");
               } finally {
