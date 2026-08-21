@@ -1,7 +1,16 @@
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 
-export async function requireProfile() {
+/**
+ * Envolvida em `cache()` porque `/hoje` chama isto duas vezes por
+ * renderização — uma no layout, outra na página. Sem a deduplicação são
+ * dois `auth.getUser()` (que é rede, não CPU) e duas consultas a
+ * `profiles` para responder a mesma pergunta. O `cache()` do React vale
+ * só por passada de renderização no servidor: requisições diferentes não
+ * compartilham nada entre si.
+ */
+export const requireProfile = cache(async () => {
   const supabase = await createClient();
   const {
     data: { user },
@@ -17,8 +26,8 @@ export async function requireProfile() {
 
   if (!profile) redirect("/login");
 
-  return { user, profile };
-}
+  return { userId: user.id, profile };
+});
 
 export async function listProfiles() {
   const supabase = await createClient();
