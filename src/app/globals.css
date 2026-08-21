@@ -54,6 +54,22 @@ body {
   scrollbar-color: var(--color-border) transparent;
 }
 
+/* O quadro da Implantação tem tantas colunas quantas forem as etapas em
+   `implantacao_etapas` — dado, não código, então o número chega por
+   `--colunas`. O PONTO DE CORTE, porém, é CSS: com ele em JavaScript
+   (`useMediaQuery`, que devolve `false` no servidor) o celular pintava o
+   layout de desktop antes de virar celular, e todo carregamento piscava. */
+.board-etapas {
+  display: grid;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 768px) {
+  .board-etapas {
+    grid-template-columns: repeat(var(--colunas, 1), minmax(0, 1fr));
+  }
+}
+
 @keyframes toast-in {
   from { opacity: 0; transform: translateY(8px); }
   to   { opacity: 1; transform: translateY(0); }
