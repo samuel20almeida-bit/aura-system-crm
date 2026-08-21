@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { Slideover } from "@/components/ui/Overlay";
 import { Field, Input, Select, Textarea } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Button";
@@ -31,7 +30,6 @@ export function NegocioDrawer({
   agora: Date;
   onClose: () => void;
 }) {
-  const router = useRouter();
   const { notify } = useToast();
   const [pendente, startTransition] = useTransition();
 
@@ -71,11 +69,11 @@ export function NegocioDrawer({
     enabled: contaNomeValido,
     isEqual: (a, b) => JSON.stringify(a) === JSON.stringify(b),
     onSave: async (v) => {
-      // Mesmo padrão de `executar()` (beginMutation/end + refresh) — o
-      // autosave não é uma exceção à regra do portão. Sem `catch` aqui de
-      // propósito: o erro precisa SUBIR para `createAutoSaver` decidir que o
-      // save falhou e chamar `onError` — engolir o erro aqui faria o módulo
-      // achar que salvou com sucesso.
+      // Mesmo padrão de `executar()` (beginMutation/end, sem refresh — ver o
+      // comentário ali) — o autosave não é uma exceção à regra do portão. Sem
+      // `catch` aqui de propósito: o erro precisa SUBIR para `createAutoSaver`
+      // decidir que o save falhou e chamar `onError` — engolir o erro aqui
+      // faria o módulo achar que salvou com sucesso.
       const end = beginMutation();
       try {
         await atualizarConta({
@@ -91,7 +89,6 @@ export function NegocioDrawer({
           telefone: v.telefone.trim() || null,
           site: v.site.trim() || null,
         });
-        router.refresh();
       } finally {
         end();
       }
@@ -122,13 +119,18 @@ export function NegocioDrawer({
   );
   const vencimento = rotuloVencimento(negocio.proximo_passo_em, agora);
 
+  // Sem `router.refresh()`: as três actions que passam por aqui
+  // (`moverNegocioParaEstagio`, `ganharNegocio`, `perderNegocio`) chamam
+  // `revalidatePath("/pipeline")`, e o Next devolve o payload novo desta rota
+  // junto com a resposta da action. Um refresh depois disso renderizaria a
+  // rota inteira uma segunda vez — ~9 idas ao servidor repetidas com a gaveta
+  // travada. Ver a auditoria action × rota no plano da 5F.
   /** Toda escrita da gaveta passa por aqui: portão, aviso em caso de falha, e a janela continua aberta. */
   function executar(oQue: string, acao: () => Promise<unknown>, depois?: () => void) {
     startTransition(async () => {
       const end = beginMutation();
       try {
         await acao();
-        router.refresh();
         depois?.();
       } catch (erro) {
         console.error(`[pipeline] falha ao ${oQue}:`, erro);
@@ -160,7 +162,7 @@ export function NegocioDrawer({
     enabled: !valoresInvalidos,
     isEqual: (a, b) => JSON.stringify(a) === JSON.stringify(b),
     onSave: async (v) => {
-      // Mesmo padrão de `executar()` (beginMutation/end + refresh); sem
+      // Mesmo padrão de `executar()` (beginMutation/end, sem refresh); sem
       // `catch` pelo mesmo motivo do onSave da conta acima — o erro precisa
       // chegar em `createAutoSaver`.
       const end = beginMutation();
@@ -172,7 +174,6 @@ export function NegocioDrawer({
           setup: numeroOuNulo(v.setup),
           mrr: numeroOuNulo(v.mrr),
         });
-        router.refresh();
       } finally {
         end();
       }

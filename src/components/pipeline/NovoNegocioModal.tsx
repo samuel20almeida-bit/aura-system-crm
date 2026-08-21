@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { Modal } from "@/components/ui/Overlay";
 import { Field, Input, Select, Textarea } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Button";
@@ -27,7 +26,6 @@ export function NovoNegocioModal({
   profiles: { id: string; full_name: string }[];
   onClose: () => void;
 }) {
-  const router = useRouter();
   const { notify } = useToast();
   const [pendente, startTransition] = useTransition();
 
@@ -87,7 +85,6 @@ export function NovoNegocioModal({
                 proximoPassoEm: proximoPassoEm || null,
                 donoId: donoId || null,
               });
-              router.refresh();
               onClose();
             } catch (erro) {
               console.error("[pipeline] falha ao criar o negócio:", erro);
