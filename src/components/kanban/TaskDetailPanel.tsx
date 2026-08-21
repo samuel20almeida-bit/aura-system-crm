@@ -60,8 +60,32 @@ export function TaskDetailPanel({ detail, profiles }: { detail: TaskDetail; prof
       list.map((item) => (item.id === id ? { ...item, done } : item))
   );
 
+  // Mesmo padrão da gaveta do negócio (`NegocioDrawer.tsx`). O `catch` é novo:
+  // antes desta fase o seletor tinha try/finally sem catch, então uma escrita
+  // que falhasse não avisava ninguém — a tela voltava ao status antigo sem
+  // explicação. Fica antes do `return null` abaixo porque hook não pode vir
+  // depois de um retorno condicional; o `?? ""` nunca aparece na tela, pois
+  // sem tarefa o painel nem chega a renderizar o seletor.
+  const [statusOtimista, setStatusOtimista] = useOptimistic(detail.task?.status ?? "");
+
   if (!detail.task) return null;
   const t = detail.task;
+
+  function trocarStatus(novo: string) {
+    startTransition(async () => {
+      setStatusOtimista(novo);
+      const end = beginMutation();
+      try {
+        await updateTask(t.id, { status: novo });
+      } catch (erro) {
+        console.error("[kanban] falha ao mudar o status da tarefa:", erro);
+        notify("error", "Não foi possível mudar o status da tarefa. Tente de novo — se persistir, me avise.");
+      } finally {
+        end();
+      }
+    });
+  }
+
   const doneCount = optimisticChecklist.filter((i) => i.done).length;
   const overdue = t.due_date && daysUntil(t.due_date) < 0 && t.status !== "done";
   const days = t.due_date ? daysUntil(t.due_date) : null;
@@ -71,17 +95,8 @@ export function TaskDetailPanel({ detail, profiles }: { detail: TaskDetail; prof
       <div className="flex items-center gap-2.5 border-b border-border px-5.5 py-4">
         <span className="font-mono text-xs text-muted">{t.code}</span>
         <select
-          value={t.status}
-          onChange={(e) =>
-            startTransition(async () => {
-              const end = beginMutation();
-              try {
-                await updateTask(t.id, { status: e.target.value });
-              } finally {
-                end();
-              }
-            })
-          }
+          value={statusOtimista}
+          onChange={(e) => trocarStatus(e.target.value)}
           className="rounded-full border border-border bg-surface px-2.5 py-1 text-xs font-medium"
         >
           <option value="todo">A fazer</option>
