@@ -1,6 +1,3 @@
-import { formatCurrency, formatDate } from "./format";
-import { isInvoiceOverdue } from "./invoices";
-
 export type AppNotification = {
   id: string;
   tone: "red" | "amber" | "neutral";
@@ -11,26 +8,16 @@ export type AppNotification = {
 };
 
 export type NotificationInput = {
-  /** Faturas não pagas — o atraso é derivado aqui, não pelo status guardado. */
-  openInvoices: {
-    id: string;
-    clientId: string;
-    clientName: string;
-    amount: number;
-    dueDate: string;
-    status: string;
-  }[];
   myOpenTasks: { id: string; title: string; dueDate: string | null }[];
-  endingContracts: { id: string; clientId: string; clientName: string; endDate: string }[];
 };
 
 /**
- * Frase e cores do sino. Até a Task 5 da Fase 3A, o card "PRECISA DE VOCÊ" da
- * /início lia da mesma lista — enquanto tinham escopos diferentes, a /início
- * podia dizer "Tudo em dia por aqui." com seis tarefas atrasadas no sino, um
- * centímetro acima. O card saiu; `/hoje` é agora o lugar único para negócio +
- * tarefa, e o sino aponta pra lá. A frase e as cores continuam aqui porque o
- * sino ainda é a segunda apresentação de faturas/contratos/tarefas.
+ * Frase e cores do sino. Até a Task 1 da Fase 5F, o sino também consultava
+ * `invoices` e `contracts` — tabelas que nenhuma tela alimenta desde que o CRM
+ * antigo saiu, e cujos avisos já nasciam com `href: null` porque a tela de
+ * destino não existe. Tarefa é a fonte única agora; a frase e as cores
+ * continuam aqui porque o sino ainda é a segunda apresentação da tarefa,
+ * depois de `/hoje`.
  */
 export const ALL_CLEAR = "Tudo em dia por aqui.";
 
@@ -40,23 +27,11 @@ export const TONE_BG: Record<AppNotification["tone"], string> = {
   neutral: "bg-faint",
 };
 
+// `neutral` não é mais produzido por `buildNotifications`, mas fica no vocabulário: `TONE_BG` é a paleta do sino e a 5A vai mexer nela.
 const TONE_ORDER: Record<AppNotification["tone"], number> = { red: 0, amber: 1, neutral: 2 };
 
 export function buildNotifications(input: NotificationInput, today: string): AppNotification[] {
   const out: AppNotification[] = [];
-
-  for (const invoice of input.openInvoices) {
-    if (!isInvoiceOverdue(invoice.status, invoice.dueDate, today)) continue;
-    out.push({
-      id: `fatura-${invoice.id}`,
-      tone: "red",
-      title: `${invoice.clientName} · fatura vencida`,
-      detail: `${formatCurrency(invoice.amount)} · venceu em ${formatDate(invoice.dueDate)}`,
-      // A tela de cliente (/crm/[id]) foi removida na Task 6 — o aviso
-      // continua aparecendo (a fatura é dado real), só deixa de ser clicável.
-      href: null,
-    });
-  }
 
   for (const task of input.myOpenTasks) {
     if (!task.dueDate) continue;
@@ -79,18 +54,7 @@ export function buildNotifications(input: NotificationInput, today: string): App
     }
   }
 
-  for (const contract of input.endingContracts) {
-    out.push({
-      id: `contrato-${contract.id}`,
-      tone: "neutral",
-      title: `Contrato ${contract.clientName} termina em breve`,
-      detail: `Até ${formatDate(contract.endDate)}`,
-      // Mesma razão do aviso de fatura, acima: a tela de cliente não existe mais.
-      href: null,
-    });
-  }
-
   // Ordena por urgência (vermelho → âmbar → neutro). `sort` é estável, então a
-  // ordem dentro de cada tom continua sendo a das queries (por data de vencimento).
+  // ordem dentro de cada tom continua sendo a da query (por data de vencimento).
   return out.sort((a, b) => TONE_ORDER[a.tone] - TONE_ORDER[b.tone]);
 }
