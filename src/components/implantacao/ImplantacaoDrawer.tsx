@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition } from "react";
+import { useOptimistic, useTransition } from "react";
 import { Slideover } from "@/components/ui/Overlay";
 import { Field, Select } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Button";
@@ -41,15 +41,41 @@ export function ImplantacaoDrawer({
   const { notify } = useToast();
   const [pendente, startTransition] = useTransition();
 
+  // Deliberadamente NÃO usam o valor otimista: dependem de `etapa_desde`, que
+  // só o servidor sabe zerar. Um SLA otimista mostraria um prazo que ainda
+  // não existe — o seletor responde na hora, mas este rótulo espera a
+  // confirmação do servidor.
   const etapaAtual = etapas.find((e) => e.posicao === implantacao.etapa) ?? null;
   const vencimento = etapaAtual ? vencimentoDaEtapa(implantacao.etapa_desde, etapaAtual.sla_dias) : null;
   const saude = etapaAtual ? saudeDaImplantacao(vencimento!, etapaAtual.espera, agora) : "ok";
 
-  // Sem `router.refresh()`: `moverEtapa` e `concluirImplantacao` chamam
+  // Mesmo padrão da gaveta do negócio (`NegocioDrawer.tsx`): a etapa responde
+  // no clique e reverte sozinha se a escrita falhar.
+  const [etapaOtimista, setEtapaOtimista] = useOptimistic(implantacao.etapa);
+
+  function trocarEtapa(nova: number) {
+    startTransition(async () => {
+      setEtapaOtimista(nova);
+      const end = beginMutation();
+      try {
+        await moverEtapa(implantacao.id, nova);
+      } catch (erro) {
+        console.error("[implantacao] falha ao mover a implantação de etapa:", erro);
+        notify("error", "Não foi possível mover a implantação de etapa. Tente de novo — se persistir, me avise.");
+      } finally {
+        end();
+      }
+    });
+  }
+
+  // Sem `router.refresh()`: `concluirImplantacao` chama
   // `revalidatePath("/implantacao")`, e o Next devolve o payload novo desta
-  // rota junto com a resposta da action. Ver a auditoria action × rota no
-  // plano da 5F.
-  /** Toda escrita da gaveta passa por aqui: portão, aviso em caso de falha, e a janela continua aberta. */
+  // rota junto com a resposta da action. Um refresh depois disso renderizaria
+  // a rota inteira uma segunda vez. Ver a auditoria action × rota no plano da
+  // 5F. `moverEtapa` segue o mesmo raciocínio, mas por um caminho próprio —
+  // `trocarEtapa`, acima — porque a resposta some no `useOptimistic` em vez de
+  // passar por aqui.
+  /** As escritas da gaveta que não têm valor otimista próprio passam por aqui: portão, aviso em caso de falha, e a janela continua aberta. */
   function executar(oQue: string, acao: () => Promise<unknown>, depois?: () => void) {
     startTransition(async () => {
       const end = beginMutation();
@@ -100,15 +126,7 @@ export function ImplantacaoDrawer({
               isto, a tela vira somente-leitura fora do desktop com mouse —
               mesmo raciocínio de `NegocioDrawer.tsx`. */}
           <Field label="ETAPA">
-            <Select
-              value={String(implantacao.etapa)}
-              disabled={pendente}
-              onChange={(e) =>
-                executar("mover a implantação de etapa", () =>
-                  moverEtapa(implantacao.id, Number(e.target.value))
-                )
-              }
-            >
+            <Select value={String(etapaOtimista)} onChange={(e) => trocarEtapa(Number(e.target.value))}>
               {etapas.map((etapa) => (
                 <option key={etapa.posicao} value={etapa.posicao}>
                   {etapa.nome}
