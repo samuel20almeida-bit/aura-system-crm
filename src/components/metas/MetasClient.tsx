@@ -1,7 +1,6 @@
 "use client";
 
 import { useOptimistic, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { Card, ProgressBar } from "@/components/ui/Card";
 import { Tag } from "@/components/ui/Tag";
 import { Button } from "@/components/ui/Button";
@@ -20,7 +19,6 @@ function formatValue(value: number, unit: string) {
 }
 
 function GoalRowItem({ goal }: { goal: GoalRow }) {
-  const router = useRouter();
   const { notify } = useToast();
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(String(goal.current));
@@ -43,7 +41,6 @@ function GoalRowItem({ goal }: { goal: GoalRow }) {
                 try {
                   await updateGoalProgress(goal.id, parsed);
                   setEditing(false);
-                  router.refresh();
                 } catch {
                   notify("error", "Não foi possível atualizar o progresso da meta. Tente novamente.");
                 } finally {
@@ -82,7 +79,6 @@ function GoalRowItem({ goal }: { goal: GoalRow }) {
               const end = beginMutation();
               try {
                 await deleteGoal(goal.id);
-                router.refresh();
               } catch {
                 notify("error", "Não foi possível excluir a meta. Tente novamente.");
               } finally {
@@ -110,7 +106,6 @@ export function NewGoalModal({
   areas: string[];
   onClose: () => void;
 }) {
-  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [title, setTitle] = useState("");
   const [area, setArea] = useState(areas[0] ?? "Geral");
@@ -139,7 +134,6 @@ export function NewGoalModal({
                 unit,
                 ownerId: ownerId || null,
               });
-              router.refresh();
               onClose();
             } finally {
               end();
