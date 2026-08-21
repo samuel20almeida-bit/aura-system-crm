@@ -141,13 +141,15 @@ export function NegocioDrawer({
   );
   const vencimento = rotuloVencimento(negocio.proximo_passo_em, agora);
 
-  // Sem `router.refresh()`: as três actions que passam por aqui
-  // (`moverNegocioParaEstagio`, `ganharNegocio`, `perderNegocio`) chamam
-  // `revalidatePath("/pipeline")`, e o Next devolve o payload novo desta rota
-  // junto com a resposta da action. Um refresh depois disso renderizaria a
-  // rota inteira uma segunda vez — ~9 idas ao servidor repetidas com a gaveta
-  // travada. Ver a auditoria action × rota no plano da 5F.
-  /** Toda escrita da gaveta passa por aqui: portão, aviso em caso de falha, e a janela continua aberta. */
+  // Sem `router.refresh()`: as actions que passam por aqui (`ganharNegocio`,
+  // `perderNegocio`) chamam `revalidatePath("/pipeline")`, e o Next devolve o
+  // payload novo desta rota junto com a resposta da action. Um refresh depois
+  // disso renderizaria a rota inteira uma segunda vez — ~9 idas ao servidor
+  // repetidas com a gaveta travada. Ver a auditoria action × rota no plano da
+  // 5F. `moverNegocioParaEstagio` segue o mesmo raciocínio, mas por um
+  // caminho próprio — `trocarEstagio`, acima — porque a resposta some no
+  // `useOptimistic` em vez de passar por aqui.
+  /** As escritas da gaveta que não têm valor otimista próprio passam por aqui: portão, aviso em caso de falha, e a janela continua aberta. */
   function executar(oQue: string, acao: () => Promise<unknown>, depois?: () => void) {
     startTransition(async () => {
       const end = beginMutation();
