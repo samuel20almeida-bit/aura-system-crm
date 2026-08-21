@@ -79,10 +79,10 @@ export function NotificationBell({ notifications }: { notifications: AppNotifica
                 );
               })}
             </div>
-            {/* O sino cobre faturas/contratos (CRM antigo) + tarefas — não
-                negócio/Pipeline, que `getNotifications` nunca passou a
-                incluir. `/hoje` é quem unifica negócio + tarefa; este link só
-                aponta pra lá, não substitui os itens acima. */}
+            {/* O sino cobre só tarefa — nunca passou a incluir negócio/Pipeline,
+                e desde a Task 1 da Fase 5F também não cobre mais
+                faturas/contratos (CRM antigo). `/hoje` é quem unifica negócio +
+                tarefa; este link só aponta pra lá, não substitui os itens acima. */}
             <Link
               href="/hoje"
               onClick={() => setOpen(false)}
