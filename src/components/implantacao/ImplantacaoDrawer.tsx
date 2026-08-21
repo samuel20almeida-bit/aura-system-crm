@@ -1,7 +1,6 @@
 "use client";
 
 import { useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { Slideover } from "@/components/ui/Overlay";
 import { Field, Select } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Button";
@@ -39,7 +38,6 @@ export function ImplantacaoDrawer({
   agora: Date;
   onClose: () => void;
 }) {
-  const router = useRouter();
   const { notify } = useToast();
   const [pendente, startTransition] = useTransition();
 
@@ -47,13 +45,16 @@ export function ImplantacaoDrawer({
   const vencimento = etapaAtual ? vencimentoDaEtapa(implantacao.etapa_desde, etapaAtual.sla_dias) : null;
   const saude = etapaAtual ? saudeDaImplantacao(vencimento!, etapaAtual.espera, agora) : "ok";
 
+  // Sem `router.refresh()`: `moverEtapa` e `concluirImplantacao` chamam
+  // `revalidatePath("/implantacao")`, e o Next devolve o payload novo desta
+  // rota junto com a resposta da action. Ver a auditoria action × rota no
+  // plano da 5F.
   /** Toda escrita da gaveta passa por aqui: portão, aviso em caso de falha, e a janela continua aberta. */
   function executar(oQue: string, acao: () => Promise<unknown>, depois?: () => void) {
     startTransition(async () => {
       const end = beginMutation();
       try {
         await acao();
-        router.refresh();
         depois?.();
       } catch (erro) {
         console.error(`[implantacao] falha ao ${oQue}:`, erro);
