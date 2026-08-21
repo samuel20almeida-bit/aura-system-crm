@@ -315,7 +315,6 @@ export function PlaybooksBody({
 }
 
 function NewPlaybookModal({ categoryId, onClose }: { categoryId: string; onClose: () => void }) {
-  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [name, setName] = useState("");
   const [type, setType] = useState("executable");
@@ -337,7 +336,6 @@ function NewPlaybookModal({ categoryId, onClose }: { categoryId: string; onClose
               estimatedDays: estimatedDays ? Number(estimatedDays) : null,
               steps,
             });
-            router.refresh();
             onClose();
           });
         }}
