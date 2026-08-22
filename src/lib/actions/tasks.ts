@@ -123,6 +123,7 @@ export async function updateTask(
     status: string;
     conta_id: string | null;
     is_internal: boolean;
+    area: string | null;
   }>
 ) {
   const supabase = await createClient();
