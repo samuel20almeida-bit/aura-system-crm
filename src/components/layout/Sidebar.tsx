@@ -35,6 +35,7 @@ const businessItems: NavItem[] = [
   { href: "/painel", label: "Painel", icon: PainelIcon },
   { href: "/metas", label: "Metas", icon: TargetIcon },
   { href: "/playbooks", label: "Playbooks", icon: PlaybookIcon },
+  { href: "/credenciais", label: "Credenciais", icon: CredentialsIcon },
 ];
 
 /**
@@ -243,6 +244,14 @@ function PlaybookIcon() {
     <svg {...iconProps()}>
       <path d="M3 2.8h5.2A1.8 1.8 0 0 1 10 4.6v8.6H4.8A1.8 1.8 0 0 1 3 11.4z" />
       <path d="M10 4.6a1.8 1.8 0 0 1 1.8-1.8H13v10.4h-1.2" />
+    </svg>
+  );
+}
+function CredentialsIcon() {
+  return (
+    <svg {...iconProps()}>
+      <circle cx="5.4" cy="8" r="2.6" />
+      <path d="M7.8 8h6M11 8v2.4M13 8v3.2" />
     </svg>
   );
 }
