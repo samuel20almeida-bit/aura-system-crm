@@ -190,14 +190,22 @@ export function NewTaskModal({
               // possível pelo outro botão.
               <Tag tone="amber">Contas indisponíveis</Tag>
             ) : (
-              <Select value={contaId} onChange={(e) => setContaId(e.target.value)}>
-                <option value="">Selecione…</option>
-                {contas.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.nome}
-                  </option>
-                ))}
-              </Select>
+              <>
+                <Select value={contaId} onChange={(e) => setContaId(e.target.value)}>
+                  <option value="">Selecione…</option>
+                  {contas.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.nome}
+                    </option>
+                  ))}
+                </Select>
+                {/* Sem isto o botão "Criar tarefa" fica desabilitado sem dizer
+                    por quê, que é o mesmo tipo de beco sem saída que esta fase
+                    veio desfazer — só que menor. */}
+                {faltaConta && (
+                  <p className="mt-1 text-[12px] text-muted">Escolha a conta ou marque a tarefa como interna.</p>
+                )}
+              </>
             )}
           </Field>
         )}
