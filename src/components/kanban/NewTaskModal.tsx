@@ -4,28 +4,31 @@ import { useState, useTransition } from "react";
 import { Modal } from "@/components/ui/Overlay";
 import { Field, Input, Select, Textarea } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Button";
+import { Tag } from "@/components/ui/Tag";
 import { createTask, createTaskArea } from "@/lib/actions/tasks";
 import { beginMutation } from "@/lib/realtime/mutation-gate";
 import type { Tables } from "@/lib/supabase/database.types";
 
-type ClientLite = { id: string; name: string; color: string; code_prefix: string };
+type ContaLite = { id: string; nome: string };
 type AreaLite = { id: string; nome: string };
 
 export function NewTaskModal({
-  clients,
+  contas,
+  contasIndisponiveis,
   profiles,
   areas,
   onClose,
 }: {
-  clients: ClientLite[];
+  contas: ContaLite[];
+  contasIndisponiveis: boolean;
   profiles: Tables<"profiles">[];
   areas: AreaLite[];
   onClose: () => void;
 }) {
   const [pending, startTransition] = useTransition();
   const [title, setTitle] = useState("");
-  const [isInternal, setIsInternal] = useState(clients.length === 0);
-  const [clientId, setClientId] = useState(clients[0]?.id ?? "");
+  const [isInternal, setIsInternal] = useState(contas.length === 0);
+  const [contaId, setContaId] = useState(contas[0]?.id ?? "");
   const [areasDisponiveis, setAreasDisponiveis] = useState(areas);
   const [area, setArea] = useState(areasDisponiveis[0]?.nome ?? "");
   const [mostrandoNovaArea, setMostrandoNovaArea] = useState(false);
@@ -58,15 +61,21 @@ export function NewTaskModal({
     });
   }
 
+  // Tarefa de cliente sem conta escolhida seria gravada como
+  // `is_internal: false, conta_id: null` — o estado incoerente espelhado do
+  // "interna com conta": apareceria no escopo Clientes, rotulada "Interno", e
+  // nenhum filtro de conta a alcançaria. O botão fica desabilitado por isto.
+  const faltaConta = !isInternal && !contaId;
+
   function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!title.trim()) return;
+    if (!title.trim() || faltaConta) return;
     startTransition(async () => {
       const end = beginMutation();
       try {
         await createTask({
           title: title.trim(),
-          clientId: isInternal ? null : clientId || null,
+          contaId: isInternal ? null : contaId || null,
           isInternal,
           area: isInternal ? area : null,
           priority,
@@ -171,15 +180,33 @@ export function NewTaskModal({
             )}
           </Field>
         ) : (
-          <Field label="CLIENTE">
-            <Select value={clientId} onChange={(e) => setClientId(e.target.value)}>
-              <option value="">Selecione…</option>
-              {clients.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </Select>
+          <Field label="CONTA">
+            {contasIndisponiveis ? (
+              // A leitura de contas falhou (mesmo caso do filtro da tela, dos
+              // Playbooks e das Credenciais): um seletor só com "Selecione…"
+              // seria de novo o beco sem saída que esta fase existe para
+              // acabar — a pessoa escolhe "Tarefa de cliente" e não tem o que
+              // escolher. O aviso diz a verdade; a tarefa interna continua
+              // possível pelo outro botão.
+              <Tag tone="amber">Contas indisponíveis</Tag>
+            ) : (
+              <>
+                <Select value={contaId} onChange={(e) => setContaId(e.target.value)}>
+                  <option value="">Selecione…</option>
+                  {contas.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.nome}
+                    </option>
+                  ))}
+                </Select>
+                {/* Sem isto o botão "Criar tarefa" fica desabilitado sem dizer
+                    por quê, que é o mesmo tipo de beco sem saída que esta fase
+                    veio desfazer — só que menor. */}
+                {faltaConta && (
+                  <p className="mt-1 text-[12px] text-muted">Escolha a conta ou marque a tarefa como interna.</p>
+                )}
+              </>
+            )}
           </Field>
         )}
 
@@ -215,7 +242,7 @@ export function NewTaskModal({
           <Button type="button" variant="ghost" onClick={onClose}>
             Cancelar
           </Button>
-          <Button type="submit" disabled={pending || mostrandoNovaArea}>
+          <Button type="submit" disabled={pending || mostrandoNovaArea || faltaConta}>
             {pending ? "Criando…" : "Criar tarefa"}
           </Button>
         </div>

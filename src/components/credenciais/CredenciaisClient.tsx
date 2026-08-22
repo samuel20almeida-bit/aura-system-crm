@@ -13,7 +13,7 @@ import { CredentialModal } from "./CredentialModal";
 import type { CredentialWithRelations } from "@/lib/data/credenciais";
 
 type CategoriaLite = { id: string; nome: string };
-type ClientLite = { id: string; name: string; color: string; code_prefix: string };
+type ContaLite = { id: string; nome: string };
 
 function CredentialCard({
   credential,
@@ -47,7 +47,7 @@ function CredentialCard({
         <Tag tone="neutral">{credential.categoria?.nome ?? "—"}</Tag>
       </div>
       <div className="text-[12px] text-muted">
-        {credential.cliente ? credential.cliente.name : "Interna"}
+        {credential.conta ? credential.conta.nome : "Interna"}
       </div>
       {credential.usuario && (
         <div className="text-[13px]">
@@ -99,11 +99,13 @@ function CredentialCard({
 export function CredenciaisClient({
   credentials,
   categories,
-  clients,
+  contas,
+  contasIndisponiveis,
 }: {
   credentials: CredentialWithRelations[];
   categories: CategoriaLite[];
-  clients: ClientLite[];
+  contas: ContaLite[];
+  contasIndisponiveis: boolean;
 }) {
   const [categoriaFiltro, setCategoriaFiltro] = useState("");
   const [modalAberto, setModalAberto] = useState(false);
@@ -165,7 +167,8 @@ export function CredenciaisClient({
         <CredentialModal
           credential={editando}
           categories={categories}
-          clients={clients}
+          contas={contas}
+          contasIndisponiveis={contasIndisponiveis}
           onClose={() => setModalAberto(false)}
         />
       )}

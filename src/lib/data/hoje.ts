@@ -29,7 +29,7 @@ export async function getItensHoje(donoId?: string) {
 
   let tasksQuery = supabase
     .from("tasks")
-    .select("id, title, due_date, assignee_id, client:clients(id, name)")
+    .select("id, title, due_date, assignee_id, conta:contas(id, nome)")
     // `tasks.status` é `text` com `check`, não enum — "não concluída" é
     // "diferente de 'done'".
     .neq("status", "done");

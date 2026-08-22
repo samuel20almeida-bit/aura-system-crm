@@ -28,7 +28,7 @@ type Profile = Tables<"profiles">;
 
 type TaskDetail = {
   task: (Tables<"tasks"> & {
-    client: { id: string; name: string; color: string; code_prefix: string } | null;
+    conta: { id: string; nome: string } | null;
     assignee: { id: string; full_name: string; initials: string } | null;
   }) | null;
   checklist: (Tables<"task_checklist_items"> & { assignee: { id: string; full_name: string; initials: string } | null })[];
@@ -41,7 +41,17 @@ type TaskDetail = {
 // tarefa chamam `revalidatePath("/kanban")`, e o Next devolve o payload novo
 // desta rota junto com a resposta da action. Ver a auditoria action × rota no
 // plano da 5F.
-export function TaskDetailPanel({ detail, profiles }: { detail: TaskDetail; profiles: Profile[] }) {
+export function TaskDetailPanel({
+  detail,
+  profiles,
+  contas,
+  contasIndisponiveis,
+}: {
+  detail: TaskDetail;
+  profiles: Profile[];
+  contas: { id: string; nome: string }[];
+  contasIndisponiveis: boolean;
+}) {
   const router = useRouter();
   const { notify } = useToast();
   const [tab, setTab] = useState<"detalhes" | "comentarios" | "historico">("detalhes");
@@ -144,7 +154,7 @@ export function TaskDetailPanel({ detail, profiles }: { detail: TaskDetail; prof
           className="rounded -mx-1 px-1 text-[19px] font-medium outline-none focus:bg-neutral-tint"
         />
         <div className="text-[12.5px] text-muted">
-          {t.client ? t.client.name : "Interno"} {t.area ? `· ${t.area}` : ""}
+          {t.conta ? t.conta.nome : "Interno"} {t.area ? `· ${t.area}` : ""}
         </div>
       </div>
 
@@ -167,6 +177,55 @@ export function TaskDetailPanel({ detail, profiles }: { detail: TaskDetail; prof
         {tab === "detalhes" && (
           <>
             <div className="grid grid-cols-[96px_1fr] items-center gap-y-2.5 gap-x-3 text-[13px]">
+              {/* Conta e escopo são um controle só: uma tarefa com conta não é
+                  interna, e uma interna não tem conta. Deixar os dois separados
+                  permitiria o estado incoerente "interna com conta". */}
+              <span className="text-muted">Conta</span>
+              {contasIndisponiveis ? (
+                <Tag tone="amber">Contas indisponíveis</Tag>
+              ) : (
+                <select
+                  value={t.conta_id ?? ""}
+                  onChange={(e) =>
+                    startTransition(async () => {
+                      const contaId = e.target.value || null;
+                      const end = beginMutation();
+                      try {
+                        // O código da tarefa não é recalculado ao trocar de conta:
+                        // `tasks.code` é único e já foi falado em voz alta; reescrevê-lo
+                        // quebraria a referência de quem anotou o número.
+                        // `area` sai junto quando a tarefa ganha conta, pela mesma
+                        // regra que o cadastro já aplica (`area: isInternal ? area : null`).
+                        // Sem isto o cabeçalho aqui em cima passaria a dizer
+                        // "Nimbus · Financeiro" — uma tarefa de cliente anunciando área
+                        // interna, que o cartão do quadro esconde e esta tela mostra.
+                        await updateTask(t.id, {
+                          conta_id: contaId,
+                          is_internal: contaId === null,
+                          ...(contaId === null ? {} : { area: null }),
+                        });
+                      } catch (erro) {
+                        console.error("[kanban] falha ao trocar a conta da tarefa:", erro);
+                        notify(
+                          "error",
+                          "Não foi possível trocar a conta da tarefa. Tente de novo — se persistir, me avise."
+                        );
+                      } finally {
+                        end();
+                      }
+                    })
+                  }
+                  className="rounded-lg border border-border bg-bone px-2 py-1.5 text-[13px]"
+                >
+                  <option value="">Interna</option>
+                  {contas.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.nome}
+                    </option>
+                  ))}
+                </select>
+              )}
+
               <span className="text-muted">Responsável</span>
               <select
                 value={t.assignee_id ?? ""}

@@ -6,7 +6,7 @@ export async function listTasks() {
   const { data, error } = await supabase
     .from("tasks")
     .select(
-      "*, client:clients(id, name, color, code_prefix), assignee:profiles!tasks_assignee_id_fkey(id, full_name, initials)"
+      "*, conta:contas(id, nome), assignee:profiles!tasks_assignee_id_fkey(id, full_name, initials)"
     )
     .order("position", { ascending: true });
   if (error) throw error;
@@ -15,14 +15,35 @@ export async function listTasks() {
 
 export type TaskWithRelations = Awaited<ReturnType<typeof listTasks>>[number];
 
-export async function listClientsLite() {
+export type ContaLite = { id: string; nome: string };
+
+/**
+ * As contas que podem receber tarefa, playbook ou credencial.
+ *
+ * TODAS, ordenadas por nome — sem filtrar por `fase`. Filtrar por
+ * `fase = 'cliente'` esconderia justamente a conta em `prospect` para a qual
+ * se está preparando uma proposta, que é trabalho real com tarefa real. A
+ * fase governa o funil, não o direito de ter tarefa.
+ *
+ * Falha de leitura vira `{ ok: false }`, nunca lista vazia: o Kanban usa
+ * este resultado para popular o seletor de conta E o `<select>` de nova
+ * tarefa, que grava `conta_id`. Uma falha travestida de "zero contas"
+ * faria o seletor mentir dizendo "sem contas cadastradas" — e, pior,
+ * abriria a porta para gravar uma conta inventada se algum consumidor
+ * futuro tratasse um item sentinela como opção selecionável. Quem chama
+ * decide a UI (estado de indisponível); a tarefa interna, que não depende
+ * de conta nenhuma, continua criável do mesmo jeito.
+ */
+export async function listContasLite(): Promise<
+  { ok: true; contas: ContaLite[] } | { ok: false }
+> {
   const supabase = await createClient();
-  const { data } = await supabase
-    .from("clients")
-    .select("id, name, color, code_prefix")
-    .eq("status", "active")
-    .order("name");
-  return data ?? [];
+  const { data, error } = await supabase.from("contas").select("id, nome").order("nome");
+  if (error) {
+    console.error("[contas] falha ao consultar o Supabase:", error);
+    return { ok: false };
+  }
+  return { ok: true, contas: data ?? [] };
 }
 
 export async function listTaskAreas() {
@@ -57,7 +78,7 @@ export async function getTaskDetail(id: string) {
     supabase
       .from("tasks")
       .select(
-        "*, client:clients(id, name, color, code_prefix), assignee:profiles!tasks_assignee_id_fkey(id, full_name, initials)"
+        "*, conta:contas(id, nome), assignee:profiles!tasks_assignee_id_fkey(id, full_name, initials)"
       )
       .eq("id", id)
       .single(),
@@ -103,10 +124,20 @@ export async function getTaskDetail(id: string) {
   };
 }
 
-async function resolveTaskCodePrefix(supabase: Awaited<ReturnType<typeof createClient>>, clientId: string | null, isInternal: boolean) {
-  if (isInternal || !clientId) return "INT";
-  const { data: client } = await supabase.from("clients").select("code_prefix").eq("id", clientId).single();
-  return client?.code_prefix ?? "INT";
+async function resolveTaskCodePrefix(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  contaId: string | null,
+  isInternal: boolean
+) {
+  if (isInternal || !contaId) return "INT";
+  const { data: conta } = await supabase
+    .from("contas")
+    .select("code_prefix")
+    .eq("id", contaId)
+    .single();
+  // `code_prefix` nulo acontece se a conta nasceu numa janela entre a
+  // migration e a Task 3. O código sai menos informativo, nunca quebra.
+  return conta?.code_prefix ?? "INT";
 }
 
 async function highestTaskCodeNumber(supabase: Awaited<ReturnType<typeof createClient>>, prefix: string) {
@@ -118,15 +149,15 @@ async function highestTaskCodeNumber(supabase: Awaited<ReturnType<typeof createC
   return highestCodeNumber((data ?? []).map((row) => row.code));
 }
 
-export async function nextTaskCode(clientId: string | null, isInternal: boolean) {
+export async function nextTaskCode(contaId: string | null, isInternal: boolean) {
   const supabase = await createClient();
-  const prefix = await resolveTaskCodePrefix(supabase, clientId, isInternal);
+  const prefix = await resolveTaskCodePrefix(supabase, contaId, isInternal);
   return buildSequentialCodes(prefix, (await highestTaskCodeNumber(supabase, prefix)) + 1, 1)[0];
 }
 
 /** Generates `count` sequential task codes for the same prefix in one shot (e.g. for a playbook run). */
-export async function nextTaskCodes(clientId: string | null, isInternal: boolean, count: number) {
+export async function nextTaskCodes(contaId: string | null, isInternal: boolean, count: number) {
   const supabase = await createClient();
-  const prefix = await resolveTaskCodePrefix(supabase, clientId, isInternal);
+  const prefix = await resolveTaskCodePrefix(supabase, contaId, isInternal);
   return buildSequentialCodes(prefix, (await highestTaskCodeNumber(supabase, prefix)) + 1, count);
 }

@@ -13,7 +13,7 @@ import type { TaskWithRelations } from "@/lib/data/tasks";
 import type { Tables } from "@/lib/supabase/database.types";
 import type { ColumnId } from "./KanbanBoard";
 
-type ClientLite = { id: string; name: string; color: string; code_prefix: string };
+type ContaLite = { id: string; nome: string };
 type AreaLite = { id: string; nome: string };
 
 const statusLabel: Record<string, string> = { todo: "A fazer", in_progress: "Em andamento", done: "Finalizada" };
@@ -21,13 +21,15 @@ const mobileColumns: ColumnId[] = ["todo", "in_progress", "done"];
 
 export function KanbanClient({
   tasks,
-  clients,
+  contas,
+  contasIndisponiveis,
   profiles,
   areas,
   checklistCounts,
 }: {
   tasks: TaskWithRelations[];
-  clients: ClientLite[];
+  contas: ContaLite[];
+  contasIndisponiveis: boolean;
   profiles: Tables<"profiles">[];
   areas: AreaLite[];
   checklistCounts: Record<string, { done: number; total: number }>;
@@ -35,7 +37,7 @@ export function KanbanClient({
   const router = useRouter();
   const [view, setView] = useState<"board" | "list">("board");
   const [scope, setScope] = useState<"clientes" | "interno">("clientes");
-  const [clientFilter, setClientFilter] = useState("");
+  const [contaFilter, setContaFilter] = useState("");
   const [assigneeFilter, setAssigneeFilter] = useState("");
   const [priorityFilter, setPriorityFilter] = useState("");
   const [showNewTask, setShowNewTask] = useState(false);
@@ -45,12 +47,12 @@ export function KanbanClient({
     return tasks.filter((t) => {
       if (scope === "interno" && !t.is_internal) return false;
       if (scope === "clientes" && t.is_internal) return false;
-      if (clientFilter && t.client_id !== clientFilter) return false;
+      if (contaFilter && t.conta_id !== contaFilter) return false;
       if (assigneeFilter && t.assignee_id !== assigneeFilter) return false;
       if (priorityFilter && t.priority !== priorityFilter) return false;
       return true;
     });
-  }, [tasks, scope, clientFilter, assigneeFilter, priorityFilter]);
+  }, [tasks, scope, contaFilter, assigneeFilter, priorityFilter]);
 
   const activeCount = filtered.filter((t) => t.status !== "done").length;
   // "Hoje" é o dia em São Paulo e a comparação fica no calendário. Com
@@ -109,20 +111,27 @@ export function KanbanClient({
             </button>
           ))}
         </div>
-        {scope === "clientes" && (
-          <select
-            value={clientFilter}
-            onChange={(e) => setClientFilter(e.target.value)}
-            className="rounded-full border border-border bg-surface px-3 py-1.5 text-xs text-muted"
-          >
-            <option value="">Todos os clientes</option>
-            {clients.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-        )}
+        {scope === "clientes" &&
+          (contasIndisponiveis ? (
+            // A leitura de contas falhou — mostrar "Todas as contas" aqui
+            // mentiria que dá para filtrar. O aviso ocupa o mesmo lugar do
+            // seletor sem bloquear o resto da tela (board/lista continuam
+            // navegáveis, e a nova tarefa interna não depende disto).
+            <Tag tone="amber">Contas indisponíveis</Tag>
+          ) : (
+            <select
+              value={contaFilter}
+              onChange={(e) => setContaFilter(e.target.value)}
+              className="rounded-full border border-border bg-surface px-3 py-1.5 text-xs text-muted"
+            >
+              <option value="">Todas as contas</option>
+              {contas.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.nome}
+                </option>
+              ))}
+            </select>
+          ))}
         <select
           value={assigneeFilter}
           onChange={(e) => setAssigneeFilter(e.target.value)}
@@ -188,7 +197,7 @@ export function KanbanClient({
                 <span className="font-mono text-[11px] text-faint">{t.code}</span>
                 {t.title}
               </div>
-              <div className="truncate text-muted">{t.client?.name ?? "Interno"}</div>
+              <div className="truncate text-muted">{t.conta?.nome ?? "Interno"}</div>
               <div>
                 <Tag tone={t.status === "done" ? "accent" : "neutral"}>{statusLabel[t.status]}</Tag>
               </div>
@@ -203,7 +212,13 @@ export function KanbanClient({
       )}
 
       {showNewTask && (
-        <NewTaskModal clients={clients} profiles={profiles} areas={areas} onClose={() => setShowNewTask(false)} />
+        <NewTaskModal
+          contas={contas}
+          contasIndisponiveis={contasIndisponiveis}
+          profiles={profiles}
+          areas={areas}
+          onClose={() => setShowNewTask(false)}
+        />
       )}
     </>
   );

@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { todayInAppTz } from "@/lib/timezone";
 import { normalizeLinkUrl } from "@/lib/links";
+import { derivePrefixoDaConta } from "@/lib/task-codes";
 import type { Database } from "@/lib/supabase/database.types";
 
 type Estagio = Database["public"]["Enums"]["negocio_estagio"];
@@ -66,6 +67,7 @@ export async function criarContaComNegocio(input: {
       site: siteNormalizado ? siteNormalizado.url : null,
       fase: "prospect",
       dono_id: input.donoId,
+      code_prefix: derivePrefixoDaConta(nomeLimpo),
     })
     .select("id")
     .single();
