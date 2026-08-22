@@ -112,6 +112,8 @@ export async function updateTask(
     due_date: string | null;
     estimated_hours: number | null;
     status: string;
+    conta_id: string | null;
+    is_internal: boolean;
   }>
 ) {
   const supabase = await createClient();
