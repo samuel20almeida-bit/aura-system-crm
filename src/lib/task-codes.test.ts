@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildSequentialCodes, highestCodeNumber } from "./task-codes";
+import { buildSequentialCodes, derivePrefixoDaConta, highestCodeNumber } from "./task-codes";
 
 describe("highestCodeNumber", () => {
   it("devolve 0 para lista vazia", () => {
@@ -43,5 +43,31 @@ describe("buildSequentialCodes", () => {
     const novos = buildSequentialCodes("NIM", highestCodeNumber(existentes) + 1, 3);
     expect(novos).toEqual(["NIM-06", "NIM-07", "NIM-08"]);
     expect(novos.some((c) => existentes.includes(c))).toBe(false);
+  });
+});
+
+describe("derivePrefixoDaConta", () => {
+  it("usa as três primeiras letras, em maiúsculas", () => {
+    expect(derivePrefixoDaConta("Barbearia do Léo")).toBe("BAR");
+  });
+
+  it("remove acento", () => {
+    expect(derivePrefixoDaConta("Ótica Vera")).toBe("OTI");
+  });
+
+  it("ignora espaço no começo", () => {
+    expect(derivePrefixoDaConta("  Studio X")).toBe("STU");
+  });
+
+  it("aceita nome com menos de três letras", () => {
+    expect(derivePrefixoDaConta("Zé")).toBe("ZE");
+    expect(derivePrefixoDaConta("A")).toBe("A");
+  });
+
+  it("devolve INT quando não sobra letra nenhuma", () => {
+    // `contas.nome` é `not null` e a action recusa nome vazio, então isto não
+    // deve acontecer — mas um prefixo vazio geraria códigos como "-01".
+    expect(derivePrefixoDaConta("")).toBe("INT");
+    expect(derivePrefixoDaConta("   ")).toBe("INT");
   });
 });
