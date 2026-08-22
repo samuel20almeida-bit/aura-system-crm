@@ -176,9 +176,11 @@ export function CredentialModal({
           {contasIndisponiveis ? (
             // A leitura de contas falhou (mesmo caso do Kanban, Task 4, e dos
             // Playbooks, Task 5): listar um <select> vazio aqui mentiria "sem
-            // contas cadastradas". O aviso ocupa o lugar do seletor; salvar
-            // como credencial interna continua possível, já que `contaId`
-            // permanece vazio nesse estado.
+            // contas cadastradas". O aviso ocupa o lugar do seletor, e salvar
+            // continua possível porque `contaId` fica com o valor que já tinha:
+            // vazio numa credencial nova, que grava como interna; e a conta
+            // atual numa credencial existente, que fica preservada. O que se
+            // perde enquanto a leitura falha é só a troca de conta.
             <Tag tone="amber">Contas indisponíveis</Tag>
           ) : (
             <Select value={contaId} onChange={(e) => setContaId(e.target.value)}>
