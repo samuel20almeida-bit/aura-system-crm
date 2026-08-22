@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 type CredentialInput = {
   nome: string;
   categoriaId: string;
-  clienteId: string | null;
+  contaId: string | null;
   usuario: string | null;
   senha: string | null;
   url: string | null;
@@ -18,7 +18,7 @@ export async function createCredential(input: CredentialInput) {
   const { error } = await supabase.from("credenciais").insert({
     nome: input.nome,
     categoria_id: input.categoriaId,
-    cliente_id: input.clienteId,
+    conta_id: input.contaId,
     usuario: input.usuario,
     senha: input.senha,
     url: input.url,
@@ -35,7 +35,7 @@ export async function updateCredential(id: string, input: CredentialInput) {
     .update({
       nome: input.nome,
       categoria_id: input.categoriaId,
-      cliente_id: input.clienteId,
+      conta_id: input.contaId,
       usuario: input.usuario,
       senha: input.senha,
       url: input.url,
