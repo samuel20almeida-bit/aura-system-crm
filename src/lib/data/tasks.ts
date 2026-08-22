@@ -15,16 +15,6 @@ export async function listTasks() {
 
 export type TaskWithRelations = Awaited<ReturnType<typeof listTasks>>[number];
 
-export async function listClientsLite() {
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from("clients")
-    .select("id, name, color, code_prefix")
-    .eq("status", "active")
-    .order("name");
-  return data ?? [];
-}
-
 export type ContaLite = { id: string; nome: string };
 
 /**
