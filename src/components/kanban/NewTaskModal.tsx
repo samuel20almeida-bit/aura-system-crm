@@ -210,7 +210,7 @@ export function NewTaskModal({
           <Button type="button" variant="ghost" onClick={onClose}>
             Cancelar
           </Button>
-          <Button type="submit" disabled={pending}>
+          <Button type="submit" disabled={pending || mostrandoNovaArea}>
             {pending ? "Criando…" : "Criar tarefa"}
           </Button>
         </div>
