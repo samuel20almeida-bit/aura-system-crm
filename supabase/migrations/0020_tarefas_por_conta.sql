@@ -35,7 +35,7 @@ alter table public.contas add column code_prefix text;
 -- leitura, em dois lugares diferentes para dois gatilhos diferentes:
 -- `resolveTaskCodePrefix` (`src/lib/data/tasks.ts`) troca NULL por "INT" ao
 -- buscar o prefixo de uma conta; `derivePrefixoDaConta`
--- (`src/lib/task-codes.ts`, criada na próxima task desta fase) cai no mesmo
+-- (`src/lib/task-codes.ts`, implementada na task 2 desta fase) cai no mesmo
 -- "INT" quando o *nome* da conta não rende nenhuma letra. Mesmo destino,
 -- funções diferentes — nenhuma das duas deriva o prefixo daqui. A remoção de
 -- acento usa `translate` puro: habilitar a extensão `unaccent` por causa de
