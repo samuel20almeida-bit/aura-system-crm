@@ -93,7 +93,12 @@ export function NewTaskModal({
         <div className="flex gap-2">
           <button
             type="button"
-            onClick={() => setIsInternal(false)}
+            onClick={() => {
+              setIsInternal(false);
+              setMostrandoNovaArea(false);
+              setNovaAreaNome("");
+              setErroArea(null);
+            }}
             className={`flex-1 rounded-lg border px-3 py-2 text-[13px] ${!isInternal ? "border-ink bg-ink text-bone" : "border-border text-muted"}`}
           >
             Tarefa de cliente
