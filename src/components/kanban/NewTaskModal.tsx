@@ -37,6 +37,27 @@ export function NewTaskModal({
   const [dueDate, setDueDate] = useState("");
   const [description, setDescription] = useState("");
 
+  function handleAddArea() {
+    if (criandoArea || !novaAreaNome.trim()) return;
+    setErroArea(null);
+    startAreaTransition(async () => {
+      const end = beginMutation();
+      try {
+        const nova = await createTaskArea(novaAreaNome.trim());
+        setAreasDisponiveis((atual) =>
+          atual.some((a) => a.id === nova.id) ? atual : [...atual, nova]
+        );
+        setArea(nova.nome);
+        setNovaAreaNome("");
+        setMostrandoNovaArea(false);
+      } catch {
+        setErroArea("Não foi possível criar a área. Tente de novo.");
+      } finally {
+        end();
+      }
+    });
+  }
+
   function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!title.trim()) return;
@@ -95,30 +116,18 @@ export function NewTaskModal({
                     autoFocus
                     value={novaAreaNome}
                     onChange={(e) => setNovaAreaNome(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleAddArea();
+                      }
+                    }}
                     placeholder="Nome da nova área"
                   />
                   <Button
                     type="button"
                     disabled={criandoArea || !novaAreaNome.trim()}
-                    onClick={() => {
-                      setErroArea(null);
-                      startAreaTransition(async () => {
-                        const end = beginMutation();
-                        try {
-                          const nova = await createTaskArea(novaAreaNome.trim());
-                          setAreasDisponiveis((atual) =>
-                            atual.some((a) => a.id === nova.id) ? atual : [...atual, nova]
-                          );
-                          setArea(nova.nome);
-                          setNovaAreaNome("");
-                          setMostrandoNovaArea(false);
-                        } catch {
-                          setErroArea("Não foi possível criar a área. Tente de novo.");
-                        } finally {
-                          end();
-                        }
-                      });
-                    }}
+                    onClick={handleAddArea}
                   >
                     {criandoArea ? "Adicionando…" : "Adicionar"}
                   </Button>
