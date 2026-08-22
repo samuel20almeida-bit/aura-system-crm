@@ -19,6 +19,14 @@ describe("highestCodeNumber", () => {
   it("lida com números de dois ou mais dígitos", () => {
     expect(highestCodeNumber(["INT-09", "INT-10", "INT-100"])).toBe(100);
   });
+
+  it("conta certo quando o próprio prefixo tem hífen", () => {
+    // "Ki-Barba" vira o prefixo "KI-", que gera "KI--01". Partindo no primeiro
+    // hífen o pedaço do meio é vazio, a contagem voltava a zero e a segunda
+    // tarefa da conta repetia o código da primeira — que é único no banco.
+    expect(highestCodeNumber(["KI--01"])).toBe(1);
+    expect(highestCodeNumber(["KI--01", "KI--02"])).toBe(2);
+  });
 });
 
 describe("buildSequentialCodes", () => {
@@ -64,9 +72,11 @@ describe("derivePrefixoDaConta", () => {
     expect(derivePrefixoDaConta("A")).toBe("A");
   });
 
-  it("devolve INT quando não sobra letra nenhuma", () => {
+  it("devolve INT quando não sobra caractere nenhum", () => {
     // `contas.nome` é `not null` e a action recusa nome vazio, então isto não
     // deve acontecer — mas um prefixo vazio geraria códigos como "-01".
+    // A regra é "nenhum caractere", não "nenhuma letra": um nome só de dígitos
+    // devolve os dígitos, como o `translate` do SQL também faz.
     expect(derivePrefixoDaConta("")).toBe("INT");
     expect(derivePrefixoDaConta("   ")).toBe("INT");
   });
