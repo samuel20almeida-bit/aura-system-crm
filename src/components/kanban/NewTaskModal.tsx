@@ -8,24 +8,24 @@ import { createTask, createTaskArea } from "@/lib/actions/tasks";
 import { beginMutation } from "@/lib/realtime/mutation-gate";
 import type { Tables } from "@/lib/supabase/database.types";
 
-type ClientLite = { id: string; name: string; color: string; code_prefix: string };
+type ContaLite = { id: string; nome: string };
 type AreaLite = { id: string; nome: string };
 
 export function NewTaskModal({
-  clients,
+  contas,
   profiles,
   areas,
   onClose,
 }: {
-  clients: ClientLite[];
+  contas: ContaLite[];
   profiles: Tables<"profiles">[];
   areas: AreaLite[];
   onClose: () => void;
 }) {
   const [pending, startTransition] = useTransition();
   const [title, setTitle] = useState("");
-  const [isInternal, setIsInternal] = useState(clients.length === 0);
-  const [clientId, setClientId] = useState(clients[0]?.id ?? "");
+  const [isInternal, setIsInternal] = useState(contas.length === 0);
+  const [contaId, setContaId] = useState(contas[0]?.id ?? "");
   const [areasDisponiveis, setAreasDisponiveis] = useState(areas);
   const [area, setArea] = useState(areasDisponiveis[0]?.nome ?? "");
   const [mostrandoNovaArea, setMostrandoNovaArea] = useState(false);
@@ -66,7 +66,7 @@ export function NewTaskModal({
       try {
         await createTask({
           title: title.trim(),
-          clientId: isInternal ? null : clientId || null,
+          contaId: isInternal ? null : contaId || null,
           isInternal,
           area: isInternal ? area : null,
           priority,
@@ -171,12 +171,12 @@ export function NewTaskModal({
             )}
           </Field>
         ) : (
-          <Field label="CLIENTE">
-            <Select value={clientId} onChange={(e) => setClientId(e.target.value)}>
+          <Field label="CONTA">
+            <Select value={contaId} onChange={(e) => setContaId(e.target.value)}>
               <option value="">Selecione…</option>
-              {clients.map((c) => (
+              {contas.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.name}
+                  {c.nome}
                 </option>
               ))}
             </Select>
