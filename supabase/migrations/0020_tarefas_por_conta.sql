@@ -30,11 +30,16 @@
 -- prefixo compartilham a sequência e nenhum código se repete.
 alter table public.contas add column code_prefix text;
 
--- `nullif(..., '')` deixa NULL em vez de string vazia; a leitura trata NULL
--- como "INT", que é o mesmo destino da regra em TypeScript
--- (`derivePrefixoDaConta`, src/lib/task-codes.ts). A remoção de acento usa
--- `translate` puro: habilitar a extensão `unaccent` por causa de um rótulo de
--- três letras não se paga.
+-- `nullif(..., '')` deixa NULL em vez de string vazia; o SQL só evita fingir
+-- que uma string vazia é prefixo válido. Quem decide o destino do NULL é a
+-- leitura, em dois lugares diferentes para dois gatilhos diferentes:
+-- `resolveTaskCodePrefix` (`src/lib/data/tasks.ts`) troca NULL por "INT" ao
+-- buscar o prefixo de uma conta; `derivePrefixoDaConta`
+-- (`src/lib/task-codes.ts`, criada na próxima task desta fase) cai no mesmo
+-- "INT" quando o *nome* da conta não rende nenhuma letra. Mesmo destino,
+-- funções diferentes — nenhuma das duas deriva o prefixo daqui. A remoção de
+-- acento usa `translate` puro: habilitar a extensão `unaccent` por causa de
+-- um rótulo de três letras não se paga.
 update public.contas
    set code_prefix = nullif(
          upper(
