@@ -176,6 +176,7 @@ export type Database = {
       contas: {
         Row: {
           cidade: string | null
+          code_prefix: string | null
           criado_em: string
           decisor_nome: string | null
           dono_id: string | null
@@ -193,6 +194,7 @@ export type Database = {
         }
         Insert: {
           cidade?: string | null
+          code_prefix?: string | null
           criado_em?: string
           decisor_nome?: string | null
           dono_id?: string | null
@@ -210,6 +212,7 @@ export type Database = {
         }
         Update: {
           cidade?: string | null
+          code_prefix?: string | null
           criado_em?: string
           decisor_nome?: string | null
           dono_id?: string | null
@@ -284,6 +287,7 @@ export type Database = {
           atualizado_em: string
           categoria_id: string
           cliente_id: string | null
+          conta_id: string | null
           criado_em: string
           id: string
           nome: string
@@ -296,6 +300,7 @@ export type Database = {
           atualizado_em?: string
           categoria_id: string
           cliente_id?: string | null
+          conta_id?: string | null
           criado_em?: string
           id?: string
           nome: string
@@ -308,6 +313,7 @@ export type Database = {
           atualizado_em?: string
           categoria_id?: string
           cliente_id?: string | null
+          conta_id?: string | null
           criado_em?: string
           id?: string
           nome?: string
@@ -329,6 +335,13 @@ export type Database = {
             columns: ["cliente_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credenciais_conta_id_fkey"
+            columns: ["conta_id"]
+            isOneToOne: false
+            referencedRelation: "contas"
             referencedColumns: ["id"]
           },
         ]
@@ -747,6 +760,7 @@ export type Database = {
         Row: {
           client_id: string | null
           completed_at: string | null
+          conta_id: string | null
           id: string
           playbook_id: string
           started_at: string
@@ -755,6 +769,7 @@ export type Database = {
         Insert: {
           client_id?: string | null
           completed_at?: string | null
+          conta_id?: string | null
           id?: string
           playbook_id: string
           started_at?: string
@@ -763,6 +778,7 @@ export type Database = {
         Update: {
           client_id?: string | null
           completed_at?: string | null
+          conta_id?: string | null
           id?: string
           playbook_id?: string
           started_at?: string
@@ -774,6 +790,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "playbook_runs_conta_id_fkey"
+            columns: ["conta_id"]
+            isOneToOne: false
+            referencedRelation: "contas"
             referencedColumns: ["id"]
           },
           {
@@ -1035,6 +1058,7 @@ export type Database = {
           assignee_id: string | null
           client_id: string | null
           code: string
+          conta_id: string | null
           created_at: string
           created_by: string | null
           description: string | null
@@ -1055,6 +1079,7 @@ export type Database = {
           assignee_id?: string | null
           client_id?: string | null
           code: string
+          conta_id?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
@@ -1075,6 +1100,7 @@ export type Database = {
           assignee_id?: string | null
           client_id?: string | null
           code?: string
+          conta_id?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
@@ -1103,6 +1129,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_conta_id_fkey"
+            columns: ["conta_id"]
+            isOneToOne: false
+            referencedRelation: "contas"
             referencedColumns: ["id"]
           },
           {
