@@ -47,7 +47,14 @@ export default async function KanbanPage({
         areas={areas}
         checklistCounts={checklistCounts}
       />
-      {detail?.task && <TaskDetailPanel detail={detail} profiles={profiles} />}
+      {detail?.task && (
+        <TaskDetailPanel
+          detail={detail}
+          profiles={profiles}
+          contas={contas}
+          contasIndisponiveis={contasIndisponiveis}
+        />
+      )}
     </PageBody>
   );
 }
