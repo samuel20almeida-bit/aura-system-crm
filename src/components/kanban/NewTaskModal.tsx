@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { Modal } from "@/components/ui/Overlay";
 import { Field, Input, Select, Textarea } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Button";
+import { Tag } from "@/components/ui/Tag";
 import { createTask, createTaskArea } from "@/lib/actions/tasks";
 import { beginMutation } from "@/lib/realtime/mutation-gate";
 import type { Tables } from "@/lib/supabase/database.types";
@@ -13,11 +14,13 @@ type AreaLite = { id: string; nome: string };
 
 export function NewTaskModal({
   contas,
+  contasIndisponiveis,
   profiles,
   areas,
   onClose,
 }: {
   contas: ContaLite[];
+  contasIndisponiveis: boolean;
   profiles: Tables<"profiles">[];
   areas: AreaLite[];
   onClose: () => void;
@@ -58,9 +61,15 @@ export function NewTaskModal({
     });
   }
 
+  // Tarefa de cliente sem conta escolhida seria gravada como
+  // `is_internal: false, conta_id: null` — o estado incoerente espelhado do
+  // "interna com conta": apareceria no escopo Clientes, rotulada "Interno", e
+  // nenhum filtro de conta a alcançaria. O botão fica desabilitado por isto.
+  const faltaConta = !isInternal && !contaId;
+
   function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!title.trim()) return;
+    if (!title.trim() || faltaConta) return;
     startTransition(async () => {
       const end = beginMutation();
       try {
@@ -172,14 +181,24 @@ export function NewTaskModal({
           </Field>
         ) : (
           <Field label="CONTA">
-            <Select value={contaId} onChange={(e) => setContaId(e.target.value)}>
-              <option value="">Selecione…</option>
-              {contas.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.nome}
-                </option>
-              ))}
-            </Select>
+            {contasIndisponiveis ? (
+              // A leitura de contas falhou (mesmo caso do filtro da tela, dos
+              // Playbooks e das Credenciais): um seletor só com "Selecione…"
+              // seria de novo o beco sem saída que esta fase existe para
+              // acabar — a pessoa escolhe "Tarefa de cliente" e não tem o que
+              // escolher. O aviso diz a verdade; a tarefa interna continua
+              // possível pelo outro botão.
+              <Tag tone="amber">Contas indisponíveis</Tag>
+            ) : (
+              <Select value={contaId} onChange={(e) => setContaId(e.target.value)}>
+                <option value="">Selecione…</option>
+                {contas.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.nome}
+                  </option>
+                ))}
+              </Select>
+            )}
           </Field>
         )}
 
@@ -215,7 +234,7 @@ export function NewTaskModal({
           <Button type="button" variant="ghost" onClick={onClose}>
             Cancelar
           </Button>
-          <Button type="submit" disabled={pending || mostrandoNovaArea}>
+          <Button type="submit" disabled={pending || mostrandoNovaArea || faltaConta}>
             {pending ? "Criando…" : "Criar tarefa"}
           </Button>
         </div>

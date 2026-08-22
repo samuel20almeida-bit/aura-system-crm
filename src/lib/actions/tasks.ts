@@ -23,6 +23,15 @@ export async function createTask(input: {
   } = await supabase.auth.getUser();
   if (!user) throw new Error("Não autenticado");
 
+  // Espelho da regra que já vale do outro lado: tarefa com conta não é interna,
+  // e tarefa de cliente sem conta não existe. Sem esta guarda, uma chamada que
+  // não passe pelo modal grava `is_internal: false, conta_id: null` — linha que
+  // aparece no escopo Clientes, se mostra como "Interno" e nenhum filtro de
+  // conta alcança.
+  if (!input.isInternal && !input.contaId) {
+    throw new Error("Tarefa de cliente precisa de uma conta");
+  }
+
   const code = await nextTaskCode(input.contaId, input.isInternal);
 
   const { data: maxPos } = await supabase

@@ -212,7 +212,13 @@ export function KanbanClient({
       )}
 
       {showNewTask && (
-        <NewTaskModal contas={contas} profiles={profiles} areas={areas} onClose={() => setShowNewTask(false)} />
+        <NewTaskModal
+          contas={contas}
+          contasIndisponiveis={contasIndisponiveis}
+          profiles={profiles}
+          areas={areas}
+          onClose={() => setShowNewTask(false)}
+        />
       )}
     </>
   );

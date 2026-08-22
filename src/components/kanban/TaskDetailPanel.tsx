@@ -194,7 +194,16 @@ export function TaskDetailPanel({
                         // O código da tarefa não é recalculado ao trocar de conta:
                         // `tasks.code` é único e já foi falado em voz alta; reescrevê-lo
                         // quebraria a referência de quem anotou o número.
-                        await updateTask(t.id, { conta_id: contaId, is_internal: contaId === null });
+                        // `area` sai junto quando a tarefa ganha conta, pela mesma
+                        // regra que o cadastro já aplica (`area: isInternal ? area : null`).
+                        // Sem isto o cabeçalho aqui em cima passaria a dizer
+                        // "Nimbus · Financeiro" — uma tarefa de cliente anunciando área
+                        // interna, que o cartão do quadro esconde e esta tela mostra.
+                        await updateTask(t.id, {
+                          conta_id: contaId,
+                          is_internal: contaId === null,
+                          ...(contaId === null ? {} : { area: null }),
+                        });
                       } catch (erro) {
                         console.error("[kanban] falha ao trocar a conta da tarefa:", erro);
                         notify(
