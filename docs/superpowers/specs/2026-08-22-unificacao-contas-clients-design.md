@@ -21,6 +21,14 @@ Consequências em cadeia, todas verificadas no código:
   que nunca existe.
 - **Nenhuma tarefa pode ser ligada a uma conta real**, então a pergunta "o que está
   pendente nesta barbearia" não tem resposta no sistema.
+- **O módulo Credenciais, criado depois de tudo isso, herdou o mesmo defeito.**
+  `credenciais.cliente_id` referencia `clients`, e a leitura faz
+  `cliente:clients(id, name)` — o seletor "de qual cliente é esta credencial" também
+  nunca teve opção.
+
+Esse último item é o argumento mais forte a favor de resolver agora: **a tabela morta
+está se espalhando.** Ela continua parecendo viva no esquema, então cada módulo novo se
+liga a ela de boa-fé e nasce com o mesmo beco sem saída.
 
 Isto foi levantado como achado A3 na auditoria de 2026-08-21 e como P0.5 na auditoria
 de transformação. É o único achado P0 que não se resolve com trabalho de interface: a
@@ -130,6 +138,9 @@ create index tasks_conta_idx on public.tasks (conta_id);
 
 alter table public.playbook_runs
   add column conta_id uuid references public.contas(id) on delete set null;
+
+alter table public.credenciais
+  add column conta_id uuid references public.contas(id) on delete set null;
 ```
 
 `on delete set null` e não `cascade`: apagar uma conta não pode levar junto o histórico
@@ -155,8 +166,9 @@ A migration é aditiva justamente por isso: ela não tenta migrar nada. Antes de
 alguém com acesso ao painel roda:
 
 ```sql
-select count(*) from public.tasks where client_id is not null;
-select count(*) from public.playbook_runs where client_id is not null;
+select count(*) from public.tasks         where client_id  is not null;
+select count(*) from public.playbook_runs where client_id  is not null;
+select count(*) from public.credenciais   where cliente_id is not null;
 ```
 
 - **Ambos zero** (esperado): seguir, nada a migrar.
@@ -195,6 +207,10 @@ Kanban funciona pela conta. Fica registrada aqui para não virar dívida esqueci
 `src/lib/data/hoje.ts`: o join `client:clients(id, name)` vira `conta:contas(id, nome)`.
 O rótulo "Interno" para tarefa sem conta continua igual.
 
+`src/lib/data/credenciais.ts`: o join `cliente:clients(id, name)` vira
+`conta:contas(id, nome)`. O significado do campo não muda — nulo continua sendo
+"credencial interna da Aura Studio", preenchido continua sendo "de um cliente".
+
 ## Escrita
 
 `src/lib/actions/tasks.ts`:
@@ -226,7 +242,10 @@ O que muda na tela, e o que deliberadamente não muda:
   interna e de cliente, pelo `updateTask` estendido.
 - **Executar playbook:** o seletor de cliente lista contas; executar para uma conta
   gera tarefas já ligadas a ela.
-- **Pipeline, Implantação, Painel, Metas, Hoje, Credenciais:** sem mudança.
+- **Credenciais:** o seletor "de qual cliente" lista contas. Deixar de fora significaria
+  entregar a unificação e manter uma tela com seletor vazio — o mesmo defeito, num
+  módulo que acabou de ser construído.
+- **Pipeline, Implantação, Painel, Metas, Hoje:** sem mudança.
 
 ## Erros
 
