@@ -7,8 +7,6 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "14.15"
   }
@@ -280,6 +278,81 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      credenciais: {
+        Row: {
+          atualizado_em: string
+          categoria_id: string
+          cliente_id: string | null
+          criado_em: string
+          id: string
+          nome: string
+          notas: string | null
+          senha: string | null
+          url: string | null
+          usuario: string | null
+        }
+        Insert: {
+          atualizado_em?: string
+          categoria_id: string
+          cliente_id?: string | null
+          criado_em?: string
+          id?: string
+          nome: string
+          notas?: string | null
+          senha?: string | null
+          url?: string | null
+          usuario?: string | null
+        }
+        Update: {
+          atualizado_em?: string
+          categoria_id?: string
+          cliente_id?: string | null
+          criado_em?: string
+          id?: string
+          nome?: string
+          notas?: string | null
+          senha?: string | null
+          url?: string | null
+          usuario?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credenciais_categoria_id_fkey"
+            columns: ["categoria_id"]
+            isOneToOne: false
+            referencedRelation: "credencial_categorias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credenciais_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      credencial_categorias: {
+        Row: {
+          criado_em: string
+          id: string
+          nome: string
+          position: number
+        }
+        Insert: {
+          criado_em?: string
+          id?: string
+          nome: string
+          position?: number
+        }
+        Update: {
+          criado_em?: string
+          id?: string
+          nome?: string
+          position?: number
+        }
+        Relationships: []
       }
       deals: {
         Row: {
