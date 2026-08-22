@@ -272,3 +272,35 @@ export async function removeAttachment(attachmentId: string) {
 
   revalidatePath("/kanban");
 }
+
+export async function createTaskArea(nome: string) {
+  const supabase = await createClient();
+  const nomeAparado = nome.trim();
+
+  // Reaproveita uma área já existente com o mesmo nome (ignorando
+  // maiúsculas/minúsculas e espaço nas pontas) em vez de duplicar —
+  // "Financeiro" e "financeiro " não podem virar duas linhas.
+  const { data: existente } = await supabase
+    .from("task_areas")
+    .select("id, nome")
+    .ilike("nome", nomeAparado)
+    .maybeSingle();
+  if (existente) return existente;
+
+  const { data: maxPos } = await supabase
+    .from("task_areas")
+    .select("position")
+    .order("position", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const { data, error } = await supabase
+    .from("task_areas")
+    .insert({ nome: nomeAparado, position: (maxPos?.position ?? 0) + 1 })
+    .select("id, nome")
+    .single();
+  if (error) throw error;
+
+  revalidatePath("/kanban");
+  return data;
+}

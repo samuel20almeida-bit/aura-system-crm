@@ -25,6 +25,15 @@ export async function listClientsLite() {
   return data ?? [];
 }
 
+export async function listTaskAreas() {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("task_areas")
+    .select("id, nome")
+    .order("position");
+  return data ?? [];
+}
+
 export async function getTaskHistory(taskId: string) {
   const supabase = await createClient();
   const { data } = await supabase
