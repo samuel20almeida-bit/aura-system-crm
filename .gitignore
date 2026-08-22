@@ -43,3 +43,8 @@ next-env.d.ts
 node_modules
 .env.local
 .next
+
+# harness/tooling state (not project content)
+/.claude-flow/
+/.claude/proven-config.json
+/.claude/.proven-config-version
