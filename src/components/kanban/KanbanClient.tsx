@@ -14,6 +14,7 @@ import type { Tables } from "@/lib/supabase/database.types";
 import type { ColumnId } from "./KanbanBoard";
 
 type ClientLite = { id: string; name: string; color: string; code_prefix: string };
+type AreaLite = { id: string; nome: string };
 
 const statusLabel: Record<string, string> = { todo: "A fazer", in_progress: "Em andamento", done: "Finalizada" };
 const mobileColumns: ColumnId[] = ["todo", "in_progress", "done"];
@@ -22,11 +23,13 @@ export function KanbanClient({
   tasks,
   clients,
   profiles,
+  areas,
   checklistCounts,
 }: {
   tasks: TaskWithRelations[];
   clients: ClientLite[];
   profiles: Tables<"profiles">[];
+  areas: AreaLite[];
   checklistCounts: Record<string, { done: number; total: number }>;
 }) {
   const router = useRouter();
@@ -200,7 +203,7 @@ export function KanbanClient({
       )}
 
       {showNewTask && (
-        <NewTaskModal clients={clients} profiles={profiles} onClose={() => setShowNewTask(false)} />
+        <NewTaskModal clients={clients} profiles={profiles} areas={areas} onClose={() => setShowNewTask(false)} />
       )}
     </>
   );

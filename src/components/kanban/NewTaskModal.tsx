@@ -4,26 +4,34 @@ import { useState, useTransition } from "react";
 import { Modal } from "@/components/ui/Overlay";
 import { Field, Input, Select, Textarea } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Button";
-import { createTask } from "@/lib/actions/tasks";
+import { createTask, createTaskArea } from "@/lib/actions/tasks";
 import { beginMutation } from "@/lib/realtime/mutation-gate";
 import type { Tables } from "@/lib/supabase/database.types";
 
 type ClientLite = { id: string; name: string; color: string; code_prefix: string };
+type AreaLite = { id: string; nome: string };
 
 export function NewTaskModal({
   clients,
   profiles,
+  areas,
   onClose,
 }: {
   clients: ClientLite[];
   profiles: Tables<"profiles">[];
+  areas: AreaLite[];
   onClose: () => void;
 }) {
   const [pending, startTransition] = useTransition();
   const [title, setTitle] = useState("");
   const [isInternal, setIsInternal] = useState(clients.length === 0);
   const [clientId, setClientId] = useState(clients[0]?.id ?? "");
-  const [area, setArea] = useState("Estúdio");
+  const [areasDisponiveis, setAreasDisponiveis] = useState(areas);
+  const [area, setArea] = useState(areasDisponiveis[0]?.nome ?? "");
+  const [mostrandoNovaArea, setMostrandoNovaArea] = useState(false);
+  const [novaAreaNome, setNovaAreaNome] = useState("");
+  const [criandoArea, startAreaTransition] = useTransition();
+  const [erroArea, setErroArea] = useState<string | null>(null);
   const [priority, setPriority] = useState("medium");
   const [assigneeId, setAssigneeId] = useState("");
   const [dueDate, setDueDate] = useState("");
@@ -80,7 +88,73 @@ export function NewTaskModal({
 
         {isInternal ? (
           <Field label="ÁREA">
-            <Input value={area} onChange={(e) => setArea(e.target.value)} placeholder="Estúdio, Financeiro, Marketing…" />
+            {mostrandoNovaArea ? (
+              <div className="flex flex-col gap-1.5">
+                <div className="flex gap-2">
+                  <Input
+                    autoFocus
+                    value={novaAreaNome}
+                    onChange={(e) => setNovaAreaNome(e.target.value)}
+                    placeholder="Nome da nova área"
+                  />
+                  <Button
+                    type="button"
+                    disabled={criandoArea || !novaAreaNome.trim()}
+                    onClick={() => {
+                      setErroArea(null);
+                      startAreaTransition(async () => {
+                        const end = beginMutation();
+                        try {
+                          const nova = await createTaskArea(novaAreaNome.trim());
+                          setAreasDisponiveis((atual) =>
+                            atual.some((a) => a.id === nova.id) ? atual : [...atual, nova]
+                          );
+                          setArea(nova.nome);
+                          setNovaAreaNome("");
+                          setMostrandoNovaArea(false);
+                        } catch {
+                          setErroArea("Não foi possível criar a área. Tente de novo.");
+                        } finally {
+                          end();
+                        }
+                      });
+                    }}
+                  >
+                    {criandoArea ? "Adicionando…" : "Adicionar"}
+                  </Button>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMostrandoNovaArea(false);
+                    setNovaAreaNome("");
+                    setErroArea(null);
+                  }}
+                  className="self-start text-[12px] text-faint hover:text-ink"
+                >
+                  Cancelar e voltar à lista
+                </button>
+                {erroArea && <p className="text-[12px] text-red">{erroArea}</p>}
+              </div>
+            ) : (
+              <Select
+                value={area}
+                onChange={(e) => {
+                  if (e.target.value === "__nova__") {
+                    setMostrandoNovaArea(true);
+                  } else {
+                    setArea(e.target.value);
+                  }
+                }}
+              >
+                {areasDisponiveis.map((a) => (
+                  <option key={a.id} value={a.nome}>
+                    {a.nome}
+                  </option>
+                ))}
+                <option value="__nova__">+ Nova área…</option>
+              </Select>
+            )}
           </Field>
         ) : (
           <Field label="CLIENTE">
