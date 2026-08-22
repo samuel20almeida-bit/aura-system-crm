@@ -72,9 +72,14 @@ Em `src/lib/data/credenciais.ts` (arquivo novo, mesmo padrão de
 - `listCredentials()`: `select("*, categoria:credencial_categorias(id,
   nome), cliente:clients(id, name)").order("nome")` — traz tudo, incluindo
   a senha em texto simples (sem criptografia, não há necessidade de uma
-  chamada separada para "revelar").
+  chamada separada para "revelar"). É o conteúdo principal da página, então
+  segue o padrão de `listTasks()` — lança (`throw`) em erro de consulta,
+  para acionar o `error.tsx` do grupo `(app)` em vez de mostrar uma lista
+  vazia enganosa.
 - `listCredentialCategories()`: mesmo formato de `listTaskAreas()`
-  (`select("id, nome").order("position")`).
+  (`select("id, nome").order("position")`) — inclusive no tratamento de
+  erro (devolve `[]`), porque é dado auxiliar de formulário, não o
+  conteúdo principal da tela.
 
 Em `src/lib/actions/credenciais.ts` (arquivo novo, mesmo padrão de
 `src/lib/actions/tasks.ts`):
@@ -121,9 +126,13 @@ Em `src/lib/actions/credenciais.ts` (arquivo novo, mesmo padrão de
   do resto do app; o modal não fecha em caso de erro de criar/editar.
 - Falha ao criar categoria nova: erro inline no modal, mesmo padrão do
   campo Área do Kanban.
-- Falha ao carregar a lista (RSC): `listCredentials()`/
-  `listCredentialCategories()` devolvem `[]` em caso de erro, sem quebrar
-  a tela — mesmo padrão de `listTaskAreas()`.
+- Falha ao carregar a lista de credenciais (RSC): `listCredentials()`
+  lança erro, acionando o `error.tsx` do grupo `(app)` — mesmo padrão de
+  `listTasks()`, para não mostrar uma lista vazia enganosa quando a
+  consulta falhou de verdade.
+- Falha ao carregar o catálogo de categorias (RSC): `listCredentialCategories()`
+  devolve `[]` em caso de erro, sem quebrar a tela — mesmo padrão de
+  `listTaskAreas()`, já que é só dado auxiliar do formulário.
 
 ## Testes
 
