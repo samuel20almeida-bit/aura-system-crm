@@ -23,7 +23,7 @@ type PlaybookListItem = {
   updated_by_profile: { initials: string } | null;
 };
 type Step = { id: string; title: string; position: number };
-type Run = { id: string; status: string; client: { id: string; name: string } | null; run_steps: { id: string; done: boolean }[] };
+type Run = { id: string; status: string; conta: { id: string; nome: string } | null; run_steps: { id: string; done: boolean }[] };
 
 const typeLabel: Record<string, string> = { executable: "Executável", document: "Documento", draft: "Rascunho" };
 const typeTone: Record<string, "accent" | "neutral"> = { executable: "accent", document: "neutral", draft: "neutral" };
@@ -34,14 +34,16 @@ export function PlaybooksBody({
   allPlaybooks,
   activePlaybookId: initialActivePlaybookId,
   detail: initialDetail,
-  clients,
+  contas,
+  contasIndisponiveis,
 }: {
   categories: Category[];
   activeCategoryId: string | null;
   allPlaybooks: PlaybookListItem[];
   activePlaybookId: string | null;
   detail: { playbook: { id: string; name: string } | null; steps: Step[]; runs: Run[] } | null;
-  clients: { id: string; name: string }[];
+  contas: { id: string; nome: string }[];
+  contasIndisponiveis: boolean;
 }) {
   const router = useRouter();
   const { notify } = useToast();
@@ -202,7 +204,7 @@ export function PlaybooksBody({
                       return (
                         <div key={r.id} className="mb-2.5 flex flex-col gap-1.5">
                           <div className="flex items-center justify-between text-[13px]">
-                            <span>{r.client?.name ?? "Interno"}</span>
+                            <span>{r.conta?.nome ?? "Interno"}</span>
                             <span className={`font-mono text-[12px] ${done === total && total > 0 ? "text-accent" : "text-muted"}`}>
                               {done}/{total}
                             </span>
@@ -302,7 +304,8 @@ export function PlaybooksBody({
       {showRun && detail?.playbook && (
         <RunPlaybookModal
           playbookId={detail.playbook.id}
-          clients={clients}
+          contas={contas}
+          contasIndisponiveis={contasIndisponiveis}
           onClose={() => setShowRun(false)}
           onRun={async () => {
             const fresh = await getPlaybookDetailAction(detail.playbook!.id);
@@ -371,18 +374,20 @@ function NewPlaybookModal({ categoryId, onClose }: { categoryId: string; onClose
 
 function RunPlaybookModal({
   playbookId,
-  clients,
+  contas,
+  contasIndisponiveis,
   onClose,
   onRun,
 }: {
   playbookId: string;
-  clients: { id: string; name: string }[];
+  contas: { id: string; nome: string }[];
+  contasIndisponiveis: boolean;
   onClose: () => void;
   onRun: () => Promise<void>;
 }) {
   const { notify } = useToast();
   const [pending, startTransition] = useTransition();
-  const [clientId, setClientId] = useState("");
+  const [contaId, setContaId] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   return (
@@ -398,7 +403,7 @@ function RunPlaybookModal({
             // pode continuar mostrando "não foi possível rodar" — isso
             // convidaria a um reenvio que duplicaria a execução inteira.
             try {
-              await runPlaybook(playbookId, clientId || null);
+              await runPlaybook(playbookId, contaId || null);
             } catch {
               setError("Não foi possível rodar o playbook. Tente novamente.");
               return;
@@ -414,11 +419,19 @@ function RunPlaybookModal({
         className="flex flex-col gap-3.5 p-5.5"
       >
         <h2 className="text-base font-medium">Rodar playbook</h2>
-        <Field label="CLIENTE (OU INTERNO)">
-          <Select value={clientId} onChange={(e) => setClientId(e.target.value)}>
-            <option value="">Interno / sem cliente</option>
-            {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </Select>
+        <Field label="CONTA (OU INTERNO)">
+          {contasIndisponiveis ? (
+            // A leitura de contas falhou (mesmo caso do Kanban, Task 4): listar
+            // um `<select>` vazio aqui mentiria "sem contas cadastradas". O
+            // aviso ocupa o lugar do seletor; `contaId` some vazio, então
+            // confirmar continua funcionando como execução interna.
+            <Tag tone="amber">Contas indisponíveis</Tag>
+          ) : (
+            <Select value={contaId} onChange={(e) => setContaId(e.target.value)}>
+              <option value="">Interno / sem conta</option>
+              {contas.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
+            </Select>
+          )}
         </Field>
         <p className="text-[12.5px] text-muted">Isso vai criar uma tarefa no Kanban para cada etapa do playbook.</p>
         {error && <p className="rounded-lg bg-red-tint px-3 py-2 text-[12.5px] text-red">{error}</p>}
