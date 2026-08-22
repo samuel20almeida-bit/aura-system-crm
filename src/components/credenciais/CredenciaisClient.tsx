@@ -156,7 +156,7 @@ export function CredenciaisClient({
         ))}
         {filtradas.length === 0 && (
           <div className="col-span-full flex flex-1 items-center justify-center rounded-xl border border-dashed border-border p-10 text-center text-[13px] text-faint">
-            Nenhuma credencial cadastrada ainda.
+            {categoriaFiltro ? "Nenhuma credencial nesta categoria." : "Nenhuma credencial cadastrada ainda."}
           </div>
         )}
       </div>
