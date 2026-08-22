@@ -25,6 +25,22 @@ export async function listClientsLite() {
   return data ?? [];
 }
 
+export type ContaLite = { id: string; nome: string };
+
+/**
+ * As contas que podem receber tarefa, playbook ou credencial.
+ *
+ * TODAS, ordenadas por nome — sem filtrar por `fase`. Filtrar por
+ * `fase = 'cliente'` esconderia justamente a conta em `prospect` para a qual
+ * se está preparando uma proposta, que é trabalho real com tarefa real. A
+ * fase governa o funil, não o direito de ter tarefa.
+ */
+export async function listContasLite(): Promise<ContaLite[]> {
+  const supabase = await createClient();
+  const { data } = await supabase.from("contas").select("id, nome").order("nome");
+  return data ?? [];
+}
+
 export async function listTaskAreas() {
   const supabase = await createClient();
   const { data } = await supabase
