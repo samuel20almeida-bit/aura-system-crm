@@ -28,7 +28,7 @@ type Profile = Tables<"profiles">;
 
 type TaskDetail = {
   task: (Tables<"tasks"> & {
-    client: { id: string; name: string; color: string; code_prefix: string } | null;
+    conta: { id: string; nome: string } | null;
     assignee: { id: string; full_name: string; initials: string } | null;
   }) | null;
   checklist: (Tables<"task_checklist_items"> & { assignee: { id: string; full_name: string; initials: string } | null })[];
@@ -144,7 +144,7 @@ export function TaskDetailPanel({ detail, profiles }: { detail: TaskDetail; prof
           className="rounded -mx-1 px-1 text-[19px] font-medium outline-none focus:bg-neutral-tint"
         />
         <div className="text-[12.5px] text-muted">
-          {t.client ? t.client.name : "Interno"} {t.area ? `· ${t.area}` : ""}
+          {t.conta ? t.conta.nome : "Interno"} {t.area ? `· ${t.area}` : ""}
         </div>
       </div>
 

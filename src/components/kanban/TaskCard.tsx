@@ -63,11 +63,11 @@ export function TaskCard({
         <span className="font-mono text-[11px] text-muted">{task.code}</span>
       </div>
       <div className={clsx("text-[13px] font-medium", isDone && "line-through")}>{task.title}</div>
-      {task.client && (
-        <div className="flex items-center gap-1.5 text-[11.5px] text-muted">
-          <span className="h-2 w-2 rounded-sm" style={{ background: task.client.color }} />
-          {task.client.name}
-        </div>
+      {/* Sem quadradinho: `contas` não tem cor, e inventar uma por conta seria
+          decoração sem fonte de verdade — o nome já é a informação que o
+          quadradinho tentava resumir. */}
+      {task.conta && (
+        <div className="text-[11.5px] text-muted">{task.conta.nome}</div>
       )}
       {task.is_internal && task.area && (
         <div className="flex items-center gap-1.5 text-[11.5px] text-muted">

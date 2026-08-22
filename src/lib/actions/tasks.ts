@@ -8,7 +8,7 @@ import { normalizeLinkUrl } from "@/lib/links";
 
 export async function createTask(input: {
   title: string;
-  clientId: string | null;
+  contaId: string | null;
   isInternal: boolean;
   area?: string | null;
   priority: string;
@@ -23,7 +23,7 @@ export async function createTask(input: {
   } = await supabase.auth.getUser();
   if (!user) throw new Error("Não autenticado");
 
-  const code = await nextTaskCode(input.clientId, input.isInternal);
+  const code = await nextTaskCode(input.contaId, input.isInternal);
 
   const { data: maxPos } = await supabase
     .from("tasks")
@@ -38,7 +38,7 @@ export async function createTask(input: {
     .insert({
       title: input.title,
       code,
-      client_id: input.isInternal ? null : input.clientId,
+      conta_id: input.isInternal ? null : input.contaId,
       is_internal: input.isInternal,
       area: input.area ?? null,
       priority: input.priority,
