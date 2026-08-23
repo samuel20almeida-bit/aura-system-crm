@@ -1,0 +1,57 @@
+# Roda os mesmos quatro comandos que qualquer um de nós roda antes de commitar.
+#
+# Existe porque o deploy da Vercel responde uma pergunta só — "compila?" — e o
+# defeito mais caro desta base até hoje (o prefixo com hífen, que quebrava o
+# cadastro de uma conta para sempre) compilava perfeitamente. Quem o pegou foi
+# um teste. Sem isto aqui, a garantia de que os testes passam é alguém ter
+# lembrado de rodar.
+name: Verificações
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Só leitura: este workflow não escreve nada no repositório.
+permissions:
+  contents: read
+
+# Um push novo na mesma branch cancela a execução anterior, que já não interessa.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  portoes:
+    name: Testes, tipos, lint e build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # `npm ci` e não `npm install`: instala exatamente o que está no
+      # package-lock.json, então o CI testa as mesmas versões que rodam aqui.
+      - run: npm ci
+
+      # Os quatro passos ficam separados de propósito: quando um falha, o nome
+      # do passo vermelho já diz o que quebrou, sem ler log.
+      - name: Testes
+        run: npx vitest run
+
+      - name: Tipos
+        run: npx tsc --noEmit
+
+      # Sem --max-warnings: há um aviso conhecido e aceito sobre fontes
+      # customizadas em src/app/layout.tsx. Transformá-lo em erro deixaria o CI
+      # vermelho desde o primeiro dia, e um CI que nasce vermelho ninguém olha.
+      - name: Lint
+        run: npx eslint .
+
+      # O build não precisa das variáveis do Supabase: nenhuma página é gerada
+      # estaticamente a partir de dado do banco.
+      - name: Build
+        run: npm run build
