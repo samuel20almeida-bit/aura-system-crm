@@ -11,6 +11,7 @@ import { concluirImplantacao, moverEtapa } from "@/lib/actions/implantacoes";
 import { ROTULO_DA_SAUDE, diasParado, rotuloVencimento } from "@/lib/negocios";
 import { saudeDaImplantacao, vencimentoDaEtapa } from "@/lib/implantacoes";
 import type { Etapa, ImplantacaoAberta } from "@/lib/data/implantacoes";
+import { useConfirm } from "@/components/ui/ConfirmDialog";
 
 function Linha({ rotulo, valor }: { rotulo: string; valor: string | null | undefined }) {
   return (
@@ -40,6 +41,7 @@ export function ImplantacaoDrawer({
 }) {
   const { notify } = useToast();
   const [pendente, startTransition] = useTransition();
+  const { pedirConfirmacao, dialogo } = useConfirm();
   // Transição própria para o seletor otimista: `pendente` é o estado do botão
   // do rodapé ("Concluindo…"), e uma troca de etapa não pode fazê-lo dizer
   // isso enquanto nada está sendo concluído.
@@ -97,6 +99,7 @@ export function ImplantacaoDrawer({
 
   return (
     <Slideover onClose={onClose}>
+      {dialogo}
       <div className="flex items-start gap-2.5 border-b border-border px-5.5 py-4">
         <div className="min-w-0 flex-1">
           <div className="truncate text-[17px] font-medium">{implantacao.conta?.nome ?? "Conta sem nome"}</div>
@@ -157,10 +160,15 @@ export function ImplantacaoDrawer({
       <div className="flex items-center justify-end border-t border-border px-5.5 py-3">
         <Button
           disabled={pendente}
-          onClick={() => {
-            if (!confirm("Concluir a implantação? A conta vira cliente.")) return;
-            executar("concluir a implantação", () => concluirImplantacao(implantacao.id), onClose);
-          }}
+          onClick={() =>
+            pedirConfirmacao({
+              titulo: "Concluir a implantação?",
+              descricao: "A conta passa a contar como cliente ativo, e a implantação sai da esteira.",
+              rotuloConfirmar: "Concluir implantação",
+              aoConfirmar: () =>
+                executar("concluir a implantação", () => concluirImplantacao(implantacao.id), onClose),
+            })
+          }
         >
           {pendente ? "Concluindo…" : "Concluir implantação"}
         </Button>

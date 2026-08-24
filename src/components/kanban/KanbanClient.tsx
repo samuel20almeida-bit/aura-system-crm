@@ -12,6 +12,7 @@ import { addDaysToDateStr, todayInAppTz } from "@/lib/timezone";
 import type { TaskWithRelations } from "@/lib/data/tasks";
 import type { Tables } from "@/lib/supabase/database.types";
 import type { ColumnId } from "./KanbanBoard";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 type ClientLite = { id: string; name: string; color: string; code_prefix: string };
 type AreaLite = { id: string; nome: string };
@@ -197,7 +198,7 @@ export function KanbanClient({
             </div>
           ))}
           {filtered.length === 0 && (
-            <div className="p-8 text-center text-[13px] text-faint">Nenhuma tarefa encontrada.</div>
+            <EmptyState plain title="Nenhuma tarefa encontrada." />
           )}
         </div>
       )}
