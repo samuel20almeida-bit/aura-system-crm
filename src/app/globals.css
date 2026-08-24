@@ -1,27 +1,112 @@
 @import "tailwindcss";
 
+/* ============================================================
+   TOKENS
+   Toda decisão visual que aparece mais de uma vez mora aqui, para
+   que mudar o sistema inteiro continue sendo mudar uma linha.
+   Ver a proposta da Etapa 2 do redesign para o raciocínio completo.
+   ============================================================ */
+
 @theme {
+  /* ---------- neutros ---------- */
   --color-bone: #f7f5f0;
   --color-ink: #1e1e1c;
   --color-surface: #ffffff;
   --color-border: #e4e1d8;
   --color-border-soft: #edeae2;
   --color-muted: #5c5a52;
-  --color-faint: #9a9890;
+
+  /* Era #9a9890, que dá 2,65:1 sobre o bege — bem abaixo do mínimo
+     legível de 4,5:1, e usado em 51 lugares, quase sempre em texto de
+     9 a 11px: rótulo de campo, título de seção do menu, contador.
+     #6f6d65 dá 4,76:1 sobre o bege, 5,18:1 sobre o branco e 4,55:1
+     sobre o cinza dos blocos. Medido, não estimado. */
+  --color-faint: #6f6d65;
+
+  /* ---------- acento (marca) ---------- */
+  /* 5,94:1 sobre o bege: já passava, fica como está. */
   --color-accent: #0b6b54;
   --color-accent-logo: #0f6e56;
   --color-accent-tint: #e1f0ea;
   --color-accent-tint-border: #cfe4da;
-  --color-red: #c4574a;
+
+  /* ---------- vermelho ---------- */
+  /* Era #c4574a. Este token faz três trabalhos ao mesmo tempo: texto
+     da tag vermelha, fundo do botão de excluir e barra de progresso
+     estourada. O antigo falhava nos dois primeiros — 3,80:1 do texto
+     sobre o tinto, 4,01:1 do bone sobre o botão. #a8443a leva os dois
+     a 5,15:1 e 5,42:1. Importa mais que os outros porque é a cor que
+     marca prazo vencido: o aviso mais urgente era o texto menos
+     legível do sistema. */
+  --color-red: #a8443a;
   --color-red-tint: #fbecea;
   --color-red-tint-border: #ebcfca;
+
+  /* ---------- âmbar ---------- */
+  /* NÃO é cor de texto: é o preenchimento de uma barra do gráfico do
+     Painel (`PainelHistoricoClient`). Fica como está — trocá-la mudaria
+     a leitura do gráfico, não a legibilidade de nada. O âmbar de TEXTO
+     é `--color-warning`, abaixo. */
   --color-amber: #d8b24a;
+
   --color-neutral-tint: #f2f0ea;
   --color-neutral-tint-border: #e9e5dc;
+
+  /* ---------- semânticos ---------- */
+  /* Separados do acento de propósito: se o verde de sucesso fosse o
+     verde da marca, um botão primário pareceria uma confirmação.
+     Cada par texto/tinto foi medido sobre o seu próprio tinto. */
+  --color-success: #2f7a5e;
+  --color-success-tint: #e3f0ea;
+  --color-warning: #7a5410;        /* 6,09:1 sobre o tinto abaixo */
+  --color-warning-tint: #f7efdc;
+  --color-info: #3d5a6c;
+  --color-info-tint: #e8eef2;
+
+  /* ---------- tipografia ---------- */
+  /* Cinco degraus no lugar dos 14 tamanhos avulsos que existiam,
+     usados 175 vezes — havia 11px, 11.5px, 12px e 12.5px convivendo.
+     Nenhum salto da consolidação é maior que 2px: o tamanho aparente
+     quase não muda, o que muda é haver uma escala. */
+  --text-label: 11px;
+  --text-label--line-height: 1.3;
+  --text-small: 12px;
+  --text-small--line-height: 1.45;
+  --text-body: 13px;
+  --text-body--line-height: 1.55;
+  --text-title: 15px;
+  --text-title--line-height: 1.35;
+  --text-display: 21px;
+  --text-display--line-height: 1.15;
 
   --font-sans: "Archivo", ui-sans-serif, sans-serif;
   --font-serif: "Fraunces", ui-serif, serif;
   --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+
+  /* ---------- raio ---------- */
+  /* Três, com regra: controle, card, pílula. Havia cinco em uso. */
+  --radius-control: 6px;
+  --radius-card: 10px;
+
+  /* ---------- sombra ---------- */
+  /* Três alturas no lugar das oito definições que existiam, cinco
+     delas escritas à mão em rgba(). */
+  --shadow-raised: 0 1px 2px rgba(30, 30, 28, 0.05);
+  --shadow-layer: 0 4px 14px rgba(30, 30, 28, 0.10);
+  --shadow-overlay: 0 12px 32px rgba(30, 30, 28, 0.16);
+
+  /* ---------- movimento ---------- */
+  /* Dois tempos: retorno de clique e entrada de camada. Curto de
+     propósito — a sensação buscada é "clicou, respondeu", não animação.
+
+     O prefixo é `--transition-duration-*`, não `--duration-*`: só o
+     primeiro faz o Tailwind v4 gerar as classes `duration-fast` e
+     `duration-layer`. Verificado compilando com e sem — com `--duration-*`
+     a variável existe no CSS mas nenhuma classe nasce dela, e o erro
+     passaria despercebido até alguém escrever `duration-fast` e ver que
+     não faz nada. */
+  --transition-duration-fast: 120ms;
+  --transition-duration-layer: 180ms;
 }
 
 body {
@@ -35,12 +120,39 @@ body {
   color: var(--color-accent);
 }
 
+/* O rótulo é o texto que mais se repete na interface e era o menos
+   legível: 10,5px na cor que dava 2,65:1. Agora usa o degrau `label`
+   da escala e o cinza corrigido — meio pixel e um degrau de contraste,
+   em 19 usos desta classe mais os 51 do token. */
 .label {
   font-family: var(--font-mono);
   font-weight: 600;
-  font-size: 10.5px;
+  font-size: var(--text-label);
+  line-height: var(--text-label--line-height);
   color: var(--color-faint);
-  letter-spacing: 0.03em;
+  letter-spacing: 0.06em;
+}
+
+/* Antes desta regra o app não tinha NENHUM `focus-visible`: dava para
+   percorrer a interface inteira no teclado sem enxergar onde se estava.
+   Vale para o que é interativo, não para qualquer coisa que receba foco —
+   os painéis de modal e gaveta ganham foco por programa (`tabIndex={-1}`)
+   só para ancorar o teclado, e não devem desenhar anel por isso.
+   `:focus-visible` já cuida disso sozinho: o navegador não o aplica em
+   foco programático. O anel acompanha o `border-radius` do elemento.
+
+   Fica fora de `@layer` de propósito: regra sem camada vence utilitário
+   do Tailwind, então nenhum `focus:` de componente apaga o anel por
+   acidente. O `focus:border-accent` dos campos continua valendo — ele
+   muda a borda, este muda o contorno. */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:not([tabindex="-1"]):focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
 }
 
 .accent-italic {
