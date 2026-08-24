@@ -133,6 +133,28 @@ body {
   letter-spacing: 0.06em;
 }
 
+/* Antes desta regra o app não tinha NENHUM `focus-visible`: dava para
+   percorrer a interface inteira no teclado sem enxergar onde se estava.
+   Vale para o que é interativo, não para qualquer coisa que receba foco —
+   os painéis de modal e gaveta ganham foco por programa (`tabIndex={-1}`)
+   só para ancorar o teclado, e não devem desenhar anel por isso.
+   `:focus-visible` já cuida disso sozinho: o navegador não o aplica em
+   foco programático. O anel acompanha o `border-radius` do elemento.
+
+   Fica fora de `@layer` de propósito: regra sem camada vence utilitário
+   do Tailwind, então nenhum `focus:` de componente apaga o anel por
+   acidente. O `focus:border-accent` dos campos continua valendo — ele
+   muda a borda, este muda o contorno. */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:not([tabindex="-1"]):focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
 .accent-italic {
   font-family: var(--font-serif);
   font-style: italic;
