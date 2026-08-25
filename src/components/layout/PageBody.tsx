@@ -23,3 +23,32 @@ export function PageHeader({
     </div>
   );
 }
+
+/**
+ * Uma faixa nomeada dentro da página. `PageHeader` nomeia a tela; este nomeia
+ * um bloco dentro dela, e é a mesma gramática — por isso mora aqui, junto do
+ * resto do ritmo da página.
+ *
+ * O `aside` existe por um motivo concreto: o Painel tem dois blocos chamados
+ * "Origem → receita", um acumulado e um do período escolhido. Sem dizer o
+ * recorte ao lado do nome, os dois parecem o mesmo número em desacordo.
+ */
+export function Section({
+  title,
+  aside,
+  children,
+}: {
+  title: string;
+  aside?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="flex flex-col gap-3">
+      <div className="flex items-baseline justify-between gap-3">
+        <h2 className="text-title font-medium">{title}</h2>
+        {aside && <span className="text-small text-faint">{aside}</span>}
+      </div>
+      {children}
+    </section>
+  );
+}
