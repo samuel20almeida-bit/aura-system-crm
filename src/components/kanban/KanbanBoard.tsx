@@ -23,6 +23,7 @@ import type { TaskWithRelations } from "@/lib/data/tasks";
 import { moveItem, reorderWithin, findColumnIn, type Columns } from "@/lib/optimistic";
 import { useToast } from "@/components/ui/Toast";
 import { useMediaQuery } from "@/lib/use-media-query";
+import { DropZone } from "@/components/ui/EmptyState";
 
 const COLUMNS = [
   { id: "todo", label: "A FAZER" },
@@ -84,9 +85,7 @@ function Column({
             />
           ))}
           {tasks.length === 0 && (
-            <div className="rounded-[10px] border border-dashed border-[#CFCABD] p-3.5 text-center text-xs text-faint">
-              Solte aqui
-            </div>
+            <DropZone />
           )}
         </div>
       </SortableContext>

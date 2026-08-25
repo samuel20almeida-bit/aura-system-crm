@@ -13,6 +13,7 @@ import { ROTULO_DA_SAUDE, diasParado, rotuloVencimento, saudeDoNegocio } from "@
 import { useAutoSave } from "@/lib/use-autosave";
 import { ESTAGIOS, type EstagioId } from "./PipelineBoard";
 import type { NegocioAberto } from "@/lib/data/deals";
+import { useConfirm } from "@/components/ui/ConfirmDialog";
 
 /**
  * A gaveta do negócio: abre sobre o quadro, não navega.
@@ -32,6 +33,7 @@ export function NegocioDrawer({
 }) {
   const { notify } = useToast();
   const [pendente, startTransition] = useTransition();
+  const { pedirConfirmacao, dialogo } = useConfirm();
   // Transição própria para o seletor otimista: `pendente` é o estado dos
   // botões "Ganhar"/"Perder" do rodapé, e uma troca de estágio não pode
   // desabilitá-los nem trocar seus rótulos enquanto nada está sendo ganho ou
@@ -235,6 +237,7 @@ export function NegocioDrawer({
 
   return (
     <Slideover onClose={onClose}>
+      {dialogo}
       <div className="flex items-start gap-2.5 border-b border-border px-5.5 py-4">
         <div className="min-w-0 flex-1">
           <div className="truncate text-[17px] font-medium">{negocio.conta?.nome ?? "Conta sem nome"}</div>
@@ -408,11 +411,18 @@ export function NegocioDrawer({
             <Button
               variant="ghost"
               disabled={pendente}
-              onClick={() => {
-                if (!confirm("Marcar como ganho? Isso vira uma implantação depois.")) return;
-                setAcaoAtual("ganhar");
-                executar("marcar o negócio como ganho", () => ganharNegocio(negocio.id), onClose);
-              }}
+              onClick={() =>
+                pedirConfirmacao({
+                  titulo: "Marcar como ganho?",
+                  descricao:
+                    "O negócio sai do funil e vira uma implantação na esteira. É assim que a venda vira trabalho.",
+                  rotuloConfirmar: "Marcar como ganho",
+                  aoConfirmar: () => {
+                    setAcaoAtual("ganhar");
+                    executar("marcar o negócio como ganho", () => ganharNegocio(negocio.id), onClose);
+                  },
+                })
+              }
             >
               {pendente && acaoAtual === "ganhar" ? "Marcando como ganho…" : "Ganhar"}
             </Button>

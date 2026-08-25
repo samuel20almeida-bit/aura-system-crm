@@ -41,12 +41,20 @@ function useCamada(onClose: () => void) {
   }, []);
 
   function onKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
+    if (e.key !== "Escape" && e.key !== "Tab") return;
+
+    // A camada de cima é dona do teclado. Sem isto, um diálogo de
+    // confirmação aberto DENTRO de uma gaveta (é o caso de "Ganhar" no
+    // Pipeline e "Concluir" na Implantação) deixaria os dois painéis
+    // reagindo à mesma tecla: o Escape fecharia os dois de uma vez, e o
+    // Tab seria corrigido duas vezes, porque a lista de focáveis da gaveta
+    // inclui os botões do diálogo — que é descendente dela no DOM.
+    e.stopPropagation();
+
     if (e.key === "Escape") {
-      e.stopPropagation();
       onClose();
       return;
     }
-    if (e.key !== "Tab") return;
 
     const painel = ref.current;
     if (!painel) return;

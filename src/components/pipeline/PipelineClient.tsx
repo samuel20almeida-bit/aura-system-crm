@@ -10,6 +10,7 @@ import { NovoNegocioModal } from "./NovoNegocioModal";
 import { formatCurrency } from "@/lib/format";
 import { saudeDoNegocio } from "@/lib/negocios";
 import type { NegocioAberto } from "@/lib/data/deals";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 export function PipelineClient({
   negocios,
@@ -80,12 +81,10 @@ export function PipelineClient({
       {unavailable && <Unavailable title="Não foi possível carregar o pipeline agora" />}
 
       {!unavailable && negocios.length === 0 && (
-        <div className="rounded-xl border border-dashed border-border p-8 text-center">
-          <div className="text-[13px] font-medium">Nenhum negócio no funil ainda.</div>
-          <div className="mt-1 text-[12.5px] text-muted">
-            Cadastre o primeiro em &quot;+ Novo negócio&quot; — o quadro só mostra o que existe de verdade.
-          </div>
-        </div>
+        <EmptyState
+          title="Nenhum negócio no funil ainda."
+          sub={'Cadastre o primeiro em "+ Novo negócio" — o quadro só mostra o que existe de verdade.'}
+        />
       )}
 
       {!unavailable && (

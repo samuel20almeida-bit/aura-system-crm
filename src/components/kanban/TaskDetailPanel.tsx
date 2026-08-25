@@ -23,6 +23,7 @@ import {
 import { beginMutation } from "@/lib/realtime/mutation-gate";
 import type { Tables } from "@/lib/supabase/database.types";
 import { useToast } from "@/components/ui/Toast";
+import { useConfirm } from "@/components/ui/ConfirmDialog";
 
 type Profile = Tables<"profiles">;
 
@@ -48,6 +49,7 @@ export function TaskDetailPanel({ detail, profiles }: { detail: TaskDetail; prof
   const [newItem, setNewItem] = useState("");
   const [newComment, setNewComment] = useState("");
   const [pending, startTransition] = useTransition();
+  const { pedirConfirmacao, dialogo } = useConfirm();
 
   function close() {
     router.push("/kanban");
@@ -91,6 +93,7 @@ export function TaskDetailPanel({ detail, profiles }: { detail: TaskDetail; prof
 
   return (
     <Slideover onClose={close}>
+      {dialogo}
       <div className="flex items-center gap-2.5 border-b border-border px-5.5 py-4">
         <span className="font-mono text-xs text-muted">{t.code}</span>
         <select
@@ -105,15 +108,21 @@ export function TaskDetailPanel({ detail, profiles }: { detail: TaskDetail; prof
         <div className="ml-auto flex items-center gap-3">
           <button
             onClick={() =>
-              startTransition(async () => {
-                if (!confirm("Excluir esta tarefa?")) return;
-                const end = beginMutation();
-                try {
-                  await deleteTask(t.id);
-                  close();
-                } finally {
-                  end();
-                }
+              pedirConfirmacao({
+                titulo: "Excluir esta tarefa?",
+                descricao: `${t.code} — "${t.title}". Comentários, checklist e anexos vão junto. Não dá para desfazer.`,
+                rotuloConfirmar: "Excluir tarefa",
+                tom: "perigo",
+                aoConfirmar: () =>
+                  startTransition(async () => {
+                    const end = beginMutation();
+                    try {
+                      await deleteTask(t.id);
+                      close();
+                    } finally {
+                      end();
+                    }
+                  }),
               })
             }
             className="text-[13px] text-muted hover:text-red"
