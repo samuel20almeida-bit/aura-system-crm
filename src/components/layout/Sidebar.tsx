@@ -53,12 +53,21 @@ export function Sidebar({
   counts,
   open,
   onClose,
+  recolhido,
+  onAlternarRecolhido,
 }: {
   profile: { full_name: string; role_title: string | null; initials: string };
   /** `null` num contador significa "não deu para ler" — nunca zero. */
   counts: { openTasks: number | null };
   open: boolean;
   onClose: () => void;
+  /**
+   * Recolhido vale só a partir de `md:`. No celular o menu é uma gaveta que
+   * cobre a tela — recolher ali não sobraria espaço para nada, e esconderia
+   * os rótulos justamente onde o alvo de toque precisa deles.
+   */
+  recolhido: boolean;
+  onAlternarRecolhido: () => void;
 }) {
   const pathname = usePathname();
 
@@ -69,6 +78,9 @@ export function Sidebar({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- só o caminho deve disparar o fechamento
   }, [pathname]);
 
+  /** Some a partir de `md:` quando o menu está recolhido. */
+  const soLargo = recolhido ? "md:hidden" : undefined;
+
   const renderItem = (item: NavItem) => {
     const active = pathname === item.href || pathname.startsWith(item.href + "/");
     const count = item.countKey ? counts[item.countKey] : undefined;
@@ -78,17 +90,29 @@ export function Sidebar({
         key={item.href}
         href={item.href}
         prefetch
+        // O título só serve quando o rótulo está escondido; com o menu largo
+        // ele seria uma dica repetindo o que já está escrito ao lado.
+        title={recolhido ? (count ? `${item.label} (${count})` : item.label) : undefined}
         className={clsx(
-          "flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] font-medium",
+          "flex items-center gap-2.5 rounded-control px-2.5 py-2 text-body font-medium transition-colors",
+          recolhido && "md:justify-center md:gap-0 md:px-0",
           active ? "bg-accent-tint text-accent" : "text-muted hover:bg-neutral-tint"
         )}
       >
-        <Icon />
-        {item.label}
+        <span className="relative flex">
+          <Icon />
+          {/* Recolhido não cabe número, mas perder o sinal de "tem tarefa
+              aberta" seria perder o motivo de o contador existir. Vira ponto;
+              o número continua acessível no título. */}
+          {recolhido && !!count && (
+            <span className="absolute -top-0.5 -right-1 hidden h-1.5 w-1.5 rounded-full bg-accent md:block" />
+          )}
+        </span>
+        <span className={soLargo}>{item.label}</span>
         {count === null ? (
           // Um "0" aqui seria uma afirmação; "—" é a ausência de resposta.
           <span
-            className="ml-auto font-mono text-[10px] font-semibold text-faint"
+            className={clsx("ml-auto font-mono text-[10px] font-semibold text-faint", soLargo)}
             title="Não foi possível ler este número agora"
           >
             —
@@ -98,7 +122,8 @@ export function Sidebar({
             <span
               className={clsx(
                 "ml-auto font-mono text-[10px] font-semibold",
-                active ? "text-accent" : "text-faint"
+                active ? "text-accent" : "text-faint",
+                soLargo
               )}
             >
               {count}
@@ -108,6 +133,26 @@ export function Sidebar({
       </Link>
     );
   };
+
+  const grupo = (titulo: string, itens: NavItem[]) => (
+    <div className="flex flex-col gap-0.5 px-3">
+      {recolhido ? (
+        // Sem rótulo de grupo não haveria nada separando TRABALHO de NEGÓCIO,
+        // e os oito ícones virariam uma lista só. O traço faz o mesmo trabalho
+        // em 60px de largura.
+        <div className="mx-1 my-2 hidden border-t border-border md:block" />
+      ) : null}
+      <span
+        className={clsx(
+          "px-2.5 pt-4 pb-1.5 font-mono text-[9.5px] font-semibold tracking-[0.09em] text-faint",
+          soLargo
+        )}
+      >
+        {titulo}
+      </span>
+      {itens.map(renderItem)}
+    </div>
+  );
 
   return (
     <>
@@ -120,40 +165,68 @@ export function Sidebar({
       )}
       <div
         className={clsx(
-          "fixed inset-y-0 left-0 z-50 flex h-full w-[236px] flex-none flex-col border-r border-border bg-surface py-4.5 transition-transform duration-200 md:static md:translate-x-0",
+          "fixed inset-y-0 left-0 z-50 flex h-full w-[236px] flex-none flex-col border-r border-border bg-surface py-4.5 transition-[transform,width] duration-200 md:static md:translate-x-0",
+          recolhido && "md:w-[60px]",
           open ? "translate-x-0" : "-translate-x-full"
         )}
       >
-        <div className="flex items-center justify-between px-4.5 pb-1.5">
-          <div className="flex items-center gap-2">
-            <AuraLogo />
-            <span className="text-[17px] font-semibold">aura</span>
-          </div>
+        <div className={clsx("flex items-center gap-2 px-4.5 pb-1.5", recolhido && "md:px-0 md:justify-center")}>
+          <AuraLogo />
+          <span className={clsx("text-title font-semibold", soLargo)}>aura</span>
+          <button
+            type="button"
+            onClick={onAlternarRecolhido}
+            aria-label={recolhido ? "Expandir menu" : "Recolher menu"}
+            title={recolhido ? "Expandir menu" : "Recolher menu"}
+            className={clsx(
+              "ml-auto hidden text-faint transition-colors hover:text-ink md:flex",
+              recolhido && "md:hidden"
+            )}
+          >
+            <RecolherIcon />
+          </button>
         </div>
-        <div className="mx-3 mt-2.5 mb-1 flex items-center gap-2 rounded-lg border border-border bg-bone px-2.5 py-1.5 text-xs font-medium text-muted">
+
+        {/* Recolhido, o botão de expandir troca de lugar: no cabeçalho não
+            sobra espaço ao lado da marca, e escondê-lo deixaria o menu sem
+            volta. */}
+        {recolhido && (
+          <button
+            type="button"
+            onClick={onAlternarRecolhido}
+            aria-label="Expandir menu"
+            title="Expandir menu"
+            className="mx-auto mt-2 hidden text-faint transition-colors hover:text-ink md:flex"
+          >
+            <ExpandirIcon />
+          </button>
+        )}
+
+        <div
+          className={clsx(
+            "mx-3 mt-2.5 mb-1 flex items-center gap-2 rounded-control border border-border bg-bone px-2.5 py-1.5 text-xs font-medium text-muted",
+            soLargo
+          )}
+        >
           <span className="flex h-4 w-4 items-center justify-center rounded bg-accent-tint font-mono text-[9px] font-semibold text-accent">
             A
           </span>
           Aura Studio
         </div>
 
-        <div className="mt-2 flex flex-col gap-0.5 px-3">
-          <span className="px-2.5 pb-1.5 pt-4 font-mono text-[9.5px] font-semibold tracking-[0.09em] text-faint">
-            TRABALHO
-          </span>
-          {workItems.map(renderItem)}
-        </div>
-        <div className="flex flex-col gap-0.5 px-3">
-          <span className="px-2.5 pb-1.5 pt-4 font-mono text-[9.5px] font-semibold tracking-[0.09em] text-faint">
-            NEGÓCIO
-          </span>
-          {businessItems.map(renderItem)}
-        </div>
+        <div className="mt-2 flex flex-col">{grupo("TRABALHO", workItems)}</div>
+        {grupo("NEGÓCIO", businessItems)}
 
-        <form action={signOut} className="mx-3 mt-auto flex items-center gap-2.5 border-t border-border pt-3.5">
+        <form
+          action={signOut}
+          className={clsx(
+            "mx-3 mt-auto flex items-center gap-2.5 border-t border-border pt-3.5",
+            recolhido && "md:mx-0 md:flex-col md:gap-2 md:px-2"
+          )}
+        >
           <Avatar initials={profile.initials} />
-          <div className="min-w-0">
-            <div className="truncate text-[12.5px] font-medium">{profile.full_name}</div>
+          <div className={clsx("min-w-0", soLargo)}>
+            <div className="truncate text-small font-medium">{profile.full_name}</div>
             <div className="truncate font-mono text-[11px] text-muted">
               {profile.role_title || "Fundador(a)"}
             </div>
@@ -161,7 +234,8 @@ export function Sidebar({
           <button
             type="submit"
             title="Sair"
-            className="ml-auto flex text-muted hover:text-ink"
+            aria-label="Sair"
+            className={clsx("ml-auto flex text-muted hover:text-ink", recolhido && "md:ml-0")}
           >
             <LogoutIcon />
           </button>
@@ -188,6 +262,22 @@ function MenuIcon() {
   return (
     <svg width="17" height="17" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3">
       <path d="M2.5 4.5h11M2.5 8h11M2.5 11.5h11" />
+    </svg>
+  );
+}
+
+function RecolherIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3">
+      <path d="M6.2 2.8h6.2a.8.8 0 0 1 .8.8v8.8a.8.8 0 0 1-.8.8H6.2M6.2 2.8H3.6a.8.8 0 0 0-.8.8v8.8a.8.8 0 0 0 .8.8h2.6M6.2 2.8v10.4" />
+    </svg>
+  );
+}
+
+function ExpandirIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3">
+      <path d="M9.8 2.8H3.6a.8.8 0 0 0-.8.8v8.8a.8.8 0 0 0 .8.8h6.2M9.8 2.8h2.6a.8.8 0 0 1 .8.8v8.8a.8.8 0 0 1-.8.8H9.8M9.8 2.8v10.4" />
     </svg>
   );
 }

@@ -16,8 +16,8 @@ export function PageHeader({
   return (
     <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
       <div>
-        <h1 className="text-[21px] font-medium">{title}</h1>
-        {sub && <div className="mt-0.5 text-[12.5px] text-muted">{sub}</div>}
+        <h1 className="text-display font-medium">{title}</h1>
+        {sub && <div className="mt-0.5 text-small text-muted">{sub}</div>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
     </div>
