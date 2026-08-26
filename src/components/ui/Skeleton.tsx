@@ -21,7 +21,7 @@ export function SkeletonKpiRow({ count = 4 }: { count?: number }) {
     // cobre; divergir troca o desenho por um salto no momento em que os dados chegam.
     <div className={KPI_ROW_COLS[count] ?? KPI_ROW_COLS[4]}>
       {Array.from({ length: count }).map((_, i) => (
-        <div key={i} className="flex flex-col gap-2 rounded-xl border border-border bg-surface p-4">
+        <div key={i} className="flex flex-col gap-2 rounded-card border border-border bg-surface p-4">
           <Skeleton className="h-2.5 w-24" />
           <Skeleton className="h-6 w-20" />
           <Skeleton className="h-1.5 w-full" />
@@ -33,7 +33,7 @@ export function SkeletonKpiRow({ count = 4 }: { count?: number }) {
 
 export function SkeletonTable({ rows = 6, cols = 5 }: { rows?: number; cols?: number }) {
   return (
-    <div className="flex-1 rounded-xl border border-border bg-surface p-4">
+    <div className="flex-1 rounded-card border border-border bg-surface p-4">
       <div className="flex gap-3 border-b border-border pb-2">
         {Array.from({ length: cols }).map((_, i) => (
           <Skeleton key={i} className="h-2 flex-1" />
@@ -59,7 +59,7 @@ export function SkeletonCards({ count = 3 }: { count?: number }) {
         <div
           key={col}
           className={clsx(
-            "flex-col gap-2.25 rounded-xl border border-neutral-tint-border bg-neutral-tint p-2.75 md:flex",
+            "flex-col gap-2.25 rounded-card border border-neutral-tint-border bg-neutral-tint p-2.75 md:flex",
             col === 0 ? "flex" : "hidden"
           )}
         >

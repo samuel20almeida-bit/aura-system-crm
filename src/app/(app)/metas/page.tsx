@@ -56,7 +56,7 @@ export default async function MetasPage({
           <AreaCard key={area} area={area} goals={byArea.get(area)!} />
         ))}
         {areaNames.length === 0 && (
-          <div className="col-span-2 flex flex-1 items-center justify-center rounded-xl border border-dashed border-border p-10 text-center text-[13px] text-faint">
+          <div className="col-span-2 flex flex-1 items-center justify-center rounded-card border border-dashed border-border p-10 text-center text-[13px] text-faint">
             Nenhuma meta cadastrada para {quarter} ainda. Clique em &quot;+ Nova meta&quot; para começar.
           </div>
         )}

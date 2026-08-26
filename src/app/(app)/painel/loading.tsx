@@ -31,7 +31,7 @@ export default function Loading() {
         <Skeleton className="h-4 w-16" />
         <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="flex flex-col gap-2 rounded-card border border-border bg-surface p-4">
+            <div key={i} className="flex flex-col gap-2 rounded-card border border-border bg-surface p-5">
               <Skeleton className="h-2.5 w-24" />
               <Skeleton className="h-6 w-20" />
               <Skeleton className="h-2.5 w-32" />

@@ -96,7 +96,10 @@ export function Sidebar({
         className={clsx(
           "flex items-center gap-2.5 rounded-control px-2.5 py-2 text-body font-medium transition-colors",
           recolhido && "md:justify-center md:gap-0 md:px-0",
-          active ? "bg-accent-tint text-accent" : "text-muted hover:bg-neutral-tint"
+          // Pílula verde CHEIA, e não a tinta clara de antes. Com a tinta, o
+          // item ativo e o item sob o mouse tinham peso parecido, e a pergunta
+          // "onde eu estou?" custava um segundo. Cheio, ela some.
+          active ? "bg-accent text-bone shadow-raised" : "text-muted hover:bg-neutral-tint hover:text-ink"
         )}
       >
         <span className="relative flex">
@@ -105,14 +108,25 @@ export function Sidebar({
               aberta" seria perder o motivo de o contador existir. Vira ponto;
               o número continua acessível no título. */}
           {recolhido && !!count && (
-            <span className="absolute -top-0.5 -right-1 hidden h-1.5 w-1.5 rounded-full bg-accent md:block" />
+            // Sobre a pílula cheia o ponto verde sumiria; no item inativo,
+            // um ponto claro sumiria no fundo. A cor segue o estado.
+            <span
+              className={clsx(
+                "absolute -top-0.5 -right-1 hidden h-1.5 w-1.5 rounded-full md:block",
+                active ? "bg-bone" : "bg-accent"
+              )}
+            />
           )}
         </span>
         <span className={soLargo}>{item.label}</span>
         {count === null ? (
           // Um "0" aqui seria uma afirmação; "—" é a ausência de resposta.
           <span
-            className={clsx("ml-auto font-mono text-[10px] font-semibold text-faint", soLargo)}
+            className={clsx(
+              "ml-auto font-mono text-[10px] font-semibold",
+              active ? "text-bone/85" : "text-faint",
+              soLargo
+            )}
             title="Não foi possível ler este número agora"
           >
             —
@@ -122,7 +136,8 @@ export function Sidebar({
             <span
               className={clsx(
                 "ml-auto font-mono text-[10px] font-semibold",
-                active ? "text-accent" : "text-faint",
+                // Verde sobre a pílula verde seria invisível.
+                active ? "text-bone" : "text-faint",
                 soLargo
               )}
             >
