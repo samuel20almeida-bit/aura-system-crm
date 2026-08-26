@@ -11,6 +11,21 @@ on:
   push:
     branches: [main]
   pull_request:
+  # Disparo manual, por dois motivos concretos que já apareceram:
+  #
+  # 1. Em 26/08 o PR #18 ficou SEM nenhuma execução deste workflow. Não foi
+  #    falha: o evento `pull_request` simplesmente não chegou, enquanto o PR
+  #    anterior rodara vinte minutos antes. Sem `workflow_dispatch` não havia
+  #    como pedir a verificação de novo — e as saídas eram mergear sem CI ou
+  #    empurrar um commit vazio só para acordá-lo, que é pior.
+  #
+  # 2. Quando uma execução falha por motivo que não é do código — runner
+  #    perdido, `npm ci` caindo na rede —, a resposta certa é rodar de novo,
+  #    não investigar um erro que não existe. Sem disparo manual, "rodar de
+  #    novo" também dependia de um commit.
+  #
+  # Não muda o que roda: são os mesmos quatro passos, no mesmo job.
+  workflow_dispatch:
 
 # Só leitura: este workflow não escreve nada no repositório.
 permissions:
