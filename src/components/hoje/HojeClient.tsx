@@ -17,6 +17,7 @@ import {
 } from "@/lib/hoje";
 import type { ImplantacaoHoje, NegocioHoje, TarefaHoje } from "@/lib/data/hoje";
 import type { Tables } from "@/lib/supabase/database.types";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 // Mesma linguagem visual do ponto de saúde do Pipeline (`NegocioCard.tsx`):
 // cor e rótulo vêm de `src/lib/negocios.ts`, para as duas telas nunca
@@ -139,9 +140,7 @@ export function HojeClient({
 
       {!unavailable && itens.length === 0 && (
         <div className="grid flex-1 grid-cols-1 gap-4 overflow-hidden md:grid-cols-[1.55fr_1fr]">
-          <div className="rounded-xl border border-dashed border-border p-8 text-center">
-            <div className="text-[13px] font-medium">Nada pendente — tudo em dia.</div>
-          </div>
+          <EmptyState title="Nada pendente — tudo em dia." />
           <LiveActivity items={activityItems ?? []} error={activityItems === null} />
         </div>
       )}

@@ -22,6 +22,7 @@ import { findColumnIn, moveItem, type Columns } from "@/lib/optimistic";
 import { useToast } from "@/components/ui/Toast";
 import { useMediaQuery } from "@/lib/use-media-query";
 import type { Etapa, ImplantacaoAberta } from "@/lib/data/implantacoes";
+import { DropZone } from "@/components/ui/EmptyState";
 
 /**
  * Diferença estrutural em relação a `PipelineBoard.tsx`: lá as colunas são o
@@ -87,9 +88,7 @@ function Coluna({
             />
           ))}
           {implantacoes.length === 0 && (
-            <div className="rounded-[10px] border border-dashed border-[#CFCABD] p-3.5 text-center text-xs text-faint">
-              Solte aqui
-            </div>
+            <DropZone />
           )}
         </div>
       </SortableContext>

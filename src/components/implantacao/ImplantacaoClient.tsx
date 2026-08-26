@@ -7,6 +7,7 @@ import { ImplantacaoBoard } from "./ImplantacaoBoard";
 import { ImplantacaoDrawer } from "./ImplantacaoDrawer";
 import { saudeDaImplantacao, vencimentoDaEtapa } from "@/lib/implantacoes";
 import type { Etapa, ImplantacaoAberta } from "@/lib/data/implantacoes";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 export function ImplantacaoClient({
   implantacoes,
@@ -64,12 +65,10 @@ export function ImplantacaoClient({
       {unavailable && <Unavailable title="Não foi possível carregar a esteira de implantação agora" />}
 
       {!unavailable && implantacoes.length === 0 && (
-        <div className="rounded-xl border border-dashed border-border p-8 text-center">
-          <div className="text-[13px] font-medium">Nenhuma implantação em andamento.</div>
-          <div className="mt-1 text-[12.5px] text-muted">
-            Uma implantação nasce sozinha quando um negócio é ganho no Pipeline.
-          </div>
-        </div>
+        <EmptyState
+          title="Nenhuma implantação em andamento."
+          sub="Uma implantação nasce sozinha quando um negócio é ganho no Pipeline."
+        />
       )}
 
       {!unavailable && implantacoes.length > 0 && (

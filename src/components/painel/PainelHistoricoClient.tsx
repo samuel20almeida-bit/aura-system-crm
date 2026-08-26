@@ -5,8 +5,10 @@ import clsx from "clsx";
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import { Card } from "@/components/ui/Card";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { Section } from "@/components/layout/PageBody";
 import { Input } from "@/components/ui/Field";
-import { formatCurrency, formatCurrencyCompact } from "@/lib/format";
+import { formatCurrency, formatCurrencyCompact, formatDate } from "@/lib/format";
 import { todayInAppTz, addDaysToDateStr, monthStartInAppTz, yearMonthInAppTz } from "@/lib/timezone";
 import {
   calcularSerieNegociosGanhos,
@@ -57,6 +59,14 @@ export function PainelHistoricoClient({
 
   const rangeCustomInvalido = preset === "personalizado" && (!deCustom || !ateCustom || deCustom > ateCustom);
 
+  // O recorte fica ao lado do nome da seção. Os quatro gráficos abaixo mudam
+  // todos juntos quando o período muda, e sem o intervalo escrito por extenso
+  // eles não dizem de quando são — "30 dias" no botão fica longe do gráfico
+  // assim que a página rola.
+  const rotuloPeriodo = rangeCustomInvalido
+    ? undefined
+    : `${formatDate(periodo.inicio)} – ${formatDate(periodo.fim)}`;
+
   const serieGanhos = useMemo(
     () => calcularSerieNegociosGanhos(negocios, periodo.inicio, periodo.fim),
     [negocios, periodo]
@@ -82,17 +92,20 @@ export function PainelHistoricoClient({
   const configOrigem: ChartConfig = { mrr: { label: "Mensalidade", color: "var(--color-accent)" } };
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="text-[13px] font-medium">Tendência no período</div>
+    <Section title="Tendência" aside={rotuloPeriodo}>
       <div className="flex flex-wrap items-center gap-2">
-        <div className="flex overflow-hidden rounded-lg border border-border">
+        {/* `aria-pressed` porque isto é um grupo de alternativas, não cinco
+            ações: sem ele, um leitor de tela anuncia cinco botões iguais e
+            nenhum jeito de saber qual está valendo. */}
+        <div className="flex overflow-hidden rounded-control border border-border">
           {PRESETS.map((p) => (
             <button
               key={p.valor}
               type="button"
+              aria-pressed={preset === p.valor}
               onClick={() => setPreset(p.valor)}
               className={clsx(
-                "px-3 py-1.5 text-[12.5px] font-medium transition-colors",
+                "px-3 py-1.5 text-small font-medium transition-colors duration-fast",
                 preset === p.valor ? "bg-accent text-bone" : "bg-surface text-muted hover:text-ink"
               )}
             >
@@ -111,14 +124,14 @@ export function PainelHistoricoClient({
               max={todayInAppTz(hoje)}
               onChange={(e) => setAteCustom(e.target.value)}
             />
-            {rangeCustomInvalido && <span className="text-[12px] text-red">período inválido</span>}
+            {rangeCustomInvalido && <span className="text-small text-red">período inválido</span>}
           </div>
         )}
       </div>
 
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
         <Card className="flex flex-col gap-2 p-4">
-          <span className="text-[13px] font-medium">Mensalidade conquistada por período</span>
+          <span className="text-body font-medium">Mensalidade conquistada</span>
           <ChartContainer config={configGanhos} className="h-[220px]">
             <AreaChart data={serieGanhos}>
               <CartesianGrid vertical={false} strokeDasharray="4 4" stroke="var(--color-border)" />
@@ -148,7 +161,7 @@ export function PainelHistoricoClient({
         </Card>
 
         <Card className="flex flex-col gap-2 p-4">
-          <span className="text-[13px] font-medium">Novas contas por período</span>
+          <span className="text-body font-medium">Novas contas</span>
           <ChartContainer config={configContas} className="h-[220px]">
             <BarChart data={serieContas}>
               <CartesianGrid vertical={false} strokeDasharray="4 4" stroke="var(--color-border)" />
@@ -161,9 +174,9 @@ export function PainelHistoricoClient({
         </Card>
 
         <Card className="flex flex-col gap-2 p-4">
-          <span className="text-[13px] font-medium">Origem → receita no período selecionado</span>
+          <span className="text-body font-medium">Origem → receita</span>
           {origemPeriodo.length === 0 ? (
-            <div className="text-[12.5px] text-faint">Nenhum negócio criado nesse período.</div>
+            <EmptyState plain title="Nenhum negócio criado nesse período." className="my-auto" />
           ) : (
             <ChartContainer config={configOrigem} className="h-[220px]">
               <BarChart data={origemPeriodo} layout="vertical">
@@ -178,7 +191,7 @@ export function PainelHistoricoClient({
         </Card>
 
         <Card className="flex flex-col gap-2 p-4">
-          <span className="text-[13px] font-medium">Implantações concluídas por período</span>
+          <span className="text-body font-medium">Implantações concluídas</span>
           <ChartContainer config={configImplantacoes} className="h-[220px]">
             <BarChart data={serieImplantacoes}>
               <CartesianGrid vertical={false} strokeDasharray="4 4" stroke="var(--color-border)" />
@@ -190,6 +203,6 @@ export function PainelHistoricoClient({
           </ChartContainer>
         </Card>
       </div>
-    </div>
+    </Section>
   );
 }

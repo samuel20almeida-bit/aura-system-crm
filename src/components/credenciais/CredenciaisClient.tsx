@@ -11,6 +11,8 @@ import { deleteCredential } from "@/lib/actions/credenciais";
 import { beginMutation } from "@/lib/realtime/mutation-gate";
 import { CredentialModal } from "./CredentialModal";
 import type { CredentialWithRelations } from "@/lib/data/credenciais";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { useConfirm } from "@/components/ui/ConfirmDialog";
 
 type CategoriaLite = { id: string; nome: string };
 type ContaLite = { id: string; nome: string };
@@ -25,9 +27,19 @@ function CredentialCard({
   const { notify } = useToast();
   const [revelado, setRevelado] = useState(false);
   const [pending, startTransition] = useTransition();
+  const { pedirConfirmacao, dialogo } = useConfirm();
 
   function excluir() {
-    if (!confirm("Excluir credencial?")) return;
+    pedirConfirmacao({
+      titulo: "Excluir credencial?",
+      descricao: `"${credential.nome}" sai da lista, junto com o usuário e a senha guardados. Não dá para desfazer.`,
+      rotuloConfirmar: "Excluir credencial",
+      tom: "perigo",
+      aoConfirmar: excluirDeVerdade,
+    });
+  }
+
+  function excluirDeVerdade() {
     startTransition(async () => {
       const end = beginMutation();
       try {
@@ -42,6 +54,7 @@ function CredentialCard({
 
   return (
     <Card className="flex flex-col gap-2 p-4">
+      {dialogo}
       <div className="flex items-start justify-between gap-2">
         <span className="text-[14px] font-medium">{credential.nome}</span>
         <Tag tone="neutral">{credential.categoria?.nome ?? "—"}</Tag>
@@ -157,9 +170,14 @@ export function CredenciaisClient({
           />
         ))}
         {filtradas.length === 0 && (
-          <div className="col-span-full flex flex-1 items-center justify-center rounded-xl border border-dashed border-border p-10 text-center text-[13px] text-faint">
-            {categoriaFiltro ? "Nenhuma credencial nesta categoria." : "Nenhuma credencial cadastrada ainda."}
-          </div>
+          <EmptyState
+            className="col-span-full flex flex-1 flex-col justify-center"
+            title={
+              categoriaFiltro
+                ? "Nenhuma credencial nesta categoria."
+                : "Nenhuma credencial cadastrada ainda."
+            }
+          />
         )}
       </div>
 

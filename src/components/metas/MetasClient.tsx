@@ -10,6 +10,7 @@ import { createGoal, deleteGoal, updateGoalProgress } from "@/lib/actions/goals"
 import { beginMutation } from "@/lib/realtime/mutation-gate";
 import type { GoalRow } from "@/lib/data/goals";
 import { useToast } from "@/components/ui/Toast";
+import { useConfirm } from "@/components/ui/ConfirmDialog";
 
 function formatValue(value: number, unit: string) {
   if (unit === "currency") return `R$ ${value.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}`;
@@ -24,10 +25,12 @@ function GoalRowItem({ goal }: { goal: GoalRow }) {
   const [value, setValue] = useState(String(goal.current));
   const [pending, startTransition] = useTransition();
   const [optimisticCurrent, setOptimisticCurrent] = useOptimistic(goal.current);
+  const { pedirConfirmacao, dialogo } = useConfirm();
   const pct = goal.target > 0 ? (optimisticCurrent / goal.target) * 100 : 0;
 
   return (
     <div className="group flex flex-col gap-1.5">
+      {dialogo}
       <div className="flex items-center justify-between text-[13px]">
         <span>{goal.title}</span>
         {editing ? (
@@ -74,16 +77,22 @@ function GoalRowItem({ goal }: { goal: GoalRow }) {
         <button
           disabled={pending}
           onClick={() =>
-            startTransition(async () => {
-              if (!confirm("Excluir meta?")) return;
-              const end = beginMutation();
-              try {
-                await deleteGoal(goal.id);
-              } catch {
-                notify("error", "Não foi possível excluir a meta. Tente novamente.");
-              } finally {
-                end();
-              }
+            pedirConfirmacao({
+              titulo: "Excluir meta?",
+              descricao: `"${goal.title}" sai do trimestre, com o progresso já registrado. Não dá para desfazer.`,
+              rotuloConfirmar: "Excluir meta",
+              tom: "perigo",
+              aoConfirmar: () =>
+                startTransition(async () => {
+                  const end = beginMutation();
+                  try {
+                    await deleteGoal(goal.id);
+                  } catch {
+                    notify("error", "Não foi possível excluir a meta. Tente novamente.");
+                  } finally {
+                    end();
+                  }
+                }),
             })
           }
           className="hidden font-mono text-[11px] text-faint hover:text-red group-hover:block"

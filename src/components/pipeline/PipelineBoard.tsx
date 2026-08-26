@@ -23,6 +23,7 @@ import { useToast } from "@/components/ui/Toast";
 import { useMediaQuery } from "@/lib/use-media-query";
 import type { NegocioAberto } from "@/lib/data/deals";
 import type { Database } from "@/lib/supabase/database.types";
+import { DropZone } from "@/components/ui/EmptyState";
 
 /**
  * Os cinco estágios do funil, na ordem. **Não existe coluna de ganho**: ganhar é
@@ -93,9 +94,7 @@ function Coluna({
             />
           ))}
           {negocios.length === 0 && (
-            <div className="rounded-[10px] border border-dashed border-[#CFCABD] p-3.5 text-center text-xs text-faint">
-              Solte aqui
-            </div>
+            <DropZone />
           )}
         </div>
       </SortableContext>
