@@ -18,6 +18,21 @@ export function Card({
   );
 }
 
+/**
+ * Três texturas, uma por degrau: rótulo em mono maiúsculo, valor grande em
+ * `tabular-nums` (para que os seis do Painel se alinhem como um conjunto, e
+ * não como seis larguras diferentes), e a linha de apoio em prosa.
+ *
+ * A linha de apoio deixou de ser `font-mono`: ela é frase — "8 clientes
+ * ativos", "setup vs. 1 mês de mensalidade" —, e mono a 11px em frase é
+ * exatamente o que faz uma tela parecer terminal em vez de produto. O que
+ * precisa de alinhamento é o número, e o número está no valor.
+ *
+ * `children` fica entre o valor e a linha de apoio, que é onde caberia uma
+ * variação ("↑ 12%"). O Painel não a usa: das seis métricas, nenhuma tem
+ * valor anterior com que se comparar — não existe histórico de assinatura
+ * (a Fase 3C foi pulada), então qualquer delta ali seria inventado.
+ */
 export function Kpi({
   label,
   value,
@@ -34,11 +49,11 @@ export function Kpi({
   children?: React.ReactNode;
 }) {
   return (
-    <Card className="flex flex-col gap-1.5 p-4">
+    <Card className="flex flex-col gap-1 p-4">
       <span className={clsx("label", labelClassName)}>{label}</span>
-      <span className={clsx("text-xl font-semibold", valueClassName)}>{value}</span>
+      <span className={clsx("text-display font-semibold tabular-nums", valueClassName)}>{value}</span>
       {children}
-      {sub && <span className="font-mono text-[11px] text-muted">{sub}</span>}
+      {sub && <span className="mt-0.5 text-small text-muted">{sub}</span>}
     </Card>
   );
 }
