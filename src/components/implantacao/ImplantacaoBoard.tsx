@@ -73,7 +73,9 @@ function Coluna({
     >
       <div className="flex items-center gap-2 px-0.5">
         <span className="label">{etapa.nome}</span>
-        <span className="rounded-full bg-surface px-2 py-0.5 text-[11px] text-muted">{implantacoes.length}</span>
+        <span className="rounded-full bg-surface px-2 py-0.5 font-mono text-label tabular-nums text-muted">
+          {implantacoes.length}
+        </span>
       </div>
       <SortableContext items={implantacoes.map((i) => i.id)} strategy={verticalListSortingStrategy}>
         <div className="flex flex-1 flex-col gap-2">

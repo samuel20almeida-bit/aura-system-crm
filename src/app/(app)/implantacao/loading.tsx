@@ -30,7 +30,7 @@ export default function Loading() {
           >
             <Skeleton className="h-2.5 w-20" />
             {Array.from({ length: 2 }).map((_, cartao) => (
-              <div key={cartao} className="flex flex-col gap-2 rounded-[10px] border border-border bg-surface p-2.75">
+              <div key={cartao} className="flex flex-col gap-2 rounded-card border border-border bg-surface p-3">
                 <Skeleton className="h-3 w-full" />
                 <Skeleton className="h-2.5 w-24" />
                 <Skeleton className="h-2.5 w-16" />
