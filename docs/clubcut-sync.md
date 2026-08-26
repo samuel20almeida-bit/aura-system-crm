@@ -125,11 +125,35 @@ O envio recomendado é uma **janela de 3 dias**, não só o dia anterior:
 agendamento cancelado e conversa que continua no dia seguinte mudam números
 já enviados, e a janela corrige sozinha.
 
+## O fluxo no n8n
+
+Existe, e chama-se **"ClubCut - Uso diario para o CRM da Aura"**
+(`UqLCK8lElBR7iSze`). Nasceu **inativo** — ligar é decisão de quem revisar.
+
+Treze nós: gatilho diário às 03:00, oito leituras do ClubCut, o nó de código
+que monta o envio e o POST. As oito leituras usam `executeOnce`, senão cada
+uma rodaria uma vez por item da anterior.
+
+A agregação acontece num nó de código, e não em SQL, por um motivo concreto:
+o nó Supabase do n8n fala PostgREST, não SQL cru, e rodar a consulta desta
+página exigiria criar uma *view* ou uma função no banco do ClubCut. No volume
+de hoje — algumas centenas de linhas por dia — agregar em JavaScript é
+imediato e não mexe no banco do cliente. Quando o volume crescer, a troca é
+criar a view lá e trocar oito nós por um.
+
+Falta configurar, no próprio n8n:
+
+1. A **URL** no nó "Enviar ao CRM da Aura" (está com um marcador de
+   preenchimento).
+2. A credencial **Bearer** com o `CLUBCUT_SYNC_TOKEN`.
+3. Conferir que os oito nós Supabase estão com a credencial do ClubCut.
+
 ## A consulta, do lado do ClubCut
 
-Roda no Supabase do ClubCut. Uma linha por salão ativo por dia da janela —
-inclusive dias zerados, que são informação (o cliente não usou) e não
-ausência de dado.
+A consulta abaixo é a **referência do que o fluxo calcula** — é ela que o nó
+de código reproduz em JavaScript, e é para ela que se migra quando o volume
+justificar. Uma linha por salão ativo por dia da janela, inclusive dias
+zerados: dia zerado é informação (o cliente não usou), não ausência de dado.
 
 ```sql
 with dias as (
