@@ -80,7 +80,9 @@ function Coluna({
     >
       <div className="flex items-center gap-2 px-0.5">
         <span className="label">{label}</span>
-        <span className="rounded-full bg-surface px-2 py-0.5 text-[11px] text-muted">{negocios.length}</span>
+        <span className="rounded-full bg-surface px-2 py-0.5 font-mono text-label tabular-nums text-muted">
+          {negocios.length}
+        </span>
       </div>
       <SortableContext items={negocios.map((n) => n.id)} strategy={verticalListSortingStrategy}>
         <div className="flex flex-1 flex-col gap-2">
