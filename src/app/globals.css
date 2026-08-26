@@ -84,9 +84,16 @@
   --font-mono: "IBM Plex Mono", ui-monospace, monospace;
 
   /* ---------- raio ---------- */
-  /* Três, com regra: controle, card, pílula. Havia cinco em uso. */
-  --radius-control: 6px;
-  --radius-card: 10px;
+  /* Três, com regra: controle, card, pílula. Havia cinco em uso.
+
+     Os dois subiram na passada de âncoras visuais. 6px/10px é o canto de
+     ferramenta interna bem-feita; a referência trabalha com canto
+     visivelmente mais macio, e é dos poucos parâmetros que muda a
+     impressão da tela inteira de uma vez. O `Card` não usava este token —
+     estava em `rounded-xl` do Tailwind em 19 lugares —, então até agora o
+     valor daqui não chegava a nenhum cartão. */
+  --radius-control: 8px;
+  --radius-card: 14px;
 
   /* ---------- sombra ---------- */
   /* Três alturas no lugar das oito definições que existiam, cinco

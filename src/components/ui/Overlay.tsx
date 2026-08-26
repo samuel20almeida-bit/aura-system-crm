@@ -147,7 +147,7 @@ export function Modal({
         aria-modal="true"
         tabIndex={-1}
         onKeyDown={onKeyDown}
-        className={`max-h-[88vh] ${widthClass} overflow-y-auto rounded-xl border border-border bg-surface shadow-2xl outline-none animate-fade-in`}
+        className={`max-h-[88vh] ${widthClass} overflow-y-auto rounded-card border border-border bg-surface shadow-2xl outline-none animate-fade-in`}
         onClick={(e) => e.stopPropagation()}
       >
         {children}

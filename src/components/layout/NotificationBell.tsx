@@ -42,7 +42,7 @@ export function NotificationBell({ notifications }: { notifications: AppNotifica
               encolheria, mas a âncora continua longe demais da direita.
               O cronômetro da barra era quem empurrava e saiu na Fase 3A; a
               presença ao lado continua crescendo com quem está online. */}
-          <div className="fixed inset-x-2 top-14 z-50 overflow-hidden rounded-xl border border-border bg-surface shadow-xl animate-fade-in md:absolute md:inset-x-auto md:right-0 md:top-7 md:w-80">
+          <div className="fixed inset-x-2 top-14 z-50 overflow-hidden rounded-card border border-border bg-surface shadow-xl animate-fade-in md:absolute md:inset-x-auto md:right-0 md:top-7 md:w-80">
             <div className="border-b border-border px-3.5 py-2.5">
               <span className="label">PRECISA DE VOCÊ</span>
             </div>

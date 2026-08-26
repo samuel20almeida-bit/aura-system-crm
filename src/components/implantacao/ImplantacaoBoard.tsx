@@ -69,7 +69,7 @@ function Coluna({
   return (
     <div
       ref={setNodeRef}
-      className="flex min-h-[120px] w-full flex-1 flex-col gap-2.25 rounded-xl border border-neutral-tint-border bg-neutral-tint p-2.75"
+      className="flex min-h-[120px] w-full flex-1 flex-col gap-2.25 rounded-card border border-neutral-tint-border bg-neutral-tint p-2.75"
     >
       <div className="flex items-center gap-2 px-0.5">
         <span className="label">{etapa.nome}</span>

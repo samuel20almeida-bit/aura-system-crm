@@ -147,7 +147,7 @@ export function HojeClient({
 
       {!unavailable && itens.length > 0 && (
         <div className="grid flex-1 grid-cols-1 gap-4 overflow-hidden md:grid-cols-[1.55fr_1fr]">
-          <div className="overflow-y-auto scrollbar-thin rounded-xl border border-border bg-surface">
+          <div className="overflow-y-auto scrollbar-thin rounded-card border border-border bg-surface">
             {itens.map((item) => {
               const dono = item.donoId ? profilePorId.get(item.donoId) : undefined;
               const vencimento = rotuloVencimento(item.vencimento, agora);
