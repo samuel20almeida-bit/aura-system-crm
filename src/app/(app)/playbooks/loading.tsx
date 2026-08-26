@@ -19,7 +19,7 @@ export default function Loading() {
         </div>
         <div className="grid flex-1 grid-cols-[1.7fr_1fr] gap-3.5">
           <SkeletonTable rows={4} cols={4} />
-          <div className="rounded-xl border border-border bg-surface p-4">
+          <div className="rounded-card border border-border bg-surface p-4">
             <Skeleton className="h-2.5 w-32" />
             <Skeleton className="mt-3 h-40 w-full" />
           </div>

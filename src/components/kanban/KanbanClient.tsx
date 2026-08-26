@@ -180,7 +180,7 @@ export function KanbanClient({
           />
         </>
       ) : (
-        <div className="flex-1 overflow-y-auto scrollbar-thin rounded-xl border border-border bg-surface">
+        <div className="flex-1 overflow-y-auto scrollbar-thin rounded-card border border-border bg-surface">
           <div className="grid grid-cols-[1.6fr_1fr_1fr_.8fr_80px] gap-2 border-b border-border px-3 py-2 font-mono text-[9.5px] font-semibold tracking-wide text-faint">
             <div>TAREFA</div>
             <div>CLIENTE</div>

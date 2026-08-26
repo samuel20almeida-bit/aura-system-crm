@@ -1,4 +1,5 @@
-import { PageBody } from "@/components/layout/PageBody";
+import { PageBody, PageHeader } from "@/components/layout/PageBody";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { AreaCard } from "@/components/metas/MetasClient";
 import { MetasHeaderActions } from "@/components/metas/MetasHeaderActions";
 import { currentQuarter, listGoals, quarterRange } from "@/lib/data/goals";
@@ -38,27 +39,36 @@ export default async function MetasPage({
 
   return (
     <PageBody>
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-[21px] font-medium">Metas da empresa</h1>
-          <div className="mt-0.5 text-[12.5px] text-muted">
+      {/* Esta era a única tela do app que desenhava o próprio cabeçalho em vez
+          de usar `PageHeader` — daí o `text-[21px]` cru, que é o valor do
+          `text-display`, e a linha de apoio a 12,5px contra os 12px das outras
+          sete. Sem componente comum, mudar o ritmo do cabeçalho exigia lembrar
+          desta exceção. */}
+      <PageHeader
+        title="Metas da empresa"
+        sub={
+          <>
             {quarter} · {weeksRemaining} semanas restantes
             {goals.length > 0 && (
               <> · <span className="accent-italic">{onTrackCount} de {goals.length} no caminho</span></>
             )}
-          </div>
-        </div>
-        <MetasHeaderActions quarter={quarter} quarters={quarters} profiles={profiles} areas={areaNames} />
-      </div>
+          </>
+        }
+        actions={
+          <MetasHeaderActions quarter={quarter} quarters={quarters} profiles={profiles} areas={areaNames} />
+        }
+      />
 
       <div className="grid flex-1 grid-cols-2 gap-3 overflow-y-auto scrollbar-thin">
         {areaNames.map((area) => (
           <AreaCard key={area} area={area} goals={byArea.get(area)!} />
         ))}
         {areaNames.length === 0 && (
-          <div className="col-span-2 flex flex-1 items-center justify-center rounded-xl border border-dashed border-border p-10 text-center text-[13px] text-faint">
-            Nenhuma meta cadastrada para {quarter} ainda. Clique em &quot;+ Nova meta&quot; para começar.
-          </div>
+          <EmptyState
+            className="col-span-2"
+            title={`Nenhuma meta cadastrada para ${quarter} ainda.`}
+            sub={'Clique em "+ Nova meta" para começar.'}
+          />
         )}
       </div>
     </PageBody>

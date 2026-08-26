@@ -63,7 +63,7 @@ export default function LoginPage() {
           <span className="text-xl font-semibold">aura</span>
         </div>
 
-        <div className="rounded-xl border border-border bg-surface p-7 shadow-[0_1px_3px_rgba(30,30,28,.06)]">
+        <div className="rounded-card border border-border bg-surface p-7 shadow-raised">
           <h1 className="text-lg font-medium">
             {mode === "login" ? "Entrar" : "Criar sua conta"}
           </h1>

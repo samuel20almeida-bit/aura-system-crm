@@ -20,7 +20,7 @@ export default function Loading() {
         {Array.from({ length: 5 }).map((_, coluna) => (
           <div
             key={coluna}
-            className="flex flex-col gap-2.25 rounded-xl border border-neutral-tint-border bg-neutral-tint p-2.75"
+            className="flex flex-col gap-2.25 rounded-card border border-neutral-tint-border bg-neutral-tint p-2.75"
           >
             <Skeleton className="h-2.5 w-20" />
             {Array.from({ length: 2 }).map((_, cartao) => (

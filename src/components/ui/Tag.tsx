@@ -12,10 +12,16 @@ export function Tag({
   return (
     <span
       className={clsx(
-        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-sans",
+        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-label font-sans",
         tone === "accent" && "bg-accent-tint text-accent",
         tone === "red" && "bg-red-tint text-red",
-        tone === "amber" && "bg-[#FBF2E1] text-[#9A6B1E]",
+        // O âmbar estava escrito à mão, `#9A6B1E` sobre `#FBF2E1`. É
+        // exatamente o par que a etapa B mediu em 4,20:1 e substituiu por
+        // `--color-warning` sobre `--color-warning-tint` (5,91:1) — só que a
+        // correção não chegou aqui, porque esta cópia não usava o token. É a
+        // tag do prazo estourado e da conta indisponível: o aviso mais urgente
+        // era o texto menos legível, o mesmo padrão que o vermelho tinha.
+        tone === "amber" && "bg-warning-tint text-warning",
         tone === "neutral" && "bg-neutral-tint text-muted"
       )}
     >

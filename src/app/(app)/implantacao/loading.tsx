@@ -26,11 +26,11 @@ export default function Loading() {
         {Array.from({ length: 6 }).map((_, coluna) => (
           <div
             key={coluna}
-            className="flex flex-col gap-2.25 rounded-xl border border-neutral-tint-border bg-neutral-tint p-2.75"
+            className="flex flex-col gap-2.25 rounded-card border border-neutral-tint-border bg-neutral-tint p-2.75"
           >
             <Skeleton className="h-2.5 w-20" />
             {Array.from({ length: 2 }).map((_, cartao) => (
-              <div key={cartao} className="flex flex-col gap-2 rounded-[10px] border border-border bg-surface p-2.75">
+              <div key={cartao} className="flex flex-col gap-2 rounded-card border border-border bg-surface p-3">
                 <Skeleton className="h-3 w-full" />
                 <Skeleton className="h-2.5 w-24" />
                 <Skeleton className="h-2.5 w-16" />

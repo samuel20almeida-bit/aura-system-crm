@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import clsx from "clsx";
 import { Card } from "@/components/ui/Card";
 import { Avatar } from "@/components/ui/Avatar";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { formatActivityWhen } from "@/lib/activity-feed";
 import { useLiveRefresh } from "@/lib/realtime/useLiveRefresh";
 
@@ -88,18 +89,20 @@ export function LiveActivity({ items, error = false }: { items: LiveActivityItem
   }, [items]);
 
   return (
-    <Card className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-hidden p-4">
-      <span className="label">ATIVIDADE RECENTE</span>
-      <div className="flex flex-col gap-2.5 overflow-y-auto scrollbar-thin text-[12.5px]">
+    <Card className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden p-5">
+      <span className="label">Atividade recente</span>
+      <div className="flex flex-col gap-3 overflow-y-auto scrollbar-thin text-small">
         {error && (
           <div className="flex flex-col gap-1">
             <span className="font-medium text-red">Não foi possível carregar a atividade recente.</span>
-            <span className="font-mono text-[11px] text-muted">
+            <span className="text-small text-muted">
               A consulta ao banco falhou — a próxima atualização tenta de novo.
             </span>
           </div>
         )}
-        {!error && items.length === 0 && <div className="text-faint">Nada aconteceu por aqui ainda.</div>}
+        {!error && items.length === 0 && (
+          <EmptyState plain title="Nada aconteceu por aqui ainda." />
+        )}
         {items.map((item) => (
           <div key={item.id} className={clsx("flex gap-2.5", freshIds.has(item.id) && "animate-slide-in")}>
             <Avatar initials={item.initials} size="sm" ghost />
@@ -112,7 +115,7 @@ export function LiveActivity({ items, error = false }: { items: LiveActivityItem
                 {item.who} {item.verb}
                 {item.detail === null ? null : <> <b className="font-medium">{item.detail}</b></>}
               </span>
-              <div className="mt-0.5 font-mono text-[11px] text-faint">
+              <div className="mt-0.5 font-mono text-label text-faint tabular-nums">
                 {clientNow === null ? item.when : formatActivityWhen(item.createdAt, new Date(clientNow))}
               </div>
             </div>

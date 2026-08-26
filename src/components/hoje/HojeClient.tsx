@@ -6,8 +6,14 @@ import clsx from "clsx";
 import { PageHeader } from "@/components/layout/PageBody";
 import { Avatar } from "@/components/ui/Avatar";
 import { Unavailable } from "@/components/ui/Unavailable";
+import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { LiveActivity, type LiveActivityItem } from "@/components/hoje/LiveActivity";
-import { CLASSE_DO_PONTO_DE_SAUDE, ROTULO_DA_SAUDE, rotuloVencimento } from "@/lib/negocios";
+import {
+  CLASSE_DO_PONTO_DE_SAUDE,
+  ROTULO_DA_SAUDE,
+  rotuloVencimento,
+  type SaudeNegocio,
+} from "@/lib/negocios";
 import {
   implantacaoParaItemHoje,
   negocioParaItemHoje,
@@ -22,6 +28,18 @@ import { EmptyState } from "@/components/ui/EmptyState";
 // Mesma linguagem visual do ponto de saúde do Pipeline (`NegocioCard.tsx`):
 // cor e rótulo vêm de `src/lib/negocios.ts`, para as duas telas nunca
 // discordarem sobre o mesmo negócio.
+
+/**
+ * O destino do clique depende da origem — negócio abre o Pipeline, tarefa abre
+ * o Kanban, implantação abre a Implantação —, e antes nada na linha dizia para
+ * onde se estava indo. Três palavras curtas em vez de três ícones: são termos
+ * que estas duas pessoas usam falando, e um ícone precisaria ser aprendido.
+ */
+const ROTULO_DA_ORIGEM: Record<ItemHoje["origem"], string> = {
+  negocio: "negócio",
+  tarefa: "tarefa",
+  implantacao: "implant.",
+};
 
 export function HojeClient({
   negocios,
@@ -96,6 +114,22 @@ export function HojeClient({
 
   const profilePorId = useMemo(() => new Map(profiles.map((p) => [p.id, p])), [profiles]);
 
+  // `ordenarPorUrgencia` já ordena por saúde antes de qualquer outra coisa —
+  // este agrupamento não reordena nada, só torna visível o corte que a lista
+  // sempre teve. Sem ele, trinta linhas iguais não dizem quantas estão de
+  // fato atrasadas; com ele, a resposta é o tamanho do primeiro grupo.
+  // Os rótulos vêm de `ROTULO_DA_SAUDE`, o mesmo léxico do Pipeline — inventar
+  // "Atrasadas/Em breve" aqui seria um segundo vocabulário para o mesmo dado.
+  const grupos = useMemo(() => {
+    const ordem: SaudeNegocio[] = ["podre", "atencao", "ok"];
+    return ordem
+      .map((saude) => ({ saude, itens: itens.filter((i) => i.saude === saude) }))
+      .filter((g) => g.itens.length > 0);
+  }, [itens]);
+
+  // Estava escrita três vezes, byte a byte igual, nas três variantes abaixo.
+  const grid = "grid flex-1 grid-cols-1 gap-4 overflow-hidden md:grid-cols-[1.55fr_1fr]";
+
   return (
     <>
       <PageHeader
@@ -106,20 +140,11 @@ export function HojeClient({
             : `${itens.length} ${itens.length === 1 ? "pendência" : "pendências"}`
         }
         actions={
-          <div className="flex overflow-hidden rounded-lg border border-border bg-surface text-[12px] font-medium">
-            {donoOptions.map((o) => (
-              <Link
-                key={o.key}
-                href={o.href}
-                className={clsx(
-                  "border-r border-border px-3.25 py-1.75 last:border-r-0",
-                  o.key === donoAtual ? "bg-ink text-bone" : "text-muted"
-                )}
-              >
-                {o.label}
-              </Link>
-            ))}
-          </div>
+          <SegmentedControl
+            rotuloAcessivel="Filtrar por dono"
+            valor={donoAtual}
+            opcoes={donoOptions.map((o) => ({ valor: o.key, rotulo: o.label, href: o.href }))}
+          />
         }
       />
 
@@ -132,60 +157,85 @@ export function HojeClient({
           Comportamento herdado de `/início`, de onde foi transplantado na
           Task 6 — ver `LiveActivity.tsx`. */}
       {unavailable && (
-        <div className="grid flex-1 grid-cols-1 gap-4 overflow-hidden md:grid-cols-[1.55fr_1fr]">
+        <div className={grid}>
           <Unavailable title="Não foi possível carregar o que precisa de atenção hoje" />
           <LiveActivity items={activityItems ?? []} error={activityItems === null} />
         </div>
       )}
 
       {!unavailable && itens.length === 0 && (
-        <div className="grid flex-1 grid-cols-1 gap-4 overflow-hidden md:grid-cols-[1.55fr_1fr]">
+        <div className={grid}>
           <EmptyState title="Nada pendente — tudo em dia." />
           <LiveActivity items={activityItems ?? []} error={activityItems === null} />
         </div>
       )}
 
       {!unavailable && itens.length > 0 && (
-        <div className="grid flex-1 grid-cols-1 gap-4 overflow-hidden md:grid-cols-[1.55fr_1fr]">
-          <div className="overflow-y-auto scrollbar-thin rounded-xl border border-border bg-surface">
-            {itens.map((item) => {
-              const dono = item.donoId ? profilePorId.get(item.donoId) : undefined;
-              const vencimento = rotuloVencimento(item.vencimento, agora);
-              const href =
-                item.origem === "negocio"
-                  ? `/pipeline?negocio=${item.id}`
-                  : item.origem === "implantacao"
-                    ? "/implantacao"
-                    : `/kanban?task=${item.id}`;
-
-              return (
-                <Link
-                  key={`${item.origem}-${item.id}`}
-                  href={href}
-                  className="flex items-center gap-3 border-b border-border-soft px-3.5 py-2.75 text-[13px] last:border-b-0 hover:bg-neutral-tint"
-                >
+        <div className={grid}>
+          <div className="overflow-y-auto scrollbar-thin rounded-card border border-border bg-surface">
+            {grupos.map((grupo) => (
+              <div key={grupo.saude}>
+                {/* Cabeçalho grudado, com sombra interna no lugar de `border-b`
+                    pelo mesmo motivo do cabeçalho da tabela do Painel: borda de
+                    elemento `sticky` desce junto com a rolagem. O número ao lado
+                    do rótulo é a informação que a tela devia dar de graça — 
+                    quantas estão atrasadas. */}
+                <div className="sticky top-0 z-10 flex items-center gap-2 bg-bone px-3.5 py-2 shadow-[inset_0_-1px_0_var(--color-border)]">
                   <span
-                    title={ROTULO_DA_SAUDE[item.saude]}
-                    className={clsx("h-2 w-2 flex-none rounded-full", CLASSE_DO_PONTO_DE_SAUDE[item.saude])}
+                    aria-hidden
+                    className={clsx("h-2 w-2 flex-none rounded-full", CLASSE_DO_PONTO_DE_SAUDE[grupo.saude])}
                   />
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate font-medium">{item.texto}</div>
-                    {item.contexto && <div className="truncate text-[11.5px] text-muted">{item.contexto}</div>}
-                  </div>
-                  {vencimento && (
-                    <span
-                      className={clsx(
-                        "flex-none font-mono text-[11px]",
-                        item.saude === "podre" ? "text-red" : "text-muted"
-                      )}
+                  <span className="label">{ROTULO_DA_SAUDE[grupo.saude]}</span>
+                  <span className="ml-auto font-mono text-label text-faint">{grupo.itens.length}</span>
+                </div>
+
+                {grupo.itens.map((item) => {
+                  const dono = item.donoId ? profilePorId.get(item.donoId) : undefined;
+                  const vencimento = rotuloVencimento(item.vencimento, agora);
+                  const href =
+                    item.origem === "negocio"
+                      ? `/pipeline?negocio=${item.id}`
+                      : item.origem === "implantacao"
+                        ? "/implantacao"
+                        : `/kanban?task=${item.id}`;
+
+                  return (
+                    <Link
+                      key={`${item.origem}-${item.id}`}
+                      href={href}
+                      className="flex items-center gap-3 border-b border-border-soft px-3.5 py-3 text-body transition-colors duration-fast last:border-b-0 hover:bg-neutral-tint"
                     >
-                      {vencimento}
-                    </span>
-                  )}
-                  <Avatar initials={dono?.initials} size="sm" ghost={!dono} />
-                </Link>
-              );
-            })}
+                      {/* O ponto some da linha: ele agora é o cabeçalho do
+                          grupo, e repetido em toda linha dizia o que o grupo
+                          inteiro já diz. No lugar dele entra a origem, que era
+                          a informação que faltava — o destino do clique muda
+                          conforme ela, e nada na linha o antecipava. */}
+                      <span
+                        aria-hidden
+                        className="w-[68px] flex-none font-mono text-label text-faint"
+                      >
+                        {ROTULO_DA_ORIGEM[item.origem]}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate font-medium">{item.texto}</div>
+                        {item.contexto && <div className="truncate text-small text-muted">{item.contexto}</div>}
+                      </div>
+                      {vencimento && (
+                        <span
+                          className={clsx(
+                            "flex-none font-mono text-label tabular-nums",
+                            item.saude === "podre" ? "text-red" : "text-muted"
+                          )}
+                        >
+                          {vencimento}
+                        </span>
+                      )}
+                      <Avatar initials={dono?.initials} size="sm" ghost={!dono} />
+                    </Link>
+                  );
+                })}
+              </div>
+            ))}
           </div>
           <LiveActivity items={activityItems ?? []} error={activityItems === null} />
         </div>
