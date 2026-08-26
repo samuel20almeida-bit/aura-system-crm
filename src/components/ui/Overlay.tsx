@@ -109,6 +109,12 @@ export function Slideover({
         aria-modal="true"
         tabIndex={-1}
         onKeyDown={onKeyDown}
+        // A sombra da gaveta fica FORA da escala, de propósito: `shadow-overlay`
+        // lança para baixo, e esta gaveta encosta na borda direita da janela —
+        // uma sombra vertical some contra a borda. Esta lança para a esquerda,
+        // que é o lado por onde ela precisa se separar da página. É o único
+        // lugar do app com sombra direcional, então ela vive aqui em vez de
+        // virar um quarto token que ninguém mais usaria.
         className={`flex h-full ${widthClass} flex-col border-l border-border bg-surface shadow-[-14px_0_40px_rgba(30,30,28,.12)] outline-none animate-slide-in`}
         onClick={(e) => e.stopPropagation()}
       >
@@ -147,7 +153,7 @@ export function Modal({
         aria-modal="true"
         tabIndex={-1}
         onKeyDown={onKeyDown}
-        className={`max-h-[88vh] ${widthClass} overflow-y-auto rounded-card border border-border bg-surface shadow-2xl outline-none animate-fade-in`}
+        className={`max-h-[88vh] ${widthClass} overflow-y-auto rounded-card border border-border bg-surface shadow-overlay outline-none animate-fade-in`}
         onClick={(e) => e.stopPropagation()}
       >
         {children}
