@@ -20,20 +20,32 @@ function paraISO(local: string): string {
   return new Date(local).toISOString();
 }
 
-/** "YYYY-MM-DDTHH:mm" da próxima hora cheia, para o campo já nascer preenchido. */
-function proximaHoraCheia(): string {
+/**
+ * "YYYY-MM-DDTHH:mm" para o campo já nascer preenchido.
+ *
+ * Sem `dia`, é a próxima hora cheia — o botão do topo não sabe de que dia se
+ * está falando. Com `dia` (o quadrado clicado na agenda), é aquele dia às 10h:
+ * quem clicou num quadrado já escolheu o dia, e ter de digitá-lo de novo é a
+ * pergunta repetida que a agenda existe para evitar. 10h porque é hora de
+ * expediente e some do caminho — quem quiser outra troca só a hora.
+ */
+function valorInicial(dia?: string): string {
+  const p = (n: number) => String(n).padStart(2, "0");
+  if (dia) return `${dia}T10:00`;
   const d = new Date();
   d.setMinutes(0, 0, 0);
   d.setHours(d.getHours() + 1);
-  const p = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
 }
 
 export function NovaReuniaoModal({
+  diaSugerido,
   contas,
   contasIndisponiveis,
   onClose,
 }: {
+  /** "YYYY-MM-DD" do quadrado clicado na agenda. Ausente = veio do botão do topo. */
+  diaSugerido?: string;
   contas: { id: string; nome: string }[];
   contasIndisponiveis: boolean;
   onClose: () => void;
@@ -42,7 +54,7 @@ export function NovaReuniaoModal({
   const [pending, startTransition] = useTransition();
   const [titulo, setTitulo] = useState("");
   const [contaId, setContaId] = useState("");
-  const [quando, setQuando] = useState(proximaHoraCheia);
+  const [quando, setQuando] = useState(() => valorInicial(diaSugerido));
   const [duracao, setDuracao] = useState("60");
   const [pauta, setPauta] = useState("");
 

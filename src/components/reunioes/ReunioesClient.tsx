@@ -9,6 +9,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Unavailable } from "@/components/ui/Unavailable";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { NovaReuniaoModal } from "./NovaReuniaoModal";
+import { AgendaMes } from "./AgendaMes";
 import { ReuniaoDrawer } from "./ReuniaoDrawer";
 import { separarPorTempo, formatarQuando, formatarDuracao } from "@/lib/reunioes";
 import type { ReuniaoComTarefas } from "@/lib/data/reunioes";
@@ -29,7 +30,9 @@ export function ReunioesClient({
   profiles: { id: string; full_name: string }[];
 }) {
   const [aba, setAba] = useState<Aba>("proximas");
-  const [mostrarNova, setMostrarNova] = useState(false);
+  // `null` = fechado. String = aberto; vazia significa "sem dia sugerido"
+  // (o botão do topo), e "YYYY-MM-DD" vem do dia clicado na agenda.
+  const [novaNoDia, setNovaNoDia] = useState<string | null>(null);
   const [idSelecionado, setIdSelecionado] = useState<string | null>(null);
 
   // Um instante só para a tela inteira, reancorado a cada leitura nova —
@@ -59,13 +62,24 @@ export function ReunioesClient({
             ? "Marque uma reunião — a leitura da lista falhou, a escrita não."
             : `${proximas.length} ${proximas.length === 1 ? "marcada" : "marcadas"} · ${anteriores.length} no histórico`
         }
-        actions={<Button onClick={() => setMostrarNova(true)}>+ Nova reunião</Button>}
+        actions={<Button onClick={() => setNovaNoDia("")}>+ Nova reunião</Button>}
       />
 
       {/* Uma falha de LEITURA não pode tirar a capacidade de ESCREVER: o aviso
           substitui a lista, o botão de marcar continua onde estava. Mesma
           regra do Pipeline. */}
       {unavailable && <Unavailable title="Não foi possível carregar as reuniões agora" />}
+
+      {!unavailable && (
+        <Section title="Agenda">
+          <AgendaMes
+            reunioes={reunioes}
+            agora={agora}
+            onAbrir={setIdSelecionado}
+            onNovaNoDia={(chave) => setNovaNoDia(chave)}
+          />
+        </Section>
+      )}
 
       {!unavailable && (
         <Section
@@ -105,11 +119,12 @@ export function ReunioesClient({
         </Section>
       )}
 
-      {mostrarNova && (
+      {novaNoDia !== null && (
         <NovaReuniaoModal
+          diaSugerido={novaNoDia || undefined}
           contas={contas}
           contasIndisponiveis={contasIndisponiveis}
-          onClose={() => setMostrarNova(false)}
+          onClose={() => setNovaNoDia(null)}
         />
       )}
 
