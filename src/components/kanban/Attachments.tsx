@@ -100,7 +100,9 @@ export function Attachments({
                   }
                 })
               }
-              className="hidden text-faint hover:text-red group-hover:block"
+              // Mesmo defeito e mesma correção da subtarefa e da Metas: no
+              // toque não havia como remover um anexo.
+              className="font-mono text-label text-faint transition-opacity duration-fast hover:text-red md:opacity-0 md:focus-visible:opacity-100 md:group-hover:opacity-100"
               aria-label={`Remover ${a.filename}`}
             >
               ✕

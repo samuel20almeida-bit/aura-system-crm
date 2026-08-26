@@ -71,7 +71,7 @@ function Column({
     <div ref={setNodeRef} className="col flex min-h-[120px] w-full flex-1 flex-col gap-2.25 rounded-card border border-neutral-tint-border bg-neutral-tint p-2.75">
       <div className="flex items-center gap-2 px-0.5">
         <span className="label">{label}</span>
-        <span className="rounded-full bg-surface px-2 py-0.5 text-[11px] text-muted">{tasks.length}</span>
+        <span className="rounded-full bg-surface px-2 py-0.5 text-label text-muted">{tasks.length}</span>
       </div>
       <SortableContext items={tasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
         <div className="flex flex-1 flex-col gap-2">

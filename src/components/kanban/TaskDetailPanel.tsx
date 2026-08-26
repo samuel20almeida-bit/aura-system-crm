@@ -135,11 +135,11 @@ export function TaskDetailPanel({
                   }),
               })
             }
-            className="text-[13px] text-muted hover:text-red"
+            className="text-body text-muted hover:text-red"
           >
             Excluir
           </button>
-          <button onClick={close} className="text-[15px] text-muted hover:text-ink">
+          <button onClick={close} className="text-title text-muted hover:text-ink">
             ✕
           </button>
         </div>
@@ -160,9 +160,9 @@ export function TaskDetailPanel({
               });
             }
           }}
-          className="rounded -mx-1 px-1 text-[19px] font-medium outline-none focus:bg-neutral-tint"
+          className="rounded -mx-1 px-1 text-display font-medium outline-none focus:bg-neutral-tint"
         />
-        <div className="text-[12.5px] text-muted">
+        <div className="text-small text-muted">
           {t.conta ? t.conta.nome : "Interno"} {t.area ? `· ${t.area}` : ""}
         </div>
       </div>
@@ -173,7 +173,7 @@ export function TaskDetailPanel({
             key={tb}
             onClick={() => setTab(tb)}
             className={
-              "pb-2.25 text-[12.5px] " +
+              "pb-2.25 text-small " +
               (tab === tb ? "border-b-2 border-accent font-medium text-accent" : "text-muted")
             }
           >
@@ -185,7 +185,7 @@ export function TaskDetailPanel({
       <div className="flex flex-1 flex-col gap-4 overflow-y-auto scrollbar-thin px-5.5 py-4">
         {tab === "detalhes" && (
           <>
-            <div className="grid grid-cols-[96px_1fr] items-center gap-y-2.5 gap-x-3 text-[13px]">
+            <div className="grid grid-cols-[96px_1fr] items-center gap-y-2.5 gap-x-3 text-body">
               {/* Conta e escopo são um controle só: uma tarefa com conta não é
                   interna, e uma interna não tem conta. Deixar os dois separados
                   permitiria o estado incoerente "interna com conta". */}
@@ -224,7 +224,7 @@ export function TaskDetailPanel({
                       }
                     })
                   }
-                  className="rounded-lg border border-border bg-bone px-2 py-1.5 text-[13px]"
+                  className="rounded-control border border-border bg-bone px-2 py-1.5 text-body"
                 >
                   <option value="">Interna</option>
                   {contas.map((c) => (
@@ -248,7 +248,7 @@ export function TaskDetailPanel({
                     }
                   })
                 }
-                className="rounded-lg border border-border bg-bone px-2 py-1.5 text-[13px]"
+                className="rounded-control border border-border bg-bone px-2 py-1.5 text-body"
               >
                 <option value="">Sem responsável</option>
                 {profiles.map((p) => (
@@ -273,7 +273,7 @@ export function TaskDetailPanel({
                       }
                     })
                   }
-                  className="rounded-lg border border-border bg-bone px-2 py-1.5 text-[13px]"
+                  className="rounded-control border border-border bg-bone px-2 py-1.5 text-body"
                 />
                 {t.due_date && (
                   <Tag tone={overdue ? "red" : "neutral"} dot>
@@ -295,7 +295,7 @@ export function TaskDetailPanel({
                     }
                   })
                 }
-                className="rounded-lg border border-border bg-bone px-2 py-1.5 text-[13px]"
+                className="rounded-control border border-border bg-bone px-2 py-1.5 text-body"
               >
                 <option value="low">Baixa</option>
                 <option value="medium">Média</option>
@@ -319,14 +319,14 @@ export function TaskDetailPanel({
                   })
                 }
                 rows={3}
-                className="w-full resize-none rounded-lg border border-transparent bg-transparent p-1.5 text-[13px] leading-relaxed text-muted outline-none hover:border-border focus:border-accent focus:bg-bone"
+                className="w-full resize-none rounded-control border border-transparent bg-transparent p-1.5 text-body leading-relaxed text-muted outline-none hover:border-border focus:border-accent focus:bg-bone"
               />
             </div>
 
             <div>
               <div className="mb-2 flex items-center gap-2">
                 <span className="label">SUBTAREFAS</span>
-                <span className="font-mono text-[11px] text-muted">
+                <span className="font-mono text-label text-muted">
                   {doneCount}/{optimisticChecklist.length}
                 </span>
                 {optimisticChecklist.length > 0 && (
@@ -338,7 +338,7 @@ export function TaskDetailPanel({
               </div>
               <div className="flex flex-col gap-2">
                 {optimisticChecklist.map((item) => (
-                  <div key={item.id} className="group flex items-center gap-2.5 text-[13px]">
+                  <div key={item.id} className="group flex items-center gap-2.5 text-body">
                     <button
                       onClick={() =>
                         startTransition(async () => {
@@ -354,7 +354,7 @@ export function TaskDetailPanel({
                         })
                       }
                       className={
-                        "flex h-[15px] w-[15px] flex-none items-center justify-center rounded [border:1.5px_solid_#C7C3B8] text-[9px] " +
+                        "flex h-4 w-4 flex-none items-center justify-center rounded border-[1.5px] border-border-strong text-[9px] transition-colors duration-fast " +
                         (item.done ? "border-accent! bg-accent text-bone" : "")
                       }
                     >
@@ -375,7 +375,13 @@ export function TaskDetailPanel({
                           }
                         })
                       }
-                      className="hidden text-faint hover:text-red group-hover:block"
+                      // Era `hidden ... group-hover:block`. `display:none` tira
+                      // o botão da ordem de tabulação, e `group-hover` nunca
+                      // dispara em tela de toque: não havia como remover uma
+                      // subtarefa pelo celular nem pelo teclado. Mesmo defeito
+                      // que a Metas tinha, corrigido do mesmo jeito.
+                      aria-label={`Remover subtarefa ${item.title}`}
+                      className="font-mono text-label text-faint transition-opacity duration-fast hover:text-red md:opacity-0 md:focus-visible:opacity-100 md:group-hover:opacity-100"
                     >
                       ✕
                     </button>
@@ -401,7 +407,7 @@ export function TaskDetailPanel({
                     value={newItem}
                     onChange={(e) => setNewItem(e.target.value)}
                     placeholder="+ adicionar subtarefa"
-                    className="flex-1 bg-transparent text-[13px] text-muted outline-none placeholder:text-faint"
+                    className="flex-1 bg-transparent text-body text-muted outline-none placeholder:text-faint"
                   />
                 </form>
               </div>
@@ -414,17 +420,17 @@ export function TaskDetailPanel({
         {tab === "comentarios" && (
           <div className="flex flex-col gap-3">
             {detail.comments.length === 0 && (
-              <p className="text-[12.5px] text-faint">Nenhum comentário ainda.</p>
+              <p className="text-small text-faint">Nenhum comentário ainda.</p>
             )}
             {detail.comments.map((c) => (
               <div key={c.id} className="flex gap-2.5">
                 <Avatar initials={c.author?.initials} size="sm" ghost />
                 <div>
-                  <div className="text-[12.5px]">
+                  <div className="text-small">
                     <b className="font-medium">{c.author?.full_name ?? "Alguém"}</b>
                   </div>
-                  <div className="text-[12.5px] text-muted">{c.body}</div>
-                  <div className="mt-0.5 font-mono text-[11px] text-faint">{formatDate(c.created_at)}</div>
+                  <div className="text-small text-muted">{c.body}</div>
+                  <div className="mt-0.5 font-mono text-label text-faint">{formatDate(c.created_at)}</div>
                 </div>
               </div>
             ))}
@@ -434,17 +440,17 @@ export function TaskDetailPanel({
         {tab === "historico" && (
           <div className="flex flex-col gap-3">
             {detail.history.length === 0 && (
-              <p className="text-[12.5px] text-faint">Nenhum evento registrado ainda.</p>
+              <p className="text-small text-faint">Nenhum evento registrado ainda.</p>
             )}
             {detail.history.map((event) => (
               <div key={event.id} className="flex gap-2.5">
                 <Avatar initials={event.user?.initials} size="sm" ghost />
                 <div>
-                  <span className="text-[12.5px]">
+                  <span className="text-small">
                     <b className="font-medium">{event.user?.full_name ?? "Alguém"}</b> {event.verb}
                     {event.detail ? ` ${event.detail}` : ""}
                   </span>
-                  <div className="mt-0.5 font-mono text-[11px] text-faint">{formatActivityWhen(event.created_at)}</div>
+                  <div className="mt-0.5 font-mono text-label text-faint">{formatActivityWhen(event.created_at)}</div>
                 </div>
               </div>
             ))}
@@ -472,7 +478,7 @@ export function TaskDetailPanel({
           value={newComment}
           onChange={(e) => setNewComment(e.target.value)}
           placeholder="Comentar…"
-          className="flex-1 rounded-lg border border-border bg-bone px-2.5 py-2 text-[12.5px] outline-none focus:border-accent"
+          className="flex-1 rounded-control border border-border bg-bone px-2.5 py-2 text-small outline-none focus:border-accent"
         />
         <Button type="submit" disabled={pending}>
           Enviar

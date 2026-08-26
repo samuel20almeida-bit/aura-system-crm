@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { KanbanBoard } from "./KanbanBoard";
 import { NewTaskModal } from "./NewTaskModal";
 import { Button } from "@/components/ui/Button";
+import { SegmentedControl } from "@/components/ui/SegmentedControl";
+import { PageHeader } from "@/components/layout/PageBody";
 import { Avatar } from "@/components/ui/Avatar";
 import { Tag } from "@/components/ui/Tag";
 import { formatDate } from "@/lib/format";
@@ -75,43 +77,42 @@ export function KanbanClient({
 
   return (
     <>
-      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-        <div>
-          <h1 className="text-[21px] font-medium">Kanban</h1>
-          <div className="mt-0.5 text-[12.5px] text-muted">
-            {activeCount} tarefas ativas · {dueThisWeek} vencendo esta semana
-          </div>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex overflow-hidden rounded-lg border border-border bg-surface text-[12px] font-medium">
-            {(["board", "list"] as const).map((v) => (
-              <button
-                key={v}
-                onClick={() => setView(v)}
-                className={`border-r border-border px-3.25 py-1.75 last:border-r-0 ${
-                  view === v ? "bg-ink text-bone" : "text-muted"
-                }`}
-              >
-                {v === "board" ? "Board" : "Lista"}
-              </button>
-            ))}
-          </div>
-          <Button onClick={() => setShowNewTask(true)}>+ Nova tarefa</Button>
-        </div>
-      </div>
+      {/* Esta tela também desenhava o próprio cabeçalho, com `text-[21px]` cru
+          — o valor do `text-display` — e a linha de apoio a 12,5px contra os
+          12px das outras. Eu tinha escrito no PR de Metas que aquela era a
+          única assim; era engano, são três. Playbooks é a terceira. */}
+      <PageHeader
+        title="Kanban"
+        sub={`${activeCount} tarefas ativas · ${dueThisWeek} vencendo esta semana`}
+        actions={
+          <>
+            <SegmentedControl
+              rotuloAcessivel="Modo de visualização"
+              valor={view}
+              onChange={(v) => setView(v as "board" | "list")}
+              opcoes={[
+                { valor: "board", rotulo: "Board" },
+                { valor: "list", rotulo: "Lista" },
+              ]}
+            />
+            <Button onClick={() => setShowNewTask(true)}>+ Nova tarefa</Button>
+          </>
+        }
+      />
 
       <div className="flex flex-wrap items-center gap-2">
-        <div className="flex overflow-hidden rounded-full border border-border bg-surface text-xs font-medium">
-          {(["clientes", "interno"] as const).map((s) => (
-            <button
-              key={s}
-              onClick={() => setScope(s)}
-              className={`px-3 py-1.5 ${scope === s ? "bg-ink text-bone" : "text-muted"}`}
-            >
-              {s === "clientes" ? "Clientes" : "Interno"}
-            </button>
-          ))}
-        </div>
+        {/* `pilula` porque este controle vive na faixa de filtros, onde tudo é
+            arredondado; os outros dois usam o raio de controle. */}
+        <SegmentedControl
+          formato="pilula"
+          rotuloAcessivel="Escopo das tarefas"
+          valor={scope}
+          onChange={(v) => setScope(v as "clientes" | "interno")}
+          opcoes={[
+            { valor: "clientes", rotulo: "Clientes" },
+            { valor: "interno", rotulo: "Interno" },
+          ]}
+        />
         {scope === "clientes" &&
           (contasIndisponiveis ? (
             // A leitura de contas falhou — mostrar "Todas as contas" aqui
@@ -123,7 +124,7 @@ export function KanbanClient({
             <select
               value={contaFilter}
               onChange={(e) => setContaFilter(e.target.value)}
-              className="rounded-full border border-border bg-surface px-3 py-1.5 text-xs text-muted"
+              className="rounded-full border border-border bg-surface px-3 py-1.5 text-small text-muted transition-colors duration-fast hover:border-faint"
             >
               <option value="">Todas as contas</option>
               {contas.map((c) => (
@@ -136,7 +137,7 @@ export function KanbanClient({
         <select
           value={assigneeFilter}
           onChange={(e) => setAssigneeFilter(e.target.value)}
-          className="rounded-full border border-border bg-surface px-3 py-1.5 text-xs text-muted"
+          className="rounded-full border border-border bg-surface px-3 py-1.5 text-small text-muted transition-colors duration-fast hover:border-faint"
         >
           <option value="">Responsável</option>
           {profiles.map((p) => (
@@ -148,7 +149,7 @@ export function KanbanClient({
         <select
           value={priorityFilter}
           onChange={(e) => setPriorityFilter(e.target.value)}
-          className="rounded-full border border-border bg-surface px-3 py-1.5 text-xs text-muted"
+          className="rounded-full border border-border bg-surface px-3 py-1.5 text-small text-muted transition-colors duration-fast hover:border-faint"
         >
           <option value="">Prioridade</option>
           <option value="high">Alta</option>
@@ -159,19 +160,14 @@ export function KanbanClient({
 
       {view === "board" ? (
         <>
-          <div className="flex overflow-hidden rounded-lg border border-border bg-surface text-[12px] font-medium md:hidden">
-            {mobileColumns.map((c) => (
-              <button
-                key={c}
-                onClick={() => setMobileColumn(c)}
-                className={`flex-1 border-r border-border px-3 py-1.75 last:border-r-0 ${
-                  mobileColumn === c ? "bg-ink text-bone" : "text-muted"
-                }`}
-              >
-                {statusLabel[c]}
-              </button>
-            ))}
-          </div>
+          <SegmentedControl
+            className="md:hidden"
+            preencher
+            rotuloAcessivel="Coluna visível"
+            valor={mobileColumn}
+            onChange={(v) => setMobileColumn(v as ColumnId)}
+            opcoes={mobileColumns.map((c) => ({ valor: c, rotulo: statusLabel[c] }))}
+          />
           <KanbanBoard
             tasks={filtered}
             checklistCounts={checklistCounts}
@@ -181,28 +177,35 @@ export function KanbanClient({
         </>
       ) : (
         <div className="flex-1 overflow-y-auto scrollbar-thin rounded-card border border-border bg-surface">
-          <div className="grid grid-cols-[1.6fr_1fr_1fr_.8fr_80px] gap-2 border-b border-border px-3 py-2 font-mono text-[9.5px] font-semibold tracking-wide text-faint">
-            <div>TAREFA</div>
-            <div>CLIENTE</div>
-            <div>STATUS</div>
-            <div>PRAZO</div>
-            <div>RESP.</div>
+          {/* Grudado, com sombra interna no lugar de `border-b`: numa lista
+              longa o cabeçalho subia junto e as colunas ficavam sem nome.
+              Mesmo tratamento da tabela do Painel e dos grupos de /hoje.
+              "CONTA", não "CLIENTE": a célula abaixo mostra `conta.nome` desde
+              a unificação, e o rótulo tinha ficado para trás. */}
+          <div className="sticky top-0 z-10 grid grid-cols-[1.6fr_1fr_1fr_.8fr_80px] gap-2 bg-bone px-3 py-2 shadow-[inset_0_-1px_0_var(--color-border)]">
+            {["Tarefa", "Conta", "Status", "Prazo", "Resp."].map((coluna) => (
+              <div key={coluna} className="label">
+                {coluna}
+              </div>
+            ))}
           </div>
           {filtered.map((t) => (
             <div
               key={t.id}
               onClick={() => openTask(t.id)}
-              className="grid cursor-pointer grid-cols-[1.6fr_1fr_1fr_.8fr_80px] items-center gap-2 border-b border-border-soft px-3 py-2.5 text-[13px] hover:bg-neutral-tint"
+              className="grid cursor-pointer grid-cols-[1.6fr_1fr_1fr_.8fr_80px] items-center gap-2 border-b border-border-soft px-3 py-2.5 text-body transition-colors duration-fast hover:bg-neutral-tint"
             >
               <div className="flex items-center gap-2 truncate">
-                <span className="font-mono text-[11px] text-faint">{t.code}</span>
+                <span className="font-mono text-label text-faint">{t.code}</span>
                 {t.title}
               </div>
               <div className="truncate text-muted">{t.conta?.nome ?? "Interno"}</div>
               <div>
                 <Tag tone={t.status === "done" ? "accent" : "neutral"}>{statusLabel[t.status]}</Tag>
               </div>
-              <div className="font-mono text-[11px] text-muted">{t.due_date ? formatDate(t.due_date) : "—"}</div>
+              <div className="font-mono text-label tabular-nums text-muted">
+                {t.due_date ? formatDate(t.due_date) : "—"}
+              </div>
               <Avatar initials={t.assignee?.initials} size="sm" ghost={!t.assignee} />
             </div>
           ))}

@@ -14,6 +14,18 @@
   --color-surface: #ffffff;
   --color-border: #e4e1d8;
   --color-border-soft: #edeae2;
+  /* A borda de CONTROLE, não de caixa. `--color-border` (1,31:1 sobre o
+     branco) é boa para separar blocos, e invisível quando o que ela desenha
+     é a coisa em si — a caixinha de uma subtarefa não marcada, o alvo de
+     soltar de uma coluna vazia. Elemento de interface precisa de 3:1.
+
+     Havia dois cinzas escritos à mão para isso, `#C7C3B8` no checklist e
+     `#CFCABD` no DropZone, medindo 1,76:1 e 1,64:1 — os dois invisíveis, e o
+     comentário do DropZone afirmando ser o único lugar do app a precisar
+     daquele tom, o que deixara de ser verdade. `#8c8a82` é o degrau mais
+     claro da mesma família que passa em 3:1 sobre o branco (3,46) E sobre o
+     tinto afundado (3,03). */
+  --color-border-strong: #8c8a82;
   --color-muted: #5c5a52;
 
   /* Era #9a9890, que dá 2,65:1 sobre o bege — bem abaixo do mínimo
