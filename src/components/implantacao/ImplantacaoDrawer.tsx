@@ -102,13 +102,13 @@ export function ImplantacaoDrawer({
       {dialogo}
       <div className="flex items-start gap-2.5 border-b border-border px-5.5 py-4">
         <div className="min-w-0 flex-1">
-          <div className="truncate text-[17px] font-medium">{implantacao.conta?.nome ?? "Conta sem nome"}</div>
-          <div className="mt-0.5 font-mono text-[11px] text-muted">
+          <div className="truncate text-display font-medium">{implantacao.conta?.nome ?? "Conta sem nome"}</div>
+          <div className="mt-0.5 text-small text-muted">
             {ROTULO_DA_SAUDE[saude]} · na etapa há {diasParado(implantacao.etapa_desde, agora)}d
           </div>
         </div>
         <Avatar initials={implantacao.dono?.initials} size="sm" ghost={!implantacao.dono} />
-        <button onClick={onClose} className="text-[15px] text-muted hover:text-ink" aria-label="Fechar">
+        <button onClick={onClose} className="text-title text-muted transition-colors duration-fast hover:text-ink" aria-label="Fechar">
           ✕
         </button>
       </div>
@@ -116,7 +116,7 @@ export function ImplantacaoDrawer({
       <div className="flex flex-1 flex-col gap-4.5 overflow-y-auto scrollbar-thin px-5.5 py-4">
         <div>
           <div className="label mb-2">A CONTA</div>
-          <div className="grid grid-cols-[112px_1fr] gap-x-3 gap-y-2 text-[13px]">
+          <div className="grid grid-cols-[112px_1fr] gap-x-3 gap-y-2 text-body">
             <Linha rotulo="Nicho" valor={implantacao.conta?.nicho} />
             <Linha
               rotulo="Cidade"
@@ -141,7 +141,7 @@ export function ImplantacaoDrawer({
               ))}
             </Select>
           </Field>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 font-mono text-[11px]">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 font-mono text-label">
             <div className="text-muted">na etapa há {diasParado(implantacao.etapa_desde, agora)}d</div>
             {/* Mesmo rótulo que /pipeline e /hoje usam para "estourou o
                 prazo?" — achado na revisão final: "SLA vence 2026-08-03"
