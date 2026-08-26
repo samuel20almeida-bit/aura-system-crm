@@ -1052,6 +1052,60 @@ export type Database = {
           },
         ]
       }
+      reunioes: {
+        Row: {
+          acontece_em: string
+          ata: string | null
+          atualizado_em: string
+          conta_id: string | null
+          criado_em: string
+          criado_por: string | null
+          duracao_min: number | null
+          id: string
+          pauta: string | null
+          titulo: string
+        }
+        Insert: {
+          acontece_em: string
+          ata?: string | null
+          atualizado_em?: string
+          conta_id?: string | null
+          criado_em?: string
+          criado_por?: string | null
+          duracao_min?: number | null
+          id?: string
+          pauta?: string | null
+          titulo: string
+        }
+        Update: {
+          acontece_em?: string
+          ata?: string | null
+          atualizado_em?: string
+          conta_id?: string | null
+          criado_em?: string
+          criado_por?: string | null
+          duracao_min?: number | null
+          id?: string
+          pauta?: string | null
+          titulo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reunioes_conta_id_fkey"
+            columns: ["conta_id"]
+            isOneToOne: false
+            referencedRelation: "contas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reunioes_criado_por_fkey"
+            columns: ["criado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tasks: {
         Row: {
           area: string | null
@@ -1070,6 +1124,7 @@ export type Database = {
           position: number
           priority: string
           recurrence: string | null
+          reuniao_id: string | null
           status: string
           title: string
           updated_at: string
@@ -1091,6 +1146,7 @@ export type Database = {
           position?: number
           priority?: string
           recurrence?: string | null
+          reuniao_id?: string | null
           status?: string
           title: string
           updated_at?: string
@@ -1112,6 +1168,7 @@ export type Database = {
           position?: number
           priority?: string
           recurrence?: string | null
+          reuniao_id?: string | null
           status?: string
           title?: string
           updated_at?: string
@@ -1143,6 +1200,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_reuniao_id_fkey"
+            columns: ["reuniao_id"]
+            isOneToOne: false
+            referencedRelation: "reunioes"
             referencedColumns: ["id"]
           },
         ]

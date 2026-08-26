@@ -16,6 +16,14 @@ export async function createTask(input: {
   dueDate: string | null;
   description?: string | null;
   estimatedHours?: number | null;
+  /**
+   * A reunião de onde este item de ação saiu. A tela de Reuniões passa por
+   * aqui em vez de inserir em `tasks` por conta própria: é esta função que
+   * gera o código da tarefa, calcula a posição na coluna, registra o
+   * histórico e revalida as rotas. Uma segunda porta de entrada para criar
+   * tarefa nasceria sem nada disso.
+   */
+  reuniaoId?: string | null;
 }) {
   const supabase = await createClient();
   const {
@@ -55,6 +63,7 @@ export async function createTask(input: {
       due_date: input.dueDate,
       description: input.description ?? null,
       estimated_hours: input.estimatedHours ?? null,
+      reuniao_id: input.reuniaoId ?? null,
       status: "todo",
       position: (maxPos?.position ?? 0) + 1,
       created_by: user.id,
@@ -67,6 +76,7 @@ export async function createTask(input: {
   await logActivity(supabase, user.id, "criou a tarefa", task.title, task.id);
   revalidatePath("/kanban");
   revalidatePath("/hoje");
+  if (input.reuniaoId) revalidatePath("/reunioes");
   return task;
 }
 
