@@ -2,9 +2,11 @@
 
 import { useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Card } from "@/components/ui/Card";
+import { Card, ProgressBar } from "@/components/ui/Card";
 import { Tag } from "@/components/ui/Tag";
 import { Button } from "@/components/ui/Button";
+import { PageHeader } from "@/components/layout/PageBody";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { Avatar } from "@/components/ui/Avatar";
 import { Modal } from "@/components/ui/Overlay";
 import { Field, Input, Select, Textarea } from "@/components/ui/Field";
@@ -106,77 +108,96 @@ export function PlaybooksBody({
   return (
     <div className="flex flex-1 overflow-hidden">
       <div className="flex w-[200px] flex-none flex-col gap-0.5 border-r border-border bg-surface p-3">
-        <span className="label px-2 pb-2">CATEGORIAS</span>
+        {/* `.label` não aplica caixa alta, e nenhum outro rótulo do app força
+            o texto a maiúsculas. Era o terceiro caso — os outros dois caíram
+            em #10 (ATIVIDADE RECENTE) e #14 (area.toUpperCase). */}
+        <span className="label px-2 pb-2">Categorias</span>
         {categories.map((c) => (
           <button
             key={c.id}
             onClick={() => selecionarCategoria(c.id)}
-            className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[13px] font-medium ${
-              c.id === activeCategoryId ? "bg-accent-tint text-accent" : "text-muted hover:bg-neutral-tint"
+            aria-current={c.id === activeCategoryId ? "true" : undefined}
+            className={`flex w-full items-center gap-2 rounded-control px-2.5 py-2 text-left text-body font-medium transition-colors duration-fast ${
+              c.id === activeCategoryId
+                ? "bg-accent-tint text-accent"
+                : "text-muted hover:bg-neutral-tint hover:text-ink"
             }`}
           >
             {c.name}
-            <span className="ml-auto font-mono text-[10px] text-faint">{c.count}</span>
+            <span className="ml-auto font-mono text-label tabular-nums text-faint">{c.count}</span>
           </button>
         ))}
-        <button onClick={() => setShowNewCategory(true)} className="mt-1.5 px-2.5 text-left text-[13px] text-faint hover:text-ink">
+        <button onClick={() => setShowNewCategory(true)} className="mt-1.5 px-2.5 text-left text-body text-faint transition-colors duration-fast hover:text-ink">
           + Nova categoria
         </button>
       </div>
 
       <div className="flex flex-1 flex-col gap-4 overflow-hidden p-5.5">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-[21px] font-medium">{activeCategory?.name ?? "Playbooks"}</h1>
-            <div className="mt-0.5 text-[12.5px] text-muted">{playbooks.length} processos</div>
-          </div>
-          {activeCategoryId && <Button onClick={() => setShowNewPlaybook(true)}>+ Novo playbook</Button>}
-        </div>
+        {/* A TERCEIRA tela a desenhar o próprio cabeçalho, com o mesmo
+            `text-[21px]` cru. As outras duas eram Metas (#14) e Kanban (#17)
+            — e no #14 eu afirmei que aquela era a única, sem ter conferido. */}
+        <PageHeader
+          title={activeCategory?.name ?? "Playbooks"}
+          sub={`${playbooks.length} ${playbooks.length === 1 ? "processo" : "processos"}`}
+          actions={
+            activeCategoryId ? (
+              <Button onClick={() => setShowNewPlaybook(true)}>+ Novo playbook</Button>
+            ) : undefined
+          }
+        />
 
         <div className="grid flex-1 grid-cols-[1.7fr_1fr] gap-3.5 overflow-hidden">
           <Card className="flex flex-col gap-1 overflow-hidden p-4">
-            <div className="grid grid-cols-[1.9fr_.8fr_.9fr_34px] gap-2 border-b border-border pb-2 font-mono text-[9.5px] font-semibold tracking-wide text-faint">
-              <div>PROCESSO</div>
-              <div>TIPO</div>
-              <div>ATUALIZADO</div>
-              <div></div>
+            <div className="grid grid-cols-[1.9fr_.8fr_.9fr_34px] gap-2 border-b border-border pb-2">
+              {["Processo", "Tipo", "Atualizado", ""].map((coluna, i) => (
+                // A última coluna é o avatar de quem mexeu por último e não
+                // tem rótulo; a chave leva o índice porque ela é string vazia.
+                <div key={`${coluna}-${i}`} className="label">
+                  {coluna}
+                </div>
+              ))}
             </div>
             <div className="flex-1 overflow-y-auto scrollbar-thin">
               {playbooks.map((p) => (
                 <button
                   key={p.id}
                   onClick={() => selecionarPlaybook(p.id)}
-                  className={`grid w-full grid-cols-[1.9fr_.8fr_.9fr_34px] items-center gap-2 border-b border-border-soft py-2.5 text-left text-[13px] hover:bg-neutral-tint ${
+                  className={`grid w-full grid-cols-[1.9fr_.8fr_.9fr_34px] items-center gap-2 border-b border-border-soft py-2.5 text-left text-body hover:bg-neutral-tint ${
                     p.id === activePlaybookId ? "bg-neutral-tint" : ""
                   }`}
                 >
                   <div>
                     <div className="font-medium">{p.name}</div>
-                    {p.estimated_days ? <div className="font-mono text-[11px] text-muted">~{p.estimated_days} dias</div> : null}
+                    {p.estimated_days ? <div className="font-mono text-label text-muted">~{p.estimated_days} dias</div> : null}
                   </div>
                   <Tag tone={typeTone[p.type]}>{typeLabel[p.type]}</Tag>
-                  <div className="font-mono text-[11px] text-muted">{formatDate(p.updated_at)}</div>
+                  <div className="font-mono text-label text-muted">{formatDate(p.updated_at)}</div>
                   <Avatar initials={p.updated_by_profile?.initials} size="sm" ghost />
                 </button>
               ))}
               {playbooks.length === 0 && (
-                <div className="py-8 text-center text-[13px] text-faint">
-                  {activeCategoryId ? "Nenhum playbook nesta categoria ainda." : "Selecione uma categoria."}
-                </div>
+                <EmptyState
+                  plain
+                  title={
+                    activeCategoryId
+                      ? "Nenhum playbook nesta categoria ainda."
+                      : "Selecione uma categoria."
+                  }
+                />
               )}
             </div>
           </Card>
 
           <div className="flex min-h-0 flex-col gap-3.5">
             {detailPending ? (
-              <Card className="flex flex-1 items-center justify-center p-4 text-center text-[12.5px] text-faint">
+              <Card className="flex flex-1 items-center justify-center p-4 text-center text-small text-faint">
                 Carregando…
               </Card>
             ) : detail?.playbook ? (
               <>
                 <Card className="flex flex-col gap-2.5 p-4">
                   <span className="label">{detail.playbook.name.toUpperCase()}</span>
-                  <div className="flex flex-col gap-1.5 text-[12.5px]">
+                  <div className="flex flex-col gap-1.5 text-small">
                     {detail.steps.map((s, i) => (
                       <div key={s.id} className="flex gap-2.5">
                         <span className="font-mono text-faint">{String(i + 1).padStart(2, "0")}</span>
@@ -203,15 +224,18 @@ export function PlaybooksBody({
                       const total = r.run_steps.length;
                       return (
                         <div key={r.id} className="mb-2.5 flex flex-col gap-1.5">
-                          <div className="flex items-center justify-between text-[13px]">
+                          <div className="flex items-center justify-between text-body">
                             <span>{r.conta?.nome ?? "Interno"}</span>
-                            <span className={`font-mono text-[12px] ${done === total && total > 0 ? "text-accent" : "text-muted"}`}>
+                            <span className={`font-mono text-small ${done === total && total > 0 ? "text-accent" : "text-muted"}`}>
                               {done}/{total}
                             </span>
                           </div>
-                          <div className="h-1.5 overflow-hidden rounded bg-[#EDEAE2]">
-                            <div className="h-full rounded bg-accent" style={{ width: total > 0 ? `${(done / total) * 100}%` : "0%" }} />
-                          </div>
+                          {/* Era uma barra reimplementada aqui dentro, com
+                              `bg-[#EDEAE2]` cru — o valor de
+                              `--color-border-soft`. A `ProgressBar` do kit faz
+                              o mesmo, já usa o token, e trata o divisor por
+                              zero que esta versão tratava à mão. */}
+                          <ProgressBar percent={total > 0 ? (done / total) * 100 : 0} />
                           <div className="flex flex-wrap gap-1.5">
                             {r.run_steps.map((rs, i) => (
                               <button
@@ -243,7 +267,7 @@ export function PlaybooksBody({
                                     }
                                   })
                                 }
-                                className={`rounded px-1.5 py-0.5 font-mono text-[10px] ${rs.done ? "bg-accent-tint text-accent" : "bg-neutral-tint text-muted"}`}
+                                className={`rounded px-1.5 py-0.5 font-mono text-label ${rs.done ? "bg-accent-tint text-accent" : "bg-neutral-tint text-muted"}`}
                                 title={detail.steps[i]?.title}
                               >
                                 {i + 1}
@@ -253,12 +277,12 @@ export function PlaybooksBody({
                         </div>
                       );
                     })}
-                    {detail.runs.length === 0 && <div className="text-[12.5px] text-faint">Nenhuma execução ainda.</div>}
+                    {detail.runs.length === 0 && <EmptyState plain title="Nenhuma execução ainda." />}
                   </div>
                 </Card>
               </>
             ) : (
-              <Card className="flex flex-1 items-center justify-center p-4 text-center text-[12.5px] text-faint">
+              <Card className="flex flex-1 items-center justify-center p-4 text-center text-small text-faint">
                 Selecione um playbook para ver os detalhes.
               </Card>
             )}
@@ -433,8 +457,8 @@ function RunPlaybookModal({
             </Select>
           )}
         </Field>
-        <p className="text-[12.5px] text-muted">Isso vai criar uma tarefa no Kanban para cada etapa do playbook.</p>
-        {error && <p className="rounded-lg bg-red-tint px-3 py-2 text-[12.5px] text-red">{error}</p>}
+        <p className="text-small text-muted">Isso vai criar uma tarefa no Kanban para cada etapa do playbook.</p>
+        {error && <p className="rounded-control bg-red-tint px-3 py-2 text-small text-red">{error}</p>}
         <div className="flex justify-end gap-2">
           <Button type="button" variant="ghost" onClick={onClose}>Cancelar</Button>
           <Button type="submit" disabled={pending}>{pending ? "Criando…" : "Confirmar"}</Button>
