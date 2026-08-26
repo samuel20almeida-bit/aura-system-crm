@@ -90,7 +90,7 @@ export function HojeClient({
           titulo: t.title,
           dueDate: t.due_date,
           donoId: t.assignee_id,
-          clienteNome: t.client?.name ?? null,
+          clienteNome: t.conta?.nome ?? null,
         },
         agora
       )

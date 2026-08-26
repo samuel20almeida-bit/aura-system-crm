@@ -27,7 +27,7 @@ export async function getPlaybookDetail(id: string) {
     supabase.from("playbook_steps").select("*").eq("playbook_id", id).order("position"),
     supabase
       .from("playbook_runs")
-      .select("*, client:clients(id, name), run_steps:playbook_run_steps(id, done)")
+      .select("*, conta:contas(id, nome), run_steps:playbook_run_steps(id, done)")
       .eq("playbook_id", id)
       .order("started_at", { ascending: false }),
   ]);

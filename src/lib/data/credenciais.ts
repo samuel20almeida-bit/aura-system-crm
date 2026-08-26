@@ -4,7 +4,7 @@ export async function listCredentials() {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("credenciais")
-    .select("*, categoria:credencial_categorias(id, nome), cliente:clients(id, name)")
+    .select("*, categoria:credencial_categorias(id, nome), conta:contas(id, nome)")
     .order("nome");
   if (error) throw error;
   return data;

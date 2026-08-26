@@ -8,7 +8,7 @@ import { normalizeLinkUrl } from "@/lib/links";
 
 export async function createTask(input: {
   title: string;
-  clientId: string | null;
+  contaId: string | null;
   isInternal: boolean;
   area?: string | null;
   priority: string;
@@ -23,7 +23,16 @@ export async function createTask(input: {
   } = await supabase.auth.getUser();
   if (!user) throw new Error("Não autenticado");
 
-  const code = await nextTaskCode(input.clientId, input.isInternal);
+  // Espelho da regra que já vale do outro lado: tarefa com conta não é interna,
+  // e tarefa de cliente sem conta não existe. Sem esta guarda, uma chamada que
+  // não passe pelo modal grava `is_internal: false, conta_id: null` — linha que
+  // aparece no escopo Clientes, se mostra como "Interno" e nenhum filtro de
+  // conta alcança.
+  if (!input.isInternal && !input.contaId) {
+    throw new Error("Tarefa de cliente precisa de uma conta");
+  }
+
+  const code = await nextTaskCode(input.contaId, input.isInternal);
 
   const { data: maxPos } = await supabase
     .from("tasks")
@@ -38,7 +47,7 @@ export async function createTask(input: {
     .insert({
       title: input.title,
       code,
-      client_id: input.isInternal ? null : input.clientId,
+      conta_id: input.isInternal ? null : input.contaId,
       is_internal: input.isInternal,
       area: input.area ?? null,
       priority: input.priority,
@@ -112,6 +121,9 @@ export async function updateTask(
     due_date: string | null;
     estimated_hours: number | null;
     status: string;
+    conta_id: string | null;
+    is_internal: boolean;
+    area: string | null;
   }>
 ) {
   const supabase = await createClient();

@@ -4,23 +4,26 @@ import { useState, useTransition } from "react";
 import { Modal } from "@/components/ui/Overlay";
 import { Field, Input, Select, Textarea } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Button";
+import { Tag } from "@/components/ui/Tag";
 import { useToast } from "@/components/ui/Toast";
 import { createCredential, updateCredential, createCredentialCategory } from "@/lib/actions/credenciais";
 import { beginMutation } from "@/lib/realtime/mutation-gate";
 import type { CredentialWithRelations } from "@/lib/data/credenciais";
 
 type CategoriaLite = { id: string; nome: string };
-type ClientLite = { id: string; name: string; color: string; code_prefix: string };
+type ContaLite = { id: string; nome: string };
 
 export function CredentialModal({
   credential,
   categories,
-  clients,
+  contas,
+  contasIndisponiveis,
   onClose,
 }: {
   credential: CredentialWithRelations | null;
   categories: CategoriaLite[];
-  clients: ClientLite[];
+  contas: ContaLite[];
+  contasIndisponiveis: boolean;
   onClose: () => void;
 }) {
   const { notify } = useToast();
@@ -34,7 +37,7 @@ export function CredentialModal({
   const [novaCategoriaNome, setNovaCategoriaNome] = useState("");
   const [criandoCategoria, startCategoriaTransition] = useTransition();
   const [erroCategoria, setErroCategoria] = useState<string | null>(null);
-  const [clienteId, setClienteId] = useState(credential?.cliente_id ?? "");
+  const [contaId, setContaId] = useState(credential?.conta_id ?? "");
   const [usuario, setUsuario] = useState(credential?.usuario ?? "");
   const [senha, setSenha] = useState(credential?.senha ?? "");
   const [mostrarSenha, setMostrarSenha] = useState(false);
@@ -68,7 +71,7 @@ export function CredentialModal({
     const dados = {
       nome: nome.trim(),
       categoriaId,
-      clienteId: clienteId || null,
+      contaId: contaId || null,
       usuario: usuario.trim() || null,
       senha: senha.trim() || null,
       url: url.trim() || null,
@@ -169,15 +172,26 @@ export function CredentialModal({
           )}
         </Field>
 
-        <Field label="CLIENTE VINCULADO">
-          <Select value={clienteId} onChange={(e) => setClienteId(e.target.value)}>
-            <option value="">Nenhum (interna)</option>
-            {clients.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </Select>
+        <Field label="CONTA VINCULADA">
+          {contasIndisponiveis ? (
+            // A leitura de contas falhou (mesmo caso do Kanban, Task 4, e dos
+            // Playbooks, Task 5): listar um <select> vazio aqui mentiria "sem
+            // contas cadastradas". O aviso ocupa o lugar do seletor, e salvar
+            // continua possível porque `contaId` fica com o valor que já tinha:
+            // vazio numa credencial nova, que grava como interna; e a conta
+            // atual numa credencial existente, que fica preservada. O que se
+            // perde enquanto a leitura falha é só a troca de conta.
+            <Tag tone="amber">Contas indisponíveis</Tag>
+          ) : (
+            <Select value={contaId} onChange={(e) => setContaId(e.target.value)}>
+              <option value="">Nenhuma (interna)</option>
+              {contas.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.nome}
+                </option>
+              ))}
+            </Select>
+          )}
         </Field>
 
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">

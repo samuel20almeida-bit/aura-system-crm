@@ -81,7 +81,7 @@ export async function deleteStep(stepId: string) {
   revalidatePath("/playbooks");
 }
 
-export async function runPlaybook(playbookId: string, clientId: string | null) {
+export async function runPlaybook(playbookId: string, contaId: string | null) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -95,7 +95,7 @@ export async function runPlaybook(playbookId: string, clientId: string | null) {
 
   const { data: run, error: runError } = await supabase
     .from("playbook_runs")
-    .insert({ playbook_id: playbookId, client_id: clientId, status: "in_progress" })
+    .insert({ playbook_id: playbookId, conta_id: contaId, status: "in_progress" })
     .select()
     .single();
   if (runError) throw runError;
@@ -105,13 +105,13 @@ export async function runPlaybook(playbookId: string, clientId: string | null) {
     .insert(steps.map((s) => ({ run_id: run.id, step_id: s.id, done: false })));
   if (runStepsError) throw runStepsError;
 
-  const isInternal = !clientId;
-  const codes = await nextTaskCodes(clientId, isInternal, steps.length);
+  const isInternal = !contaId;
+  const codes = await nextTaskCodes(contaId, isInternal, steps.length);
 
   const taskRows = steps.map((s, i) => ({
     code: codes[i],
     title: s.title,
-    client_id: clientId,
+    conta_id: contaId,
     is_internal: isInternal,
     status: "todo" as const,
     priority: "medium",
