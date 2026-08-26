@@ -9,6 +9,7 @@ import { Tag } from "@/components/ui/Tag";
 import { useToast } from "@/components/ui/Toast";
 import { useConfirm } from "@/components/ui/ConfirmDialog";
 import { vincularSalao } from "@/lib/actions/clubcut";
+import { beginMutation } from "@/lib/realtime/mutation-gate";
 import { formatCurrencyCompact } from "@/lib/format";
 import type { Frescor, Situacao } from "@/lib/clubcut";
 
@@ -87,11 +88,14 @@ export function OperacaoClient({
       tom: "perigo",
       aoConfirmar: () =>
         startTransition(async () => {
+          const end = beginMutation();
           try {
             await vincularSalao(linha.contaId, null);
             notify("success", "Conta desligada do ClubCut.");
           } catch {
             notify("error", "Não foi possível desligar a conta. Tente novamente.");
+          } finally {
+            end();
           }
         }),
     });
@@ -101,6 +105,7 @@ export function OperacaoClient({
     e.preventDefault();
     if (!contaEscolhida || !salaoEscolhido) return;
     startTransition(async () => {
+      const end = beginMutation();
       try {
         await vincularSalao(contaEscolhida, salaoEscolhido);
         setContaEscolhida("");
@@ -108,6 +113,8 @@ export function OperacaoClient({
         notify("success", "Conta ligada ao ClubCut.");
       } catch {
         notify("error", "Não foi possível ligar a conta. Tente novamente.");
+      } finally {
+        end();
       }
     });
   }
