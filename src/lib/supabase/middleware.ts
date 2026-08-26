@@ -31,8 +31,14 @@ export async function updateSession(request: NextRequest) {
   const path = request.nextUrl.pathname;
   const isAuthRoute = path.startsWith("/login");
   const isPublicAsset = path.startsWith("/_next") || path.startsWith("/favicon");
+  // O sincronizador do ClubCut não tem usuário POR DEFINIÇÃO: quem chama é o
+  // n8n, de madrugada, e a autenticação dele é o token conferido dentro do
+  // próprio handler. Sem esta exceção o POST viraria um 307 para /login e o
+  // envio sumiria em silêncio — com 200 na resposta, que é o pior jeito de
+  // falhar. Prefixo estreito de propósito: não é "/api", é esta rota.
+  const isSincronizador = path.startsWith("/api/clubcut/");
 
-  if (!user && !isAuthRoute && !isPublicAsset) {
+  if (!user && !isAuthRoute && !isPublicAsset && !isSincronizador) {
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = "/login";
     return NextResponse.redirect(redirectUrl);

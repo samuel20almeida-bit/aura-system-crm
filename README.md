@@ -50,7 +50,11 @@ O projeto está pronto para deploy na Vercel (ou similar):
 1. Importe este repositório.
 2. Configure as variáveis de ambiente `NEXT_PUBLIC_SUPABASE_URL` e
    `NEXT_PUBLIC_SUPABASE_ANON_KEY` (mesmos valores do `.env.local`).
-3. Deploy. Sem passos de build adicionais.
+3. Para a tela `/operacao` receber o uso do ClubCut, configure também
+   `SUPABASE_SERVICE_ROLE_KEY` e `CLUBCUT_SYNC_TOKEN` — as duas só são
+   usadas pela rota de sincronização, e o resto do app funciona sem elas.
+   Ver `docs/clubcut-sync.md`.
+4. Deploy. Sem passos de build adicionais.
 
 ## Banco de dados
 
