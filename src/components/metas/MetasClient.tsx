@@ -31,7 +31,7 @@ function GoalRowItem({ goal }: { goal: GoalRow }) {
   return (
     <div className="group flex flex-col gap-1.5">
       {dialogo}
-      <div className="flex items-center justify-between text-[13px]">
+      <div className="flex items-center justify-between text-body">
         <span>{goal.title}</span>
         {editing ? (
           <form
@@ -58,12 +58,17 @@ function GoalRowItem({ goal }: { goal: GoalRow }) {
               value={value}
               onChange={(e) => setValue(e.target.value)}
               onBlur={() => setEditing(false)}
-              className="w-16 rounded border border-border bg-bone px-1.5 py-0.5 font-mono text-[12px]"
+              className="w-16 rounded-control border border-border bg-bone px-1.5 py-0.5 font-mono text-small tabular-nums"
             />
-            <button type="submit" className="text-[11px] text-accent">✓</button>
+            <button type="submit" aria-label="Salvar progresso" className="text-label text-accent">
+              ✓
+            </button>
           </form>
         ) : (
-          <button onClick={() => setEditing(true)} className="font-mono text-[13px] hover:text-accent">
+          <button
+            onClick={() => setEditing(true)}
+            className="font-mono text-body tabular-nums transition-colors duration-fast hover:text-accent"
+          >
             {formatValue(optimisticCurrent, goal.unit)}
             <span className="text-faint"> / {formatValue(goal.target, goal.unit)}</span>
           </button>
@@ -71,7 +76,7 @@ function GoalRowItem({ goal }: { goal: GoalRow }) {
       </div>
       <ProgressBar percent={pct} danger={pct < 50} />
       <div className="flex items-center justify-between">
-        <span className="font-mono text-[11px] text-muted">
+        <span className="text-small text-muted">
           {goal.owner ? `resp. ${goal.owner.full_name.split(" ")[0]}` : "sem responsável"}
         </span>
         <button
@@ -95,7 +100,14 @@ function GoalRowItem({ goal }: { goal: GoalRow }) {
                 }),
             })
           }
-          className="hidden font-mono text-[11px] text-faint hover:text-red group-hover:block"
+          // Era `hidden ... group-hover:block`. `display:none` tira o botão
+          // do fluxo E da ordem de tabulação, e `group-hover` nunca dispara em
+          // tela de toque: NÃO HAVIA COMO EXCLUIR UMA META PELO CELULAR, nem
+          // pelo teclado em lugar nenhum. Agora ele existe sempre; no desktop
+          // continua recuando até o hover, via opacidade, e o foco o traz de
+          // volta. Mesmo defeito está em `Attachments.tsx` e
+          // `TaskDetailPanel.tsx`, que são da tela do Kanban.
+          className="font-mono text-label text-faint transition-opacity duration-fast hover:text-red md:opacity-0 md:focus-visible:opacity-100 md:group-hover:opacity-100"
         >
           excluir
         </button>
@@ -202,9 +214,11 @@ export function AreaCard({ area, goals }: { area: string; goals: GoalRow[] }) {
   const atRisk = goals.length - onTrack;
 
   return (
-    <Card className="flex flex-col gap-3 p-4">
+    <Card className="flex flex-col gap-3 p-5">
       <div className="flex items-center gap-2">
-        <span className="label">{area.toUpperCase()}</span>
+        {/* `.label` não aplica caixa alta, e nenhum outro rótulo do app a força.
+            Era a última chamada que passava o texto já maiúsculo. */}
+        <span className="label">{area}</span>
         {atRisk === 0 ? (
           <Tag tone="accent">no caminho</Tag>
         ) : (

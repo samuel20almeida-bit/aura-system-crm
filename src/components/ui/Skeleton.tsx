@@ -1,7 +1,7 @@
 import clsx from "clsx";
 
 export function Skeleton({ className }: { className?: string }) {
-  return <div className={clsx("rounded bg-[#EDEAE2] animate-pulse-soft", className)} />;
+  return <div className={clsx("rounded bg-border-soft animate-pulse-soft", className)} />;
 }
 
 // As grades abaixo copiam as das páginas que estes esqueletos precedem — é o

@@ -101,7 +101,10 @@ export function ProgressBar({
 }) {
   const clamped = Math.max(0, Math.min(100, percent));
   return (
-    <div className={clsx("h-1.5 overflow-hidden rounded bg-[#EDEAE2]", className)}>
+    // O trilho era `bg-[#EDEAE2]` escrito à mão — o valor exato de
+    // `--color-border-soft`, nomeado na etapa B. Mesma história do raio, da
+    // sombra e do âmbar: token definido, cópia crua ao lado.
+    <div className={clsx("h-1.5 overflow-hidden rounded bg-border-soft", className)}>
       <div
         className={clsx("h-full rounded transition-[width] duration-200 ease-out", danger ? "bg-red" : "bg-accent")}
         style={{ width: `${clamped}%` }}
