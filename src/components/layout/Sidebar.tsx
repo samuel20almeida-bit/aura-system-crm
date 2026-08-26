@@ -29,6 +29,10 @@ const workItems: NavItem[] = [
   { href: "/pipeline", label: "Pipeline", icon: PipelineIcon },
   { href: "/implantacao", label: "Implantação", icon: ImplantacaoIcon },
   { href: "/kanban", label: "Kanban", icon: KanbanIcon, countKey: "openTasks" },
+  // Reunião é coordenação do dia a dia, não métrica — por isso entra no grupo
+  // TRABALHO e não em NEGÓCIO, depois do Kanban: o que se combina numa
+  // reunião vira tarefa lá, então a ordem segue o caminho do combinado.
+  { href: "/reunioes", label: "Reuniões", icon: ReuniaoIcon },
 ];
 
 const businessItems: NavItem[] = [
@@ -349,6 +353,14 @@ function PlaybookIcon() {
     <svg {...iconProps()}>
       <path d="M3 2.8h5.2A1.8 1.8 0 0 1 10 4.6v8.6H4.8A1.8 1.8 0 0 1 3 11.4z" />
       <path d="M10 4.6a1.8 1.8 0 0 1 1.8-1.8H13v10.4h-1.2" />
+    </svg>
+  );
+}
+function ReuniaoIcon() {
+  return (
+    <svg {...iconProps()}>
+      <rect x="2.4" y="3.4" width="11.2" height="10.2" rx="1.4" />
+      <path d="M2.4 6.4h11.2M5.6 2.2v2.2M10.4 2.2v2.2" />
     </svg>
   );
 }
