@@ -1,11 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
 import { addDaysToDateStr, todayInAppTz } from "@/lib/timezone";
-import type { LinhaDeUso } from "@/lib/clubcut";
+import type { Assinatura, FaturaLida, LinhaDeUso } from "@/lib/clubcut";
 
 /**
- * A leitura da operação do ClubCut. Três consultas, e nenhuma delas sai
+ * A leitura da operação do ClubCut. Cinco consultas, e nenhuma delas sai
  * deste banco: o que chegou do cliente já foi copiado para cá pelo
- * sincronizador (ver `0022_clubcut.sql`).
+ * sincronizador (ver `0022_clubcut.sql` e `0023_clubcut_cobranca.sql`).
  *
  * Todas seguem a sentinela `unavailable` que o resto do projeto usa: uma
  * consulta que falhou não pode virar lista vazia. Nesta tela isso seria
@@ -89,4 +89,46 @@ export async function listUsoDaJanela(dias: number = JANELA_PADRAO_DIAS) {
   }
 
   return { unavailable: false as const, desde, linhas: (data ?? []) as LinhaDeUso[] };
+}
+
+export async function listAssinaturas() {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("clubcut_assinaturas")
+    .select("salon_id, plano, status, valor, proximo_vencimento, acesso_ate");
+
+  if (error) {
+    console.error("[clubcut] falha ao consultar assinaturas:", error);
+    return { unavailable: true as const };
+  }
+
+  return { unavailable: false as const, assinaturas: (data ?? []) as Assinatura[] };
+}
+
+/**
+ * TODAS as faturas, não só as da janela.
+ *
+ * Dívida não expira com o recorte da tela: uma fatura de junho sem baixa
+ * continua sendo dinheiro a receber em setembro, e filtrar por período a
+ * esconderia justamente de quem precisa vê-la. O teto de 500 é folga larga —
+ * são fechamentos mensais de um punhado de clientes.
+ */
+export async function listFaturas() {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("clubcut_faturas")
+    .select(
+      "salon_id, periodo_inicio, periodo_fim, motivo, valor, valor_gerado, agendamentos, vencimento, paga_em"
+    )
+    .order("periodo_fim", { ascending: false })
+    .limit(500);
+
+  if (error) {
+    console.error("[clubcut] falha ao consultar faturas:", error);
+    return { unavailable: true as const };
+  }
+
+  return { unavailable: false as const, faturas: (data ?? []) as FaturaLida[] };
 }

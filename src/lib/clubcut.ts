@@ -33,7 +33,38 @@ export type UsoRecebido = {
   execucoes_erro: number;
 };
 
-export type Envio = { saloes: SalaoRecebido[]; uso: UsoRecebido[] };
+export type AssinaturaRecebida = {
+  salon_id: string;
+  plano: string | null;
+  status: string;
+  valor: number | null;
+  proximo_vencimento: string | null;
+  acesso_ate: string | null;
+};
+
+export type FaturaRecebida = {
+  salon_id: string;
+  periodo_inicio: string;
+  periodo_fim: string;
+  motivo: string;
+  valor: number;
+  valor_gerado: number;
+  agendamentos: number;
+  vencimento: string | null;
+  paga_em: string | null;
+};
+
+/**
+ * `assinaturas` e `faturas` são OPCIONAIS. O workflow que só manda uso
+ * continua válido — sem isso, publicar a rota nova quebraria o envio antigo
+ * no intervalo entre um deploy e o outro.
+ */
+export type Envio = {
+  saloes: SalaoRecebido[];
+  uso: UsoRecebido[];
+  assinaturas: AssinaturaRecebida[];
+  faturas: FaturaRecebida[];
+};
 
 /**
  * Tetos por envio. Não são performance: são o limite entre "o n8n mandou a
@@ -42,6 +73,7 @@ export type Envio = { saloes: SalaoRecebido[]; uso: UsoRecebido[] };
  */
 export const MAX_SALOES = 200;
 export const MAX_USO = 18_000;
+export const MAX_FATURAS = 5_000;
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const DIA = /^\d{4}-\d{2}-\d{2}$/;
@@ -68,6 +100,20 @@ function inteiroNaoNegativo(v: unknown): v is number {
 
 function numeroNaoNegativo(v: unknown): v is number {
   return typeof v === "number" && Number.isFinite(v) && v >= 0;
+}
+
+/**
+ * Data de calendário que pode não vir. Devolve a sentinela `INVALIDA` em vez
+ * de `null` porque nulo aqui é resposta legítima ("assinatura em teste não
+ * tem próximo vencimento") — usar nulo para as duas coisas engoliria um
+ * campo mal formado em silêncio.
+ */
+const INVALIDA = Symbol("data inválida");
+
+function dataOpcional(v: unknown): string | null | typeof INVALIDA {
+  if (v === undefined || v === null || v === "") return null;
+  if (typeof v !== "string" || !diaValido(v)) return INVALIDA;
+  return v;
 }
 
 const CONTADORES = [
@@ -166,7 +212,117 @@ export function lerEnvio(bruto: unknown): { ok: true; envio: Envio } | { ok: fal
     });
   }
 
-  return { ok: true, envio: { saloes, uso } };
+  // ---- assinaturas (opcional) ----
+  const assinaturas: AssinaturaRecebida[] = [];
+  if (bruto.assinaturas !== undefined) {
+    if (!Array.isArray(bruto.assinaturas)) {
+      return { ok: false, erro: "`assinaturas` precisa ser uma lista" };
+    }
+    if (bruto.assinaturas.length > MAX_SALOES) {
+      return { ok: false, erro: `no máximo ${MAX_SALOES} assinaturas por envio` };
+    }
+    const jaVistas = new Set<string>();
+    for (const [i, linha] of bruto.assinaturas.entries()) {
+      if (!ehObjeto(linha)) return { ok: false, erro: `assinaturas[${i}]: não é um objeto` };
+      const { salon_id, plano, status, valor, proximo_vencimento, acesso_ate } = linha;
+      if (typeof salon_id !== "string" || !conhecidos.has(salon_id)) {
+        return { ok: false, erro: `assinaturas[${i}]: salão desconhecido` };
+      }
+      // Uma por salão — é a chave primária deste lado, e o ClubCut tem
+      // `unique (salon_id)` no dele.
+      if (jaVistas.has(salon_id)) {
+        return { ok: false, erro: `assinaturas[${i}]: salão repetido` };
+      }
+      jaVistas.add(salon_id);
+      if (typeof status !== "string" || status.trim() === "") {
+        return { ok: false, erro: `assinaturas[${i}]: \`status\` vazio` };
+      }
+      if (plano !== undefined && plano !== null && typeof plano !== "string") {
+        return { ok: false, erro: `assinaturas[${i}]: \`plano\` não é texto` };
+      }
+      if (valor !== undefined && valor !== null && !numeroNaoNegativo(valor)) {
+        return { ok: false, erro: `assinaturas[${i}]: \`valor\` precisa ser um número ≥ 0 ou nulo` };
+      }
+      const venc = dataOpcional(proximo_vencimento);
+      if (venc === INVALIDA) {
+        return { ok: false, erro: `assinaturas[${i}]: \`proximo_vencimento\` não é uma data` };
+      }
+      const ate = dataOpcional(acesso_ate);
+      if (ate === INVALIDA) {
+        return { ok: false, erro: `assinaturas[${i}]: \`acesso_ate\` não é uma data` };
+      }
+      assinaturas.push({
+        salon_id,
+        plano: (plano as string | null | undefined) ?? null,
+        status: status.trim(),
+        valor: (valor as number | null | undefined) ?? null,
+        proximo_vencimento: venc,
+        acesso_ate: ate,
+      });
+    }
+  }
+
+  // ---- faturas (opcional) ----
+  const faturas: FaturaRecebida[] = [];
+  if (bruto.faturas !== undefined) {
+    if (!Array.isArray(bruto.faturas)) return { ok: false, erro: "`faturas` precisa ser uma lista" };
+    if (bruto.faturas.length > MAX_FATURAS) {
+      return { ok: false, erro: `no máximo ${MAX_FATURAS} faturas por envio` };
+    }
+    const jaVistas = new Set<string>();
+    for (const [i, linha] of bruto.faturas.entries()) {
+      if (!ehObjeto(linha)) return { ok: false, erro: `faturas[${i}]: não é um objeto` };
+      const { salon_id, periodo_inicio, periodo_fim, motivo, valor, valor_gerado, agendamentos, vencimento, paga_em } =
+        linha;
+      if (typeof salon_id !== "string" || !conhecidos.has(salon_id)) {
+        return { ok: false, erro: `faturas[${i}]: salão desconhecido` };
+      }
+      if (typeof periodo_inicio !== "string" || !diaValido(periodo_inicio)) {
+        return { ok: false, erro: `faturas[${i}]: \`periodo_inicio\` precisa ser uma data AAAA-MM-DD` };
+      }
+      if (typeof periodo_fim !== "string" || !diaValido(periodo_fim)) {
+        return { ok: false, erro: `faturas[${i}]: \`periodo_fim\` precisa ser uma data AAAA-MM-DD` };
+      }
+      if (periodo_fim < periodo_inicio) {
+        return { ok: false, erro: `faturas[${i}]: o período termina antes de começar` };
+      }
+      if (typeof motivo !== "string" || motivo.trim() === "") {
+        return { ok: false, erro: `faturas[${i}]: \`motivo\` vazio` };
+      }
+      // A chave é a mesma do ClubCut. Repetida no envio, os dois upserts
+      // brigariam pela mesma linha dentro de uma requisição só.
+      const chave = `${salon_id}|${periodo_inicio}|${periodo_fim}|${motivo.trim()}`;
+      if (jaVistas.has(chave)) return { ok: false, erro: `faturas[${i}]: fatura repetida no envio` };
+      jaVistas.add(chave);
+      if (!numeroNaoNegativo(valor)) {
+        return { ok: false, erro: `faturas[${i}]: \`valor\` precisa ser um número ≥ 0` };
+      }
+      if (valor_gerado !== undefined && !numeroNaoNegativo(valor_gerado)) {
+        return { ok: false, erro: `faturas[${i}]: \`valor_gerado\` precisa ser um número ≥ 0` };
+      }
+      if (agendamentos !== undefined && !inteiroNaoNegativo(agendamentos)) {
+        return { ok: false, erro: `faturas[${i}]: \`agendamentos\` precisa ser inteiro ≥ 0` };
+      }
+      const venc = dataOpcional(vencimento);
+      if (venc === INVALIDA) return { ok: false, erro: `faturas[${i}]: \`vencimento\` não é uma data` };
+      if (paga_em !== undefined && paga_em !== null && typeof paga_em !== "string") {
+        return { ok: false, erro: `faturas[${i}]: \`paga_em\` não é um instante` };
+      }
+      faturas.push({
+        salon_id,
+        periodo_inicio,
+        periodo_fim,
+        motivo: motivo.trim(),
+        valor,
+        valor_gerado: (valor_gerado as number | undefined) ?? 0,
+        agendamentos: (agendamentos as number | undefined) ?? 0,
+        vencimento: venc,
+        paga_em: (paga_em as string | null | undefined) ?? null,
+      });
+    }
+  }
+
+  return { ok: true, envio: { saloes, uso, assinaturas, faturas } };
 }
 
 // ============================================================
@@ -285,4 +441,107 @@ export function frescor(sincronizadoEm: string | null, agora: Date = new Date())
   if (Number.isNaN(quando.getTime())) return null;
   const dias = Math.max(0, calendarDaysBetweenInAppTz(quando, agora));
   return { dias, estado: dias <= 1 ? "ok" : dias < 7 ? "atrasado" : "parado" };
+}
+
+// ============================================================
+// 3. COBRANÇA
+// ============================================================
+
+export type FaturaLida = {
+  salon_id: string;
+  periodo_inicio: string;
+  periodo_fim: string;
+  motivo: string;
+  valor: number;
+  valor_gerado: number;
+  agendamentos: number;
+  vencimento: string | null;
+  paga_em: string | null;
+};
+
+export type ResumoDeCobranca = {
+  /** Somado só o que fechou dentro da janela da tela. */
+  cobrado: number;
+  /** Tudo sem baixa, de qualquer período. Dívida não expira com a janela. */
+  emAberto: number;
+  /** Quantas das em aberto já passaram do vencimento. */
+  vencidas: number;
+  ultimoPeriodoFim: string | null;
+};
+
+export function resumirCobranca(
+  faturas: FaturaLida[],
+  desde: string,
+  hoje: string
+): Map<string, ResumoDeCobranca> {
+  const porSalao = new Map<string, ResumoDeCobranca>();
+
+  for (const f of faturas) {
+    let r = porSalao.get(f.salon_id);
+    if (!r) {
+      r = { cobrado: 0, emAberto: 0, vencidas: 0, ultimoPeriodoFim: null };
+      porSalao.set(f.salon_id, r);
+    }
+
+    if (f.periodo_fim >= desde) r.cobrado += f.valor;
+
+    if (f.paga_em === null) {
+      r.emAberto += f.valor;
+      // Sem vencimento não dá para dizer que está vencida — e boleto gerado
+      // à mão às vezes não tem. Fica em aberto, fora da contagem.
+      if (f.vencimento !== null && f.vencimento < hoje) r.vencidas += 1;
+    }
+
+    if (r.ultimoPeriodoFim === null || f.periodo_fim > r.ultimoPeriodoFim) {
+      r.ultimoPeriodoFim = f.periodo_fim;
+    }
+  }
+
+  return porSalao;
+}
+
+export type Assinatura = {
+  salon_id: string;
+  plano: string | null;
+  status: string;
+  valor: number | null;
+  proximo_vencimento: string | null;
+  acesso_ate: string | null;
+};
+
+export type Situacao = {
+  rotulo: string;
+  tom: "accent" | "amber" | "red" | "neutral";
+};
+
+/**
+ * Como a assinatura deve ser lida na tela.
+ *
+ * O caso que motiva esta função é o teste VENCIDO: status continua `trial`,
+ * `acesso_ate` já passou, e o cliente segue sendo atendido de graça porque
+ * não existe corte automático. Sem tratar isso à parte, ele apareceria com a
+ * mesma cara de um teste em dia — e é exatamente a linha que alguém precisa
+ * ver para ir cobrar.
+ */
+export function situacaoDaAssinatura(a: Assinatura | null, hoje: string): Situacao {
+  if (!a) return { rotulo: "sem assinatura", tom: "neutral" };
+
+  const acessoVencido = a.acesso_ate !== null && a.acesso_ate < hoje;
+
+  switch (a.status) {
+    case "active":
+      return { rotulo: "ativa", tom: "accent" };
+    case "trial":
+      return acessoVencido
+        ? { rotulo: "teste vencido", tom: "red" }
+        : { rotulo: "em teste", tom: "amber" };
+    case "atrasada":
+      return { rotulo: "atrasada", tom: "red" };
+    case "cancelada":
+      return { rotulo: "cancelada", tom: "red" };
+    default:
+      // Status que o ClubCut criou depois desta função. Mostrar o texto cru é
+      // melhor que esconder: quem lê descobre que existe algo novo.
+      return { rotulo: a.status, tom: "neutral" };
+  }
 }

@@ -10,7 +10,7 @@ import { useToast } from "@/components/ui/Toast";
 import { useConfirm } from "@/components/ui/ConfirmDialog";
 import { vincularSalao } from "@/lib/actions/clubcut";
 import { formatCurrencyCompact } from "@/lib/format";
-import type { Frescor } from "@/lib/clubcut";
+import type { Frescor, Situacao } from "@/lib/clubcut";
 
 export type LinhaDaOperacao = {
   contaId: string;
@@ -18,6 +18,9 @@ export type LinhaDaOperacao = {
   salaoNome: string;
   salaoAtivo: boolean;
   frescor: Frescor | null;
+  situacao: Situacao;
+  plano: string | null;
+  cobranca: { cobrado: number; emAberto: number; vencidas: number } | null;
   /** Nulo = vínculo existe, mas nenhum dia da janela chegou para este salão. */
   resumo: {
     barbeiros: number;
@@ -125,7 +128,17 @@ export function OperacaoClient({
             <table className="w-full min-w-[760px] text-body">
               <thead>
                 <tr className="text-left">
-                  {["Conta", "Barbeiros", "Conversas", "Agendamentos", "Valor gerado", "Custo de IA", "Sincronizado", ""].map(
+                  {[
+                    "Conta",
+                    "Barbeiros",
+                    "Conversas",
+                    "Agendamentos",
+                    "Valor gerado",
+                    "Cobrado",
+                    "Custo de IA",
+                    "Sincronizado",
+                    "",
+                  ].map(
                     (coluna, i) => (
                       <th
                         key={coluna || `acao-${i}`}
@@ -147,13 +160,17 @@ export function OperacaoClient({
                           {linha.salaoNome}
                           {!linha.salaoAtivo && " · inativo lá"}
                         </span>
+                        <span className="mt-1 flex flex-wrap items-center gap-1.5">
+                          <Tag tone={linha.situacao.tom}>{linha.situacao.rotulo}</Tag>
+                          {linha.plano && <span className="text-label text-faint">{linha.plano}</span>}
+                        </span>
                       </div>
                     </td>
                     {linha.resumo === null ? (
                       // Vínculo sem dado é um estado real e diferente de zero:
                       // ou o salão foi ligado agora, ou o sincronizador não
                       // mandou nada desta janela.
-                      <td colSpan={5} className="py-2 pr-3 text-small text-faint">
+                      <td colSpan={6} className="py-2 pr-3 text-small text-faint">
                         Sem uso recebido nos últimos {janelaDias} dias.
                       </td>
                     ) : (
@@ -170,6 +187,25 @@ export function OperacaoClient({
                           )}
                         </Numero>
                         <Numero forte>{formatCurrencyCompact(linha.resumo.valorGerado)}</Numero>
+                        <td className="py-2 pr-3 tabular-nums">
+                          {linha.cobranca === null ? (
+                            <span className="text-faint">—</span>
+                          ) : (
+                            <div className="flex flex-col">
+                              <span className="font-medium">{formatCurrencyCompact(linha.cobranca.cobrado)}</span>
+                              {linha.cobranca.emAberto > 0 && (
+                                <span
+                                  className={
+                                    linha.cobranca.vencidas > 0 ? "text-small text-red" : "text-small text-faint"
+                                  }
+                                >
+                                  {formatCurrencyCompact(linha.cobranca.emAberto)} em aberto
+                                  {linha.cobranca.vencidas > 0 && " · vencida"}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </td>
                         <td className="py-2 pr-3 tabular-nums text-muted">
                           {linha.resumo.diasComCusto === 0 ? (
                             // "—" e não "US$ 0,00": ninguém mediu. A instrumentação
@@ -215,6 +251,40 @@ export function OperacaoClient({
           </div>
         )}
       </Card>
+
+      {saloesLivres.length > 0 && (
+        // A pendência que o contador do KPI só anuncia. Salão novo entra no
+        // espelho sozinho na primeira sincronização, mas o vínculo com a conta
+        // é manual de propósito: "El Guardians" aqui e "El Guardians Barbearia
+        // LTDA" lá casariam na maioria e errariam calado no resto — e vínculo
+        // errado põe o número de um cliente no nome de outro.
+        <Card className="flex flex-col gap-2 p-4">
+          <span className="label">Salões sem conta no CRM</span>
+          <p className="text-small text-muted">
+            {saloesLivres.length === 1
+              ? "Um salão está operando no ClubCut sem conta correspondente aqui."
+              : `${saloesLivres.length} salões estão operando no ClubCut sem conta correspondente aqui.`}{" "}
+            O uso deles já está sendo guardado e aparece assim que forem ligados.
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {saloesLivres.map((s) => (
+              <button
+                key={s.salon_id}
+                type="button"
+                onClick={() => setSalaoEscolhido(s.salon_id)}
+                className={
+                  salaoEscolhido === s.salon_id
+                    ? "rounded-full border border-accent bg-accent-tint px-3 py-1 text-small text-accent"
+                    : "rounded-full border border-border bg-surface px-3 py-1 text-small text-muted transition-colors hover:border-border-strong hover:text-ink"
+                }
+                aria-pressed={salaoEscolhido === s.salon_id}
+              >
+                {s.nome}
+              </button>
+            ))}
+          </div>
+        </Card>
+      )}
 
       <Card className="p-4">
         <form onSubmit={vincular} className="flex flex-col gap-3 md:flex-row md:items-end">

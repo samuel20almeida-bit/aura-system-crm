@@ -3,11 +3,20 @@ import { Kpi } from "@/components/ui/Card";
 import { Unavailable } from "@/components/ui/Unavailable";
 import {
   JANELA_PADRAO_DIAS,
+  listAssinaturas,
   listContasComVinculo,
+  listFaturas,
   listSaloes,
   listUsoDaJanela,
 } from "@/lib/data/clubcut";
-import { frescor, participacaoDoAgente, resumirPorSalao } from "@/lib/clubcut";
+import {
+  frescor,
+  participacaoDoAgente,
+  resumirCobranca,
+  resumirPorSalao,
+  situacaoDaAssinatura,
+} from "@/lib/clubcut";
+import { todayInAppTz } from "@/lib/timezone";
 import { formatCurrencyCompact } from "@/lib/format";
 import {
   OperacaoClient,
@@ -27,13 +36,22 @@ import {
  * carregamento é uma renderização de servidor nova, com relógio novo.
  */
 export default async function OperacaoPage() {
-  const [leituraSaloes, leituraContas, leituraUso] = await Promise.all([
-    listSaloes(),
-    listContasComVinculo(),
-    listUsoDaJanela(),
-  ]);
+  const [leituraSaloes, leituraContas, leituraUso, leituraAssinaturas, leituraFaturas] =
+    await Promise.all([
+      listSaloes(),
+      listContasComVinculo(),
+      listUsoDaJanela(),
+      listAssinaturas(),
+      listFaturas(),
+    ]);
 
-  if (leituraSaloes.unavailable || leituraContas.unavailable || leituraUso.unavailable) {
+  if (
+    leituraSaloes.unavailable ||
+    leituraContas.unavailable ||
+    leituraUso.unavailable ||
+    leituraAssinaturas.unavailable ||
+    leituraFaturas.unavailable
+  ) {
     return (
       <PageBody>
         <PageHeader title="Operação" sub="O que o ClubCut está fazendo por cada cliente" />
@@ -45,7 +63,10 @@ export default async function OperacaoPage() {
   const agora = new Date();
   const { saloes } = leituraSaloes;
   const { contas } = leituraContas;
+  const hoje = todayInAppTz(agora);
   const resumos = resumirPorSalao(leituraUso.linhas);
+  const cobrancas = resumirCobranca(leituraFaturas.faturas, leituraUso.desde, hoje);
+  const assinaturas = new Map(leituraAssinaturas.assinaturas.map((a) => [a.salon_id, a]));
 
   const porSalonId = new Map(saloes.map((s) => [s.salon_id, s]));
 
@@ -54,9 +75,18 @@ export default async function OperacaoPage() {
     .map((c) => {
       const salao = porSalonId.get(c.clubcut_salon_id);
       const r = resumos.get(c.clubcut_salon_id) ?? null;
+      const assinatura = assinaturas.get(c.clubcut_salon_id) ?? null;
+      const cobranca = cobrancas.get(c.clubcut_salon_id) ?? null;
       return {
         contaId: c.id,
         contaNome: c.nome,
+        situacao: situacaoDaAssinatura(assinatura, hoje),
+        plano: assinatura?.plano ?? null,
+        cobranca: cobranca && {
+          cobrado: cobranca.cobrado,
+          emAberto: cobranca.emAberto,
+          vencidas: cobranca.vencidas,
+        },
         // A chave estrangeira garante que o salão existe; o `??` é para o
         // TypeScript, não para um caso real.
         salaoNome: salao?.nome ?? "—",
@@ -100,6 +130,33 @@ export default async function OperacaoPage() {
     { conversas: 0, agente: 0, total: 0, valorGerado: 0, erros: 0, custo: 0, comCusto: 0 }
   );
 
+  // A cobrança soma à parte porque não depende de ter havido uso: uma conta
+  // pode ter fatura em aberto num mês em que o agente não fez nada.
+  const cobranca = linhas.reduce(
+    (acc, l) => {
+      if (!l.cobranca) return acc;
+      acc.cobrado += l.cobranca.cobrado;
+      acc.emAberto += l.cobranca.emAberto;
+      acc.vencidas += l.cobranca.vencidas;
+      return acc;
+    },
+    { cobrado: 0, emAberto: 0, vencidas: 0 }
+  );
+
+  // Uma conta entra em risco por assinatura (atrasada, cancelada, teste
+  // vencido) OU por fatura vencida. As duas coisas levam à mesma ação — ir
+  // cobrar — então contá-las separadas dividiria a atenção sem motivo.
+  const emRisco = linhas.filter(
+    (l) => l.situacao.tom === "red" || (l.cobranca?.vencidas ?? 0) > 0
+  ).length;
+
+  // Quanto do que o agente entregou vira receita nossa. É a mesma razão que a
+  // simulação de preço chama de take rate.
+  const take =
+    totais.valorGerado > 0 && cobranca.cobrado > 0
+      ? (cobranca.cobrado / totais.valorGerado) * 100
+      : null;
+
   const participacaoGeral = totais.total > 0 ? Math.round((totais.agente / totais.total) * 100) : null;
   const saloesLivres = saloes.filter((s) => !vinculados.has(s.salon_id));
   const desatualizados = linhas.filter((l) => l.frescor && l.frescor.estado !== "ok").length;
@@ -111,8 +168,13 @@ export default async function OperacaoPage() {
         sub={`O que o ClubCut está fazendo por cada cliente · últimos ${JANELA_PADRAO_DIAS} dias`}
       />
 
-      <Section title="No período" aside={`desde ${leituraUso.desde.split("-").reverse().join("/")}`}>
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <Section
+        title="No período"
+        aside={`desde ${leituraUso.desde.split("-").reverse().join("/")}${
+          totais.comCusto === 0 ? " · custo de IA ainda não medido" : ""
+        }`}
+      >
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
           <Kpi
             label="Contas ligadas"
             value={linhas.length}
@@ -133,14 +195,28 @@ export default async function OperacaoPage() {
             }
           />
           <Kpi
-            label="Valor gerado"
+            label="Valor gerado ao cliente"
             value={formatCurrencyCompact(totais.valorGerado)}
+            sub={take === null ? "sem base para comparar" : `cobramos ${take.toFixed(1).replace(".", ",")}% disso`}
+          />
+          <Kpi
+            label="Cobrado no período"
+            value={formatCurrencyCompact(cobranca.cobrado)}
             destaque
             sub={
-              // O custo é o outro lado desta conta e ainda não existe. Dizer
-              // isso no cartão do valor gerado é o único jeito de a tela não
-              // sugerir que este número é margem.
-              totais.comCusto === 0 ? "custo de IA ainda não medido" : `custo de IA US$ ${totais.custo.toFixed(2)}`
+              cobranca.emAberto > 0
+                ? `${formatCurrencyCompact(cobranca.emAberto)} em aberto`
+                : "nada em aberto"
+            }
+          />
+          <Kpi
+            label="Em risco"
+            value={emRisco}
+            valueClassName={emRisco > 0 ? "text-display font-semibold tabular-nums text-red" : undefined}
+            sub={
+              emRisco === 0
+                ? "assinaturas em dia"
+                : `${cobranca.vencidas} ${cobranca.vencidas === 1 ? "fatura vencida" : "faturas vencidas"}`
             }
           />
         </div>

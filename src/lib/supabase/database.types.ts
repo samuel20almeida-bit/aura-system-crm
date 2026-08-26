@@ -173,6 +173,91 @@ export type Database = {
           },
         ]
       }
+      clubcut_assinaturas: {
+        Row: {
+          acesso_ate: string | null
+          atualizado_em: string
+          plano: string | null
+          proximo_vencimento: string | null
+          salon_id: string
+          status: string
+          valor: number | null
+        }
+        Insert: {
+          acesso_ate?: string | null
+          atualizado_em?: string
+          plano?: string | null
+          proximo_vencimento?: string | null
+          salon_id: string
+          status: string
+          valor?: number | null
+        }
+        Update: {
+          acesso_ate?: string | null
+          atualizado_em?: string
+          plano?: string | null
+          proximo_vencimento?: string | null
+          salon_id?: string
+          status?: string
+          valor?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clubcut_assinaturas_salon_id_fkey"
+            columns: ["salon_id"]
+            isOneToOne: true
+            referencedRelation: "clubcut_saloes"
+            referencedColumns: ["salon_id"]
+          },
+        ]
+      }
+      clubcut_faturas: {
+        Row: {
+          agendamentos: number
+          motivo: string
+          paga_em: string | null
+          periodo_fim: string
+          periodo_inicio: string
+          recebido_em: string
+          salon_id: string
+          valor: number
+          valor_gerado: number
+          vencimento: string | null
+        }
+        Insert: {
+          agendamentos?: number
+          motivo: string
+          paga_em?: string | null
+          periodo_fim: string
+          periodo_inicio: string
+          recebido_em?: string
+          salon_id: string
+          valor: number
+          valor_gerado?: number
+          vencimento?: string | null
+        }
+        Update: {
+          agendamentos?: number
+          motivo?: string
+          paga_em?: string | null
+          periodo_fim?: string
+          periodo_inicio?: string
+          recebido_em?: string
+          salon_id?: string
+          valor?: number
+          valor_gerado?: number
+          vencimento?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clubcut_faturas_salon_id_fkey"
+            columns: ["salon_id"]
+            isOneToOne: false
+            referencedRelation: "clubcut_saloes"
+            referencedColumns: ["salon_id"]
+          },
+        ]
+      }
       clubcut_saloes: {
         Row: {
           ativo: boolean

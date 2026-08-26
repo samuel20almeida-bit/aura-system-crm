@@ -3,7 +3,10 @@ import {
   frescor,
   lerEnvio,
   participacaoDoAgente,
+  resumirCobranca,
   resumirPorSalao,
+  situacaoDaAssinatura,
+  type FaturaLida,
   type LinhaDeUso,
 } from "./clubcut";
 
@@ -129,6 +132,145 @@ describe("lerEnvio", () => {
   });
 });
 
+describe("lerEnvio · assinaturas e faturas", () => {
+  it("aceita envio sem as duas listas — o workflow antigo continua válido", () => {
+    const r = lerEnvio(envioValido());
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.envio.assinaturas).toEqual([]);
+    expect(r.envio.faturas).toEqual([]);
+  });
+
+  it("aceita uma assinatura completa", () => {
+    const r = lerEnvio(
+      envioValido({
+        assinaturas: [
+          {
+            salon_id: SALAO,
+            plano: "pro",
+            status: "atrasada",
+            valor: 299,
+            proximo_vencimento: "2026-09-06",
+            acesso_ate: "2026-09-13",
+          },
+        ],
+      })
+    );
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.envio.assinaturas[0].status).toBe("atrasada");
+    expect(r.envio.assinaturas[0].acesso_ate).toBe("2026-09-13");
+  });
+
+  it("aceita assinatura em teste, sem vencimento", () => {
+    const r = lerEnvio(
+      envioValido({
+        assinaturas: [{ salon_id: SALAO, status: "trial", proximo_vencimento: null }],
+      })
+    );
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.envio.assinaturas[0].proximo_vencimento).toBeNull();
+    expect(r.envio.assinaturas[0].plano).toBeNull();
+  });
+
+  it("recusa data mal formada no lugar de ausente", () => {
+    const r = lerEnvio(
+      envioValido({ assinaturas: [{ salon_id: SALAO, status: "trial", acesso_ate: "13/09/2026" }] })
+    );
+    expect(r.ok).toBe(false);
+  });
+
+  it("recusa assinatura de salão que não veio no envio", () => {
+    const r = lerEnvio(envioValido({ assinaturas: [{ salon_id: OUTRO, status: "active" }] }));
+    expect(r.ok).toBe(false);
+  });
+
+  it("recusa duas assinaturas do mesmo salão", () => {
+    const r = lerEnvio(
+      envioValido({
+        assinaturas: [
+          { salon_id: SALAO, status: "active" },
+          { salon_id: SALAO, status: "cancelada" },
+        ],
+      })
+    );
+    expect(r.ok).toBe(false);
+  });
+
+  it("aceita uma fatura e assume zero no que não veio", () => {
+    const r = lerEnvio(
+      envioValido({
+        faturas: [
+          {
+            salon_id: SALAO,
+            periodo_inicio: "2026-08-01",
+            periodo_fim: "2026-08-31",
+            motivo: "mensal",
+            valor: 1.5,
+          },
+        ],
+      })
+    );
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.envio.faturas[0].valor_gerado).toBe(0);
+    expect(r.envio.faturas[0].agendamentos).toBe(0);
+    expect(r.envio.faturas[0].paga_em).toBeNull();
+  });
+
+  it("recusa período que termina antes de começar", () => {
+    const r = lerEnvio(
+      envioValido({
+        faturas: [
+          {
+            salon_id: SALAO,
+            periodo_inicio: "2026-08-31",
+            periodo_fim: "2026-08-01",
+            motivo: "mensal",
+            valor: 1.5,
+          },
+        ],
+      })
+    );
+    expect(r.ok).toBe(false);
+  });
+
+  it("aceita mensal e parcial do MESMO período — o motivo entra na chave", () => {
+    const base = {
+      salon_id: SALAO,
+      periodo_inicio: "2026-08-01",
+      periodo_fim: "2026-08-31",
+      valor: 1.5,
+    };
+    const r = lerEnvio(
+      envioValido({ faturas: [{ ...base, motivo: "mensal" }, { ...base, motivo: "cancelamento" }] })
+    );
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.envio.faturas).toHaveLength(2);
+  });
+
+  it("recusa a mesma fatura duas vezes", () => {
+    const f = {
+      salon_id: SALAO,
+      periodo_inicio: "2026-08-01",
+      periodo_fim: "2026-08-31",
+      motivo: "mensal",
+      valor: 1.5,
+    };
+    const r = lerEnvio(envioValido({ faturas: [f, { ...f }] }));
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.erro).toContain("repetida");
+  });
+
+  it("recusa lista que não é lista", () => {
+    expect(lerEnvio(envioValido({ assinaturas: {} })).ok).toBe(false);
+    expect(lerEnvio(envioValido({ faturas: "nenhuma" })).ok).toBe(false);
+  });
+});
+
 function linha(over: Partial<LinhaDeUso> = {}): LinhaDeUso {
   return {
     salon_id: SALAO,
@@ -237,5 +379,118 @@ describe("frescor", () => {
   it("é nulo quando nunca sincronizou ou a data não presta", () => {
     expect(frescor(null, agora)).toBeNull();
     expect(frescor("nunca", agora)).toBeNull();
+  });
+});
+
+function fatura(over: Partial<FaturaLida> = {}): FaturaLida {
+  return {
+    salon_id: SALAO,
+    periodo_inicio: "2026-08-01",
+    periodo_fim: "2026-08-31",
+    motivo: "mensal",
+    valor: 100,
+    valor_gerado: 900,
+    agendamentos: 12,
+    vencimento: "2026-09-05",
+    paga_em: null,
+    ...over,
+  };
+}
+
+describe("resumirCobranca", () => {
+  const desde = "2026-08-01";
+  const hoje = "2026-09-10";
+
+  it("soma no cobrado só o que fechou dentro da janela", () => {
+    const r = resumirCobranca(
+      [
+        fatura({ periodo_fim: "2026-08-31", valor: 100 }),
+        fatura({ periodo_inicio: "2026-06-01", periodo_fim: "2026-06-30", valor: 80 }),
+      ],
+      desde,
+      hoje
+    ).get(SALAO)!;
+    expect(r.cobrado).toBe(100);
+  });
+
+  it("conta a dívida antiga em aberto, mesmo fora da janela", () => {
+    const r = resumirCobranca(
+      [fatura({ periodo_inicio: "2026-06-01", periodo_fim: "2026-06-30", valor: 80, vencimento: "2026-07-05" })],
+      desde,
+      hoje
+    ).get(SALAO)!;
+    expect(r.cobrado).toBe(0);
+    expect(r.emAberto).toBe(80);
+    expect(r.vencidas).toBe(1);
+  });
+
+  it("fatura paga não entra em aberto nem em vencidas", () => {
+    const r = resumirCobranca(
+      [fatura({ vencimento: "2026-08-05", paga_em: "2026-08-04T10:00:00Z" })],
+      desde,
+      hoje
+    ).get(SALAO)!;
+    expect(r.emAberto).toBe(0);
+    expect(r.vencidas).toBe(0);
+  });
+
+  it("em aberto sem vencimento não conta como vencida", () => {
+    const r = resumirCobranca([fatura({ vencimento: null })], desde, hoje).get(SALAO)!;
+    expect(r.emAberto).toBe(100);
+    expect(r.vencidas).toBe(0);
+  });
+
+  it("em aberto ainda dentro do prazo não é vencida", () => {
+    const r = resumirCobranca([fatura({ vencimento: "2026-09-20" })], desde, hoje).get(SALAO)!;
+    expect(r.vencidas).toBe(0);
+  });
+
+  it("guarda o período mais recente", () => {
+    const r = resumirCobranca(
+      [
+        fatura({ periodo_fim: "2026-07-31" }),
+        fatura({ periodo_fim: "2026-08-31", motivo: "cancelamento" }),
+      ],
+      desde,
+      hoje
+    ).get(SALAO)!;
+    expect(r.ultimoPeriodoFim).toBe("2026-08-31");
+  });
+});
+
+describe("situacaoDaAssinatura", () => {
+  const hoje = "2026-08-26";
+  const base = {
+    salon_id: SALAO,
+    plano: "pro",
+    valor: 299,
+    proximo_vencimento: null,
+    acesso_ate: null,
+  };
+
+  it("marca teste VENCIDO em vermelho — é cliente sendo servido de graça", () => {
+    const s = situacaoDaAssinatura({ ...base, status: "trial", acesso_ate: "2026-08-12" }, hoje);
+    expect(s).toEqual({ rotulo: "teste vencido", tom: "red" });
+  });
+
+  it("teste em dia é âmbar, não vermelho", () => {
+    const s = situacaoDaAssinatura({ ...base, status: "trial", acesso_ate: "2026-09-30" }, hoje);
+    expect(s.tom).toBe("amber");
+  });
+
+  it("ativa é verde, atrasada e cancelada são vermelhas", () => {
+    expect(situacaoDaAssinatura({ ...base, status: "active" }, hoje).tom).toBe("accent");
+    expect(situacaoDaAssinatura({ ...base, status: "atrasada" }, hoje).tom).toBe("red");
+    expect(situacaoDaAssinatura({ ...base, status: "cancelada" }, hoje).tom).toBe("red");
+  });
+
+  it("status desconhecido aparece cru, em vez de sumir", () => {
+    const s = situacaoDaAssinatura({ ...base, status: "suspensa_por_fraude" }, hoje);
+    expect(s.rotulo).toBe("suspensa_por_fraude");
+    expect(s.tom).toBe("neutral");
+  });
+
+  it("sem assinatura tem rótulo próprio", () => {
+    expect(situacaoDaAssinatura(null, hoje).rotulo).toBe("sem assinatura");
   });
 });

@@ -59,11 +59,38 @@ banco.
       "custo_ia_usd": null,
       "execucoes_erro": 0
     }
+  ],
+  "assinaturas": [
+    {
+      "salon_id": "e1705efb-…",
+      "plano": "pro",
+      "status": "atrasada",
+      "valor": 299.0,
+      "proximo_vencimento": "2026-09-06",
+      "acesso_ate": "2026-09-13"
+    }
+  ],
+  "faturas": [
+    {
+      "salon_id": "e1705efb-…",
+      "periodo_inicio": "2026-08-01",
+      "periodo_fim": "2026-08-31",
+      "motivo": "mensal",
+      "valor": 1.5,
+      "valor_gerado": 90.0,
+      "agendamentos": 2,
+      "vencimento": null,
+      "paga_em": null
+    }
   ]
 }
 ```
 
-Resposta: `{ "saloes": 1, "uso": 1 }`.
+Resposta: `{ "saloes": 1, "uso": 1, "assinaturas": 1, "faturas": 1 }`.
+
+`assinaturas` e `faturas` são **opcionais**: um workflow que só manda `saloes`
+e `uso` continua válido, e é isso que evita o envio quebrar no intervalo entre
+publicar a rota nova e atualizar o fluxo.
 
 Regras que a rota impõe (todas testadas em `src/lib/clubcut.test.ts`):
 
@@ -78,6 +105,21 @@ Regras que a rota impõe (todas testadas em `src/lib/clubcut.test.ts`):
 - **Reenviar é seguro.** A gravação é `upsert` na chave `(salon_id, dia)`:
   mandar a mesma janela duas vezes sobrescreve, não duplica. O n8n pode
   reprocessar os últimos dias sem coordenar nada com o CRM.
+
+Nas listas novas:
+
+- **Uma assinatura por salão** — é a chave primária deste lado, e o ClubCut
+  tem `unique (salon_id)` no dele.
+- `status` e `plano` vão como **texto cru**, sem tradução. Um status novo que
+  eles criem aparece na tela como está, em vez de sumir num `else`.
+- Data ausente pode vir como `null` ou não vir; o que é recusado é data mal
+  formada (`"13/09/2026"`). Nulo é resposta legítima — assinatura em teste não
+  tem próximo vencimento.
+- A chave da fatura é `(salon_id, periodo_inicio, periodo_fim, motivo)`, a
+  mesma de lá. O `motivo` entra porque um cancelamento no meio do mês gera uma
+  fatura parcial do **mesmo período** da mensal.
+- Reenviar a fatura é como o CRM fica sabendo que ela foi paga: o `upsert`
+  atualiza `paga_em` na mesma linha.
 
 O envio recomendado é uma **janela de 3 dias**, não só o dia anterior:
 agendamento cancelado e conversa que continua no dia seguinte mudam números
@@ -128,11 +170,27 @@ from salao_dia sd
 order by sd.dia desc, sd.salon_id;
 ```
 
-E a lista de salões, no mesmo envio:
+E as outras três listas, no mesmo envio:
 
 ```sql
+-- salões
 select id as salon_id, nome, ativo from public.salons;
+
+-- assinaturas
+select sub.salon_id, sub.plan_codigo as plano, sub.status,
+       sub.valor, sub.proximo_vencimento, sub.acesso_ate
+from public.subscriptions sub;
+
+-- faturas (as dos últimos 6 meses bastam; reenviar é idempotente)
+select f.salon_id, f.periodo_inicio, f.periodo_fim, f.motivo,
+       f.valor, f.valor_gerado, f.agendamentos,
+       f.boleto_vencimento as vencimento, f.paga_em
+from public.faturas_de_uso f
+where f.periodo_fim >= (current_date - interval '180 days')::date;
 ```
+
+`boleto_vencimento` é o vencimento que vale: `proximo_vencimento` da
+assinatura é do ciclo, e a fatura de uso tem o seu, gerado no fechamento.
 
 Três coisas que esta consulta assume, e que valem estar escritas:
 
@@ -150,6 +208,19 @@ Três coisas que esta consulta assume, e que valem estar escritas:
 
 `execucoes_erro` não sai do banco: vem da API do n8n (execuções com
 `status = error` do fluxo daquele salão), e o workflow soma antes do POST.
+
+## O que a tela faz com a cobrança
+
+- **Cobrado no período** soma as faturas cujo `periodo_fim` cai na janela.
+- **Em aberto** soma tudo sem baixa, de **qualquer** período: dívida não
+  expira com o recorte da tela, e filtrar por janela esconderia justamente a
+  fatura antiga que alguém precisa cobrar.
+- **Vencida** só conta quando existe `vencimento` e ele já passou. Fatura sem
+  vencimento (boleto gerado à mão, por exemplo) fica em aberto e fora da
+  contagem — afirmar atraso sem data seria chute.
+- **Teste vencido** tem tratamento próprio: status `trial` com `acesso_ate` no
+  passado aparece em vermelho, e não com a mesma cara de um teste em dia. É
+  cliente sendo servido de graça, e é a linha que alguém precisa ver.
 
 ## O que ainda falta
 

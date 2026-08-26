@@ -58,7 +58,7 @@ export async function POST(request: Request) {
   if (!leitura.ok) {
     return NextResponse.json({ erro: leitura.erro }, { status: 400 });
   }
-  const { saloes, uso } = leitura.envio;
+  const { saloes, uso, assinaturas, faturas } = leitura.envio;
 
   // Mesmo tratamento do token ausente, e pelo mesmo motivo: falta de
   // configuração é problema nosso, não do chamador. Sem o `try`, a exceção
@@ -108,5 +108,36 @@ export async function POST(request: Request) {
     }
   }
 
-  return NextResponse.json({ saloes: saloes.length, uso: uso.length });
+  // Assinaturas e faturas depois do uso, e pelo mesmo motivo da ordem
+  // anterior: as duas apontam para `clubcut_saloes`.
+  if (assinaturas.length > 0) {
+    const { error } = await supabase.from("clubcut_assinaturas").upsert(
+      assinaturas.map((a) => ({ ...a, atualizado_em: agora })),
+      { onConflict: "salon_id" }
+    );
+    if (error) {
+      console.error("[clubcut] falha ao gravar assinaturas:", error);
+      return NextResponse.json({ erro: "falha ao gravar assinaturas" }, { status: 500 });
+    }
+  }
+
+  if (faturas.length > 0) {
+    // A chave é a mesma do ClubCut, então o mesmo fechamento chega sempre na
+    // mesma linha — inclusive quando ele muda de "não paga" para "paga".
+    const { error } = await supabase.from("clubcut_faturas").upsert(
+      faturas.map((f) => ({ ...f, recebido_em: agora })),
+      { onConflict: "salon_id,periodo_inicio,periodo_fim,motivo" }
+    );
+    if (error) {
+      console.error("[clubcut] falha ao gravar faturas:", error);
+      return NextResponse.json({ erro: "falha ao gravar faturas" }, { status: 500 });
+    }
+  }
+
+  return NextResponse.json({
+    saloes: saloes.length,
+    uso: uso.length,
+    assinaturas: assinaturas.length,
+    faturas: faturas.length,
+  });
 }
