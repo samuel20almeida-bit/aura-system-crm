@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { Modal } from "@/components/ui/Overlay";
 import { Field, Input, Select, Textarea } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Button";
+import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { Tag } from "@/components/ui/Tag";
 import { createTask, createTaskArea } from "@/lib/actions/tasks";
 import { beginMutation } from "@/lib/realtime/mutation-gate";
@@ -99,27 +100,31 @@ export function NewTaskModal({
           <Input autoFocus value={title} onChange={(e) => setTitle(e.target.value)} placeholder="O que precisa ser feito?" required />
         </Field>
 
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={() => {
-              setIsInternal(false);
+        {/* Eram dois botões SEPARADOS, com um vão entre eles — o que lê como
+            duas ações, e não como "escolha uma das duas". Juntos, e com o
+            `role="group"` que o componente traz, a marcação passa a dizer o
+            que a tela sempre quis dizer. Trocar de escopo continua limpando o
+            rascunho de área nova: sem isso, marcar "interna", começar a
+            digitar uma área e voltar para cliente deixava o formulário aberto
+            e o erro na tela, sem campo a que se referir. */}
+        <SegmentedControl
+          preencher
+          rotuloAcessivel="Escopo da tarefa"
+          valor={isInternal ? "interna" : "cliente"}
+          onChange={(v) => {
+            const interna = v === "interna";
+            setIsInternal(interna);
+            if (!interna) {
               setMostrandoNovaArea(false);
               setNovaAreaNome("");
               setErroArea(null);
-            }}
-            className={`flex-1 rounded-lg border px-3 py-2 text-[13px] ${!isInternal ? "border-ink bg-ink text-bone" : "border-border text-muted"}`}
-          >
-            Tarefa de cliente
-          </button>
-          <button
-            type="button"
-            onClick={() => setIsInternal(true)}
-            className={`flex-1 rounded-lg border px-3 py-2 text-[13px] ${isInternal ? "border-ink bg-ink text-bone" : "border-border text-muted"}`}
-          >
-            Interna
-          </button>
-        </div>
+            }
+          }}
+          opcoes={[
+            { valor: "cliente", rotulo: "Tarefa de cliente" },
+            { valor: "interna", rotulo: "Interna" },
+          ]}
+        />
 
         {isInternal ? (
           <Field label="ÁREA">
@@ -153,11 +158,11 @@ export function NewTaskModal({
                     setNovaAreaNome("");
                     setErroArea(null);
                   }}
-                  className="self-start text-[12px] text-faint hover:text-ink"
+                  className="self-start text-small text-faint hover:text-ink"
                 >
                   Cancelar e voltar à lista
                 </button>
-                {erroArea && <p className="text-[12px] text-red">{erroArea}</p>}
+                {erroArea && <p className="text-small text-red">{erroArea}</p>}
               </div>
             ) : (
               <Select
@@ -203,7 +208,7 @@ export function NewTaskModal({
                     por quê, que é o mesmo tipo de beco sem saída que esta fase
                     veio desfazer — só que menor. */}
                 {faltaConta && (
-                  <p className="mt-1 text-[12px] text-muted">Escolha a conta ou marque a tarefa como interna.</p>
+                  <p className="mt-1 text-small text-muted">Escolha a conta ou marque a tarefa como interna.</p>
                 )}
               </>
             )}

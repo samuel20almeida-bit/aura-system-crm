@@ -52,12 +52,13 @@ export function EmptyState({
  *
  * A borda usa um cinza mais escuro que `--color-border` de propósito: a
  * coluna do quadro tem fundo levemente afundado, e a borda padrão sumiria
- * nele. É o único lugar do app que precisa deste tom, então ele vive aqui
- * em vez de virar token.
+ * nele. Este comentário dizia que era o único lugar do app a precisar do
+ * tom — não era: o checkbox de subtarefa tinha um quarto cinza à mão, e os
+ * dois mediam menos de 2:1. Agora os dois usam `--color-border-strong`.
  */
 export function DropZone({ children = "Solte aqui" }: { children?: React.ReactNode }) {
   return (
-    <div className="rounded-card border border-dashed border-[#CFCABD] p-3.5 text-center text-xs text-faint">
+    <div className="rounded-card border border-dashed border-border-strong p-3.5 text-center text-xs text-faint">
       {children}
     </div>
   );

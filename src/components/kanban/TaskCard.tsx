@@ -51,8 +51,10 @@ export function TaskCard({
       {...listeners}
       onClick={onOpen}
       className={clsx(
-        "flex cursor-pointer flex-col gap-2 rounded-[10px] border border-border bg-surface p-2.75 shadow-[0_1px_2px_rgba(30,30,28,.05)] transition-shadow duration-150 hover:shadow-[0_2px_8px_rgba(30,30,28,.10)]",
-        isDragging && "opacity-40 shadow-[0_8px_24px_rgba(30,30,28,.18)]",
+        // O terceiro e último cartão de arraste a largar raio e sombra escritos
+        // à mão. Pipeline (#12) e Implantação (#13) já usam os tokens.
+        "flex cursor-pointer flex-col gap-2 rounded-card border border-border bg-surface p-3 shadow-raised transition-shadow duration-fast hover:shadow-layer",
+        isDragging && "opacity-40 shadow-overlay",
         isDone && "opacity-70"
       )}
     >
@@ -60,17 +62,21 @@ export function TaskCard({
         <Tag tone={priorityTone[task.priority]} dot>
           {priorityLabel[task.priority]}
         </Tag>
-        <span className="font-mono text-[11px] text-muted">{task.code}</span>
+        <span className="font-mono text-label text-faint">{task.code}</span>
       </div>
-      <div className={clsx("text-[13px] font-medium", isDone && "line-through")}>{task.title}</div>
+      {/* Mesma correção do NegocioCard e do ImplantacaoCard: código 11,
+         título 13, conta 11,5, área 11,5, checklist 11, prazo 11 — tudo
+         dentro de 2px, então nada saltava. O título é o que se procura ao
+         varrer o quadro. */}
+      <div className={clsx("text-title font-medium", isDone && "line-through")}>{task.title}</div>
       {/* Sem quadradinho: `contas` não tem cor, e inventar uma por conta seria
           decoração sem fonte de verdade — o nome já é a informação que o
           quadradinho tentava resumir. */}
       {task.conta && (
-        <div className="text-[11.5px] text-muted">{task.conta.nome}</div>
+        <div className="truncate text-small text-muted">{task.conta.nome}</div>
       )}
       {task.is_internal && task.area && (
-        <div className="flex items-center gap-1.5 text-[11.5px] text-muted">
+        <div className="flex items-center gap-1.5 text-small text-muted">
           <span className="h-2 w-2 rounded-sm bg-ink" />
           {task.area}
         </div>
@@ -78,7 +84,7 @@ export function TaskCard({
       {checklistSummary && checklistSummary.total > 0 && (
         <div className="flex items-center gap-2">
           <ProgressBar percent={(checklistSummary.done / checklistSummary.total) * 100} className="flex-1" />
-          <span className="font-mono text-[11px] text-muted">
+          <span className="font-mono text-label tabular-nums text-muted">
             {checklistSummary.done}/{checklistSummary.total}
           </span>
         </div>
@@ -86,11 +92,11 @@ export function TaskCard({
       <div className="flex items-center justify-between border-t border-border-soft pt-2">
         <Avatar initials={task.assignee?.initials} size="sm" ghost={!task.assignee} />
         {task.due_date ? (
-          <span className={clsx("font-mono text-[11px]", overdue ? "text-red" : "text-muted")}>
+          <span className={clsx("font-mono text-label tabular-nums", overdue ? "text-red" : "text-muted")}>
             {formatDate(task.due_date)}
           </span>
         ) : (
-          <span className="font-mono text-[11px] text-faint">sem prazo</span>
+          <span className="font-mono text-label text-faint">sem prazo</span>
         )}
       </div>
     </div>
