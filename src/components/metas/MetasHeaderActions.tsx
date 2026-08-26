@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { Button } from "@/components/ui/Button";
+import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { NewGoalModal } from "./MetasClient";
 
 export function MetasHeaderActions({
@@ -20,17 +20,11 @@ export function MetasHeaderActions({
 
   return (
     <div className="flex items-center gap-2">
-      <div className="flex overflow-hidden rounded-lg border border-border bg-surface text-[12px] font-medium">
-        {quarters.map((q) => (
-          <Link
-            key={q.key}
-            href={q.href}
-            className={`border-r border-border px-3.25 py-1.75 last:border-r-0 ${q.key === quarter ? "bg-ink text-bone" : "text-muted"}`}
-          >
-            {q.label}
-          </Link>
-        ))}
-      </div>
+      <SegmentedControl
+        rotuloAcessivel="Trimestre"
+        valor={quarter}
+        opcoes={quarters.map((q) => ({ valor: q.key, rotulo: q.label, href: q.href }))}
+      />
       <Button onClick={() => setShowModal(true)}>+ Nova meta</Button>
       {showModal && (
         <NewGoalModal quarter={quarter} profiles={profiles} areas={areas.length ? areas : ["Geral"]} onClose={() => setShowModal(false)} />

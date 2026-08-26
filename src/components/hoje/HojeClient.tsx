@@ -6,6 +6,7 @@ import clsx from "clsx";
 import { PageHeader } from "@/components/layout/PageBody";
 import { Avatar } from "@/components/ui/Avatar";
 import { Unavailable } from "@/components/ui/Unavailable";
+import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { LiveActivity, type LiveActivityItem } from "@/components/hoje/LiveActivity";
 import {
   CLASSE_DO_PONTO_DE_SAUDE,
@@ -139,31 +140,11 @@ export function HojeClient({
             : `${itens.length} ${itens.length === 1 ? "pendência" : "pendências"}`
         }
         actions={
-          <div className="flex overflow-hidden rounded-control border border-border bg-surface text-small font-medium">
-            {donoOptions.map((o) => {
-              const ativo = o.key === donoAtual;
-              return (
-                <Link
-                  key={o.key}
-                  href={o.href}
-                  // `bg-ink` fica: é a convenção de controle segmentado do app,
-                  // repetida em Metas, em três lugares do Kanban e no modal de
-                  // nova tarefa. A pílula verde do menu lateral é outra coisa —
-                  // ela responde "em que página estou", e este controle responde
-                  // "que fatia desta página estou vendo". Trocar a cor só aqui
-                  // criaria a divergência, não a resolveria; a unificação destes
-                  // cinco num só componente vem em PR próprio.
-                  aria-current={ativo ? "page" : undefined}
-                  className={clsx(
-                    "border-r border-border px-3 py-1.5 transition-colors duration-fast last:border-r-0",
-                    ativo ? "bg-ink text-bone" : "text-muted hover:bg-neutral-tint hover:text-ink"
-                  )}
-                >
-                  {o.label}
-                </Link>
-              );
-            })}
-          </div>
+          <SegmentedControl
+            rotuloAcessivel="Filtrar por dono"
+            valor={donoAtual}
+            opcoes={donoOptions.map((o) => ({ valor: o.key, rotulo: o.label, href: o.href }))}
+          />
         }
       />
 
