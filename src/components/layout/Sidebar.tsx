@@ -37,6 +37,11 @@ const workItems: NavItem[] = [
 
 const businessItems: NavItem[] = [
   { href: "/painel", label: "Painel", icon: PainelIcon },
+  // Operação entra logo depois do Painel e antes de Metas: o Painel mede o
+  // nosso negócio (funil, mensalidade), esta mede o que o produto entrega
+  // dentro do cliente. As duas são leitura de números, e a segunda só faz
+  // sentido depois da primeira.
+  { href: "/operacao", label: "Operação", icon: OperacaoIcon },
   { href: "/metas", label: "Metas", icon: TargetIcon },
   { href: "/playbooks", label: "Playbooks", icon: PlaybookIcon },
   { href: "/credenciais", label: "Credenciais", icon: CredentialsIcon },
@@ -330,6 +335,16 @@ function PainelIcon() {
   return (
     <svg {...iconProps()}>
       <path d="M3.2 12.8V8.4M8 12.8V3.2M12.8 12.8V6.4" />
+    </svg>
+  );
+}
+/** Duas cadeiras de barbeiro vistas de lado — o que a operação mede. */
+function OperacaoIcon() {
+  return (
+    <svg {...iconProps()}>
+      <path d="M2.6 13V6.6a1.6 1.6 0 0 1 3.2 0V13M10.2 13V6.6a1.6 1.6 0 0 1 3.2 0V13" />
+      <path d="M2.6 9.8h3.2M10.2 9.8h3.2" />
+      <path d="M8 3.2v3.4" />
     </svg>
   );
 }
