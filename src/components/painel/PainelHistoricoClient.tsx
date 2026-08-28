@@ -97,7 +97,7 @@ export function PainelHistoricoClient({
         {/* `aria-pressed` porque isto é um grupo de alternativas, não cinco
             ações: sem ele, um leitor de tela anuncia cinco botões iguais e
             nenhum jeito de saber qual está valendo. */}
-        <div className="flex overflow-hidden rounded-control border border-border">
+        <div className="flex overflow-hidden rounded-control border border-border shadow-raised">
           {PRESETS.map((p) => (
             <button
               key={p.valor}
@@ -129,9 +129,9 @@ export function PainelHistoricoClient({
         )}
       </div>
 
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-        <Card className="flex flex-col gap-2 p-4">
-          <span className="text-body font-medium">Mensalidade conquistada</span>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <Card className="flex flex-col gap-3 p-5">
+          <span className="text-title font-medium">Mensalidade conquistada</span>
           <ChartContainer config={configGanhos} className="h-[220px]">
             <AreaChart data={serieGanhos}>
               <CartesianGrid vertical={false} strokeDasharray="4 4" stroke="var(--color-border)" />
@@ -160,8 +160,8 @@ export function PainelHistoricoClient({
           </ChartContainer>
         </Card>
 
-        <Card className="flex flex-col gap-2 p-4">
-          <span className="text-body font-medium">Novas contas</span>
+        <Card className="flex flex-col gap-3 p-5">
+          <span className="text-title font-medium">Novas contas</span>
           <ChartContainer config={configContas} className="h-[220px]">
             <BarChart data={serieContas}>
               <CartesianGrid vertical={false} strokeDasharray="4 4" stroke="var(--color-border)" />
@@ -173,8 +173,8 @@ export function PainelHistoricoClient({
           </ChartContainer>
         </Card>
 
-        <Card className="flex flex-col gap-2 p-4">
-          <span className="text-body font-medium">Origem → receita</span>
+        <Card className="flex flex-col gap-3 p-5">
+          <span className="text-title font-medium">Origem → receita</span>
           {origemPeriodo.length === 0 ? (
             <EmptyState plain title="Nenhum negócio criado nesse período." className="my-auto" />
           ) : (
@@ -190,8 +190,8 @@ export function PainelHistoricoClient({
           )}
         </Card>
 
-        <Card className="flex flex-col gap-2 p-4">
-          <span className="text-body font-medium">Implantações concluídas</span>
+        <Card className="flex flex-col gap-3 p-5">
+          <span className="text-title font-medium">Implantações concluídas</span>
           <ChartContainer config={configImplantacoes} className="h-[220px]">
             <BarChart data={serieImplantacoes}>
               <CartesianGrid vertical={false} strokeDasharray="4 4" stroke="var(--color-border)" />

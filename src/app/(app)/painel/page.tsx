@@ -73,7 +73,7 @@ export default async function PainelPage() {
 
   if (dados.unavailable) {
     return (
-      <PageBody>
+      <PageBody ritmo="leitura">
         <PageHeader title="Painel" sub="Hoje no topo, tendência embaixo — de onde vem o próximo real." />
         <Unavailable title="Não foi possível carregar o painel agora" />
       </PageBody>
@@ -84,11 +84,11 @@ export default async function PainelPage() {
   const metricas = calcularMetricasPainel(dados.negocios, dados.contas, dados.implantacoes, agora);
 
   return (
-    <PageBody>
+    <PageBody ritmo="leitura">
       <PageHeader title="Painel" sub="Hoje no topo, tendência embaixo — de onde vem o próximo real." />
 
       <Section title="Agora">
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
           {/* O destaque é este e só este: a mensalidade recorrente é o número
               que decide o mês. Com seis cartões brancos iguais, o olho começava
               pelo canto de cima à esquerda por falta de alternativa. */}
@@ -151,7 +151,7 @@ export default async function PainelPage() {
           de mesmo nome, recortado pelo período escolhido. Sem dizer qual é
           qual, os dois parecem o mesmo número em desacordo. */}
       <Section title="Origem → receita" aside="todo o histórico">
-        <Card className="p-4">
+        <Card className="p-6">
           {metricas.origemReceita.length === 0 ? (
             <EmptyState plain title="Nenhum negócio cadastrado ainda." />
           ) : (
@@ -159,7 +159,7 @@ export default async function PainelPage() {
             // livre, então não há teto para quantas origens existem, mas o
             // cabeçalho não pode subir junto — sem ele, as colunas de número
             // ficam sem nome no meio da rolagem.
-            <div className="max-h-[360px] overflow-auto scrollbar-thin">
+            <div className="max-h-[420px] overflow-auto scrollbar-thin">
               <table className="w-full min-w-[420px] text-body">
                 <thead>
                   {/* A linha de baixo do cabeçalho é sombra interna, e não
@@ -172,7 +172,7 @@ export default async function PainelPage() {
                     {["Origem", "Leads", "Ganhos", "Mensalidade"].map((coluna) => (
                       <th
                         key={coluna}
-                        className="label sticky top-0 bg-surface py-2 pr-3 shadow-[inset_0_-1px_0_var(--color-border)]"
+                        className="label sticky top-0 bg-surface pb-2.5 pr-4 pt-0 shadow-[inset_0_-1px_0_var(--color-border)]"
                       >
                         {coluna}
                       </th>
@@ -182,10 +182,10 @@ export default async function PainelPage() {
                 <tbody>
                   {metricas.origemReceita.map((linha) => (
                     <tr key={linha.origem} className="border-b border-border-soft last:border-b-0">
-                      <td className="py-2 pr-3">{linha.origem}</td>
-                      <td className="py-2 pr-3 tabular-nums text-muted">{linha.leads}</td>
-                      <td className="py-2 pr-3 tabular-nums text-muted">{linha.ganhos}</td>
-                      <td className="py-2 pr-3 tabular-nums font-medium">{formatCurrencyCompact(linha.mrr)}</td>
+                      <td className="py-3 pr-4">{linha.origem}</td>
+                      <td className="py-3 pr-4 tabular-nums text-muted">{linha.leads}</td>
+                      <td className="py-3 pr-4 tabular-nums text-muted">{linha.ganhos}</td>
+                      <td className="py-3 pr-4 tabular-nums font-medium">{formatCurrencyCompact(linha.mrr)}</td>
                     </tr>
                   ))}
                 </tbody>

@@ -1,15 +1,33 @@
 import clsx from "clsx";
 
+/**
+ * `elevacao` é PROP e não classe passada por fora por um motivo mecânico: dois
+ * utilitários `shadow-*` no mesmo elemento não se resolvem pela ordem da
+ * string, e sim pela ordem em que o Tailwind emitiu as duas regras no CSS —
+ * quem escreve não decide qual vence. Com a escolha aqui dentro, exatamente
+ * uma classe de sombra sai do `clsx`, e o resultado é o que está escrito.
+ *
+ * O padrão é `raised`, que é quase invisível (1px a 5%). É o que faz um
+ * cartão parecer um objeto pousado no bege em vez de um retângulo desenhado
+ * nele — a diferença entre "tem borda" e "tem altura", que é metade da
+ * impressão de acabamento numa tela de leitura.
+ */
 export function Card({
   className,
   danger,
   accent,
+  elevacao = "raised",
   ...props
-}: React.HTMLAttributes<HTMLDivElement> & { danger?: boolean; accent?: boolean }) {
+}: React.HTMLAttributes<HTMLDivElement> & {
+  danger?: boolean;
+  accent?: boolean;
+  elevacao?: "raised" | "layer" | "none";
+}) {
   return (
     <div
       className={clsx(
         "rounded-card border bg-surface",
+        elevacao === "raised" ? "shadow-raised" : elevacao === "layer" ? "shadow-layer" : null,
         danger ? "border-red-tint-border" : accent ? "border-accent-tint-border bg-accent-tint" : "border-border",
         className
       )}
@@ -68,9 +86,13 @@ export function Kpi({
 }) {
   return (
     <Card
+      elevacao={destaque ? "layer" : "raised"}
       className={clsx(
-        "flex flex-col gap-1 p-5",
-        destaque && "border-accent bg-accent text-bone shadow-layer"
+        // O `p-6` só no desktop: no celular a grade é de duas colunas, e 24px
+        // de folga de cada lado deixam ~110px de largura útil para um número
+        // de 32px. Não cabe.
+        "flex flex-col gap-1.5 p-5 md:p-6",
+        destaque && "border-accent bg-accent text-bone"
       )}
     >
       <div className="flex items-start justify-between gap-2">
@@ -83,7 +105,16 @@ export function Kpi({
           </span>
         )}
       </div>
-      <span className={clsx("text-display font-semibold tabular-nums", valueClassName)}>{value}</span>
+      {/* `mt-0.5` porque o degrau `metric` tem entrelinha 1,05: o número quase
+          encosta no rótulo sem ele.
+
+          O tamanho NÃO cai no celular. Medido num quadro de 360px: com dois
+          cartões por linha, "R$ 12.350" quebra em duas linhas; com um cartão
+          por linha, sobram 280px de largura útil para um número que ocupa
+          145. Quem apertava era a grade, e é a grade que muda — encolher o
+          número seria tratar o sintoma e desistir da hierarquia justamente
+          na tela menor, onde ela é mais necessária. */}
+      <span className={clsx("mt-0.5 text-metric font-semibold tabular-nums", valueClassName)}>{value}</span>
       {children}
       {sub && <span className={clsx("mt-0.5 text-small", destaque ? "text-bone/85" : "text-muted")}>{sub}</span>}
     </Card>

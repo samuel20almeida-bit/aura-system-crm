@@ -174,7 +174,7 @@ export default async function OperacaoPage() {
           totais.comCusto === 0 ? " · custo de IA ainda não medido" : ""
         }`}
       >
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <Kpi
             label="Contas ligadas"
             value={linhas.length}
@@ -212,7 +212,10 @@ export default async function OperacaoPage() {
           <Kpi
             label="Em risco"
             value={emRisco}
-            valueClassName={emRisco > 0 ? "text-display font-semibold tabular-nums text-red" : undefined}
+            // Só a cor. Repetir aqui as classes base do `Kpi` punha dois
+            // utilitários de `font-size` no mesmo elemento, e qual vence não
+            // depende da ordem da string — depende da ordem no CSS gerado.
+            valueClassName={emRisco > 0 ? "text-red" : undefined}
             sub={
               emRisco === 0
                 ? "assinaturas em dia"

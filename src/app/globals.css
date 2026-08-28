@@ -86,10 +86,35 @@
   --text-small--line-height: 1.45;
   --text-body: 13px;
   --text-body--line-height: 1.55;
-  --text-title: 15px;
+  --text-title: 16px;
   --text-title--line-height: 1.35;
-  --text-display: 21px;
-  --text-display--line-height: 1.15;
+
+  /* O TÍTULO DE PÁGINA. Era 21px, e o problema não era o 21 — era que os
+     cinco degraus cabiam em 10px: label 11, small 12, body 13, title 15,
+     display 21. Quatro tamanhos de "pequeno" e um de "médio" não são uma
+     escala; são um tamanho só, e é por isso que a tela inteira lia como
+     bloco cinza uniforme. Hierarquia se faz com distância, e não havia
+     nenhuma para gastar.
+
+     A entressilaba negativa não é enfeite: tipo grande na entressilaba
+     desenhada para 13px fica frouxo, e frouxo é a diferença entre um
+     título e um título bem feito. */
+  --text-display: 26px;
+  --text-display--line-height: 1.2;
+  --text-display--letter-spacing: -0.015em;
+
+  /* O NÚMERO de um cartão de métrica, e só ele. Separado de `display` de
+     propósito: o `PageHeader` e o valor de um `Kpi` usavam o mesmo degrau,
+     então o nome da tela e o número da tela tinham exatamente o mesmo peso
+     e nenhum dos dois era o assunto. São papéis diferentes e agora têm
+     tamanhos diferentes.
+
+     Fica sempre com `tabular-nums`: seis cartões lado a lado precisam que
+     os algarismos tenham a mesma largura, senão a fileira parece seis
+     larguras diferentes em vez de um conjunto. */
+  --text-metric: 32px;
+  --text-metric--line-height: 1.05;
+  --text-metric--letter-spacing: -0.022em;
 
   --font-sans: "Archivo", ui-sans-serif, sans-serif;
   --font-serif: "Fraunces", ui-serif, serif;
