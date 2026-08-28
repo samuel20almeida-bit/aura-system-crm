@@ -100,8 +100,11 @@ Regras que a rota impõe (todas testadas em `src/lib/clubcut.test.ts`):
   formato e é recusada.
 - Contadores são inteiros ≥ 0, e `agendamentos_agente` não pode passar de
   `agendamentos_total`.
-- `custo_ia_usd` pode ser nulo ou ausente. **Hoje é sempre nulo** (veja o
-  final desta página).
+- `custo_ia_usd` pode ser nulo ou ausente, e **nulo continua sendo a resposta
+  mais comum**. Vem da `consumo_ia` do ClubCut, somando só as chamadas que o
+  banco conseguiu precificar; enquanto a tabela de preços estiver vazia,
+  nenhuma é precificada e o dia inteiro chega nulo. Veja "O custo de IA" no
+  final desta página.
 - **Reenviar é seguro.** A gravação é `upsert` na chave `(salon_id, dia)`:
   mandar a mesma janela duas vezes sobrescreve, não duplica. O n8n pode
   reprocessar os últimos dias sem coordenar nada com o CRM.
@@ -127,12 +130,13 @@ já enviados, e a janela corrige sozinha.
 
 ## O fluxo no n8n
 
-Existe, e chama-se **"ClubCut - Uso diario para o CRM da Aura"**
-(`UqLCK8lElBR7iSze`). Nasceu **inativo** — ligar é decisão de quem revisar.
+Existe, chama-se **"ClubCut - Uso diario para o CRM da Aura"**
+(`UqLCK8lElBR7iSze`) e está **ativo**: roda todo dia às 03:00, com URL,
+credencial Bearer e as credenciais do ClubCut já configuradas.
 
-Treze nós: gatilho diário às 03:00, oito leituras do ClubCut, o nó de código
-que monta o envio e o POST. As oito leituras usam `executeOnce`, senão cada
-uma rodaria uma vez por item da anterior.
+Doze nós de trabalho: gatilho diário às 03:00, nove leituras do ClubCut, o nó
+de código que monta o envio e o POST. As leituras usam `executeOnce`, senão
+cada uma rodaria uma vez por item da anterior.
 
 A agregação acontece num nó de código, e não em SQL, por um motivo concreto:
 o nó Supabase do n8n fala PostgREST, não SQL cru, e rodar a consulta desta
@@ -141,12 +145,17 @@ de hoje — algumas centenas de linhas por dia — agregar em JavaScript é
 imediato e não mexe no banco do cliente. Quando o volume crescer, a troca é
 criar a view lá e trocar oito nós por um.
 
-Falta configurar, no próprio n8n:
+**A nona leitura ainda está só no rascunho.** O nó "Consumo de IA" e a
+agregação de custo existem na versão salva, não na publicada:
 
-1. A **URL** no nó "Enviar ao CRM da Aura" (está com um marcador de
-   preenchimento).
-2. A credencial **Bearer** com o `CLUBCUT_SYNC_TOKEN`.
-3. Conferir que os oito nós Supabase estão com a credencial do ClubCut.
+| | |
+|---|---|
+| rascunho | `650d98b3-…` — lê `consumo_ia`, soma o custo por salão/dia |
+| no ar | `3a4797f6-…` — as oito leituras originais, `custo_ia_usd` sempre nulo |
+
+Ou seja: a execução das 03:00 de hoje ainda manda nulo. Publicar é decisão de
+quem revisar, e faz sentido publicar **junto** com o fluxo de atendimento
+(veja abaixo) — sozinho ele passaria a ler uma tabela que ninguém alimenta.
 
 ## A consulta, do lado do ClubCut
 
@@ -188,11 +197,18 @@ select
      join public.services sv on sv.id = a.service_id
     where a.salon_id = sd.salon_id and a.origem = 'agente' and a.status <> 'cancelado'
       and (a.created_at at time zone 'America/Sao_Paulo')::date = sd.dia), 0)::numeric(12,2) as valor_gerado,
-  null::numeric as custo_ia_usd,
+  (select sum(ci.custo_usd) from public.consumo_ia ci
+    where ci.salon_id = sd.salon_id and ci.custo_usd is not null
+      and (ci.criado_em at time zone 'America/Sao_Paulo')::date = sd.dia)::numeric(12,6) as custo_ia_usd,
   0 as execucoes_erro
 from salao_dia sd
 order by sd.dia desc, sd.salon_id;
 ```
+
+O `sum` sem `coalesce` é de propósito: um dia em que nenhuma chamada foi
+precificada devolve **nulo**, não zero. E o `custo_usd is not null` de dentro
+garante que uma chamada sem preço cadastrado não arraste o dia inteiro para
+zero — ela apenas não entra na soma.
 
 E as outras três listas, no mesmo envio:
 
@@ -211,6 +227,11 @@ select f.salon_id, f.periodo_inicio, f.periodo_fim, f.motivo,
        f.boleto_vencimento as vencimento, f.paga_em
 from public.faturas_de_uso f
 where f.periodo_fim >= (current_date - interval '180 days')::date;
+
+-- consumo de IA (a janela de 4 dias, um dia a mais que o envio)
+select ci.salon_id, ci.criado_em, ci.custo_usd
+from public.consumo_ia ci
+where ci.criado_em >= now() - interval '4 days';
 ```
 
 `boleto_vencimento` é o vencimento que vale: `proximo_vencimento` da
@@ -246,18 +267,77 @@ Três coisas que esta consulta assume, e que valem estar escritas:
   passado aparece em vermelho, e não com a mesma cara de um teste em dia. É
   cliente sendo servido de graça, e é a linha que alguém precisa ver.
 
-## O que ainda falta
+## O custo de IA
 
-`custo_ia_usd` chega nulo porque **o ClubCut não mede custo de IA**. Nenhuma
-tabela guarda token, modelo ou preço, e o fluxo de atendimento faz três
-chamadas pagas por mensagem — agente, transcrição de áudio e descrição de
-imagem — sem registrar nenhuma.
+Até a semana passada esta seção dizia que o ClubCut não media custo nenhum.
+Isso mudou pela metade, e a metade importa.
 
-A coluna nasce nula (e não zero) de propósito: zero afirmaria que não custou
-nada. Enquanto for nula, a tela `/operacao` mostra "—" e diz "custo de IA
-ainda não medido" em vez de exibir uma margem inventada.
+### O que existe agora, no banco do ClubCut
 
-Fechar isso é a tabela `consumo_ia` do lado do ClubCut, mais um nó no fim do
-fluxo de atendimento gravando o `usage` que a OpenAI já devolve. Feito isso,
-o único ajuste aqui é preencher `custo_ia_usd` na consulta acima — o CRM já
-aceita, guarda e mostra.
+Duas tabelas novas, criadas direto em produção:
+
+**`consumo_ia`** — uma linha por chamada paga. Guarda `salon_id`, `modelo`,
+`tokens_entrada`, `tokens_saida`, `segundos` (para áudio), `custo_usd`,
+`execucao_n8n` e `criado_em`. Sem policy de RLS: só o `service_role` escreve e
+lê, que é o que o n8n usa.
+
+**`precos_modelo`** — a tabela de preços, chaveada por `(modelo, vigente_de)`.
+Preço de modelo muda, e uma chamada de junho precisa continuar valendo o preço
+de junho; por isso a data entra na chave em vez de uma coluna `preco` que
+alguém sobrescreveria.
+
+O custo **não é calculado na leitura**. Um trigger `before insert` em
+`consumo_ia` procura o preço vigente na data da chamada e congela `custo_usd`
+na própria linha. É a diferença entre um número que se pode auditar e um que
+muda sozinho quando alguém edita a tabela de preços.
+
+O trigger tem uma regra que vale conhecer: **sem preço cadastrado, ele não
+inventa.** A linha entra com `custo_usd` nulo e a chamada fica registrada
+(quantas foram, de qual modelo, quantos tokens) sem alegar um custo. Áudio
+exige `usd_por_minuto`; o resto exige `usd_por_1k_entrada`.
+
+Existe também uma coluna `medicao` (`'medido'` ou `'estimado'`), para o dia em
+que alguma chamada só puder ser estimada. Hoje tudo que se grava é `medido`.
+
+Um aviso para quem for ler o código: o comentário no topo de
+`supabase/migrations/0022_clubcut.sql` diz que a instrumentação não existe.
+Era verdade quando aquela migration foi escrita e ficou desatualizada aqui —
+migration aplicada não se reescreve. **Esta página é a versão corrente.**
+
+### O que já está instrumentado
+
+O fluxo de atendimento faz **três** chamadas pagas por mensagem. Duas foram
+instrumentadas, no **rascunho** do fluxo `rJO1n7cFeNDIJyB5`:
+
+| Chamada | Situação |
+|---|---|
+| Descrição de imagem (visão) | **Instrumentada.** A OpenAI devolve `usage`, e o nó grava modelo, tokens de entrada e de saída. |
+| Transcrição de áudio (`whisper-1`) | **Contada, não precificada.** A chamada é registrada, mas o `whisper-1` cobra por minuto e não devolve duração — e o webhook não traz os segundos do áudio. Falta a Edge Function mandar `seconds` no corpo. |
+| O agente | **Não instrumentada, e não é descuido.** A saída do nó de agente é só `{ output: "…" }`: o consumo de tokens fica no sub-nó do modelo, inalcançável de qualquer nó seguinte. Buscar isso exige um coletor separado lendo a API do n8n depois da execução. |
+
+Os dois nós novos entram como **ramo paralelo**, não em série, e com
+`onError: continueRegularOutput`. A propriedade que isso compra: se o Supabase
+estiver fora do ar, a mensagem do cliente continua sendo respondida. Falhar em
+registrar um custo nunca pode derrubar um atendimento.
+
+### O que falta para o número aparecer na tela
+
+Três coisas, em ordem de esforço:
+
+1. **Preencher `precos_modelo`.** Nasceu vazia de propósito — chutar o preço
+   da OpenAI produziria uma margem falsa, que é pior que nenhuma. Enquanto
+   estiver vazia, o trigger grava tudo com `custo_usd` nulo e a tela continua
+   mostrando "—".
+2. **Publicar os dois rascunhos**, o de atendimento e o de sincronização. O de
+   atendimento mexe no fluxo que atende cliente de verdade; a versão publicada
+   segue rodando intocada até alguém olhar o diff e decidir.
+3. **Passar `seconds` no webhook de áudio**, do lado da Edge Function. Sem
+   isso o `whisper-1` fica contado e não precificado para sempre.
+
+Feito 1 e 2, a margem por cliente aparece em `/operacao` — parcial, cobrindo
+visão e (com o 3) transcrição, ainda sem o agente, que é justamente a maior
+das três. Vale dizer isso na tela quando chegar lá: um custo parcial
+apresentado como total é a mesma mentira que o zero seria.
+
+O agente e a reconciliação contra a fatura real da OpenAI ficaram
+deliberadamente para depois.

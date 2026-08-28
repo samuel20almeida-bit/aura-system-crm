@@ -215,10 +215,11 @@ export function OperacaoClient({
                         </td>
                         <td className="py-2 pr-3 tabular-nums text-muted">
                           {linha.resumo.diasComCusto === 0 ? (
-                            // "—" e não "US$ 0,00": ninguém mediu. A instrumentação
-                            // (`consumo_ia`, no ClubCut) ainda não existe, e um zero
-                            // aqui viraria margem inventada na conversa de preço.
-                            <span className="text-faint" title="O ClubCut ainda não registra custo de IA">
+                            // "—" e não "US$ 0,00": ninguém mediu. A `consumo_ia` do
+                            // ClubCut já existe, mas uma chamada sem preço cadastrado
+                            // entra com custo nulo — e um zero aqui viraria margem
+                            // inventada na conversa de preço.
+                            <span className="text-faint" title="Nenhuma chamada de IA precificada neste período">
                               —
                             </span>
                           ) : (
