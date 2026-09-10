@@ -14,6 +14,8 @@ import { useAutoSave } from "@/lib/use-autosave";
 import { ESTAGIOS, type EstagioId } from "./PipelineBoard";
 import type { NegocioAberto } from "@/lib/data/deals";
 import { useConfirm } from "@/components/ui/ConfirmDialog";
+import { SegmentedControl } from "@/components/ui/SegmentedControl";
+import { NotasDaConta } from "./NotasDaConta";
 
 /**
  * A gaveta do negócio: abre sobre o quadro, não navega.
@@ -80,6 +82,15 @@ export function NegocioDrawer({
   const [contaEmail, setContaEmail] = useState(negocio.conta?.email ?? "");
   const [contaTelefone, setContaTelefone] = useState(negocio.conta?.telefone ?? "");
   const [contaSite, setContaSite] = useState(negocio.conta?.site ?? "");
+
+  // A aba mora no estado local, e não na URL: é recorte de uma gaveta, não de
+  // uma página — ninguém compartilha o link "a aba Detalhes do negócio X", e
+  // o deep-link que existe (`?negocio=`) aponta para a gaveta inteira.
+  //
+  // A gaveta remonta por negócio (`key` no pai), então abrir outro cartão
+  // volta para "Dados". É o certo: a aba escolhida no negócio anterior não é
+  // um pedido sobre o próximo.
+  const [aba, setAba] = useState<"dados" | "detalhes">("dados");
 
   const contaNomeValido = contaNome.trim() !== "";
   const contaAutoSaveStatus = useAutoSave({
@@ -251,8 +262,32 @@ export function NegocioDrawer({
         </button>
       </div>
 
+      <div className="border-b border-border px-5.5 py-2.5">
+        <SegmentedControl
+          rotuloAcessivel="Seção do negócio"
+          valor={aba}
+          onChange={setAba}
+          preencher
+          opcoes={[
+            { valor: "dados", rotulo: "Dados" },
+            { valor: "detalhes", rotulo: "Detalhes" },
+          ]}
+        />
+      </div>
+
+      {/* A aba "Dados" esconde com `hidden` em vez de desmontar. Os campos
+          têm autosave com debounce: desmontar no meio de uma digitação
+          descartaria o save pendente, e voltar para a aba mostraria o valor
+          antigo até o próximo toque. Escondido, o formulário continua vivo e
+          termina de salvar enquanto se lê o histórico. `display:none` já tira
+          os campos da ordem de tabulação, então nada fica alcançável por
+          engano. A aba "Detalhes" faz o contrário — desmonta — porque ela lê
+          do servidor ao montar, e mantê-la viva significaria uma leitura presa
+          na memória por gaveta aberta. */}
       <div className="flex flex-1 flex-col gap-4.5 overflow-y-auto scrollbar-thin px-5.5 py-4">
-        <div className="flex flex-col gap-3.5">
+        {aba === "detalhes" && <NotasDaConta contaId={negocio.conta_id} />}
+
+        <div className={aba === "dados" ? "flex flex-col gap-3.5" : "hidden"}>
           <div className="label">A CONTA</div>
           <Field label="NOME">
             <Input value={contaNome} onChange={(e) => setContaNome(e.target.value)} />
@@ -320,7 +355,7 @@ export function NegocioDrawer({
           </div>
         </div>
 
-        <div className="flex flex-col gap-3.5">
+        <div className={aba === "dados" ? "flex flex-col gap-3.5" : "hidden"}>
           <div className="label">O NEGÓCIO</div>
           {/* Único jeito de mudar de estágio sem arrastar: o quadro não tem
               KeyboardSensor, e o arraste fica desabilitado no celular. Sem
@@ -365,7 +400,7 @@ export function NegocioDrawer({
           </div>
         </div>
 
-        {pedindoMotivo && (
+        {pedindoMotivo && aba === "dados" && (
           <Field label="MOTIVO DA PERDA">
             <Textarea
               autoFocus
@@ -426,7 +461,17 @@ export function NegocioDrawer({
             >
               {pendente && acaoAtual === "ganhar" ? "Marcando como ganho…" : "Ganhar"}
             </Button>
-            <Button variant="danger" disabled={pendente} onClick={() => setPedindoMotivo(true)}>
+            <Button
+              variant="danger"
+              disabled={pendente}
+              onClick={() => {
+                // Volta para "Dados": o campo do motivo mora lá, e pedir uma
+                // confirmação de perda com o campo fora de vista deixaria o
+                // rodapé pedindo algo que a tela não mostra.
+                setAba("dados");
+                setPedindoMotivo(true);
+              }}
+            >
               Perder
             </Button>
           </div>

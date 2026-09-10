@@ -329,6 +329,45 @@ export type Database = {
           },
         ]
       }
+      conta_notas: {
+        Row: {
+          autor_id: string | null
+          conta_id: string
+          criado_em: string
+          id: string
+          texto: string
+        }
+        Insert: {
+          autor_id?: string | null
+          conta_id: string
+          criado_em?: string
+          id?: string
+          texto: string
+        }
+        Update: {
+          autor_id?: string | null
+          conta_id?: string
+          criado_em?: string
+          id?: string
+          texto?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conta_notas_autor_id_fkey"
+            columns: ["autor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conta_notas_conta_id_fkey"
+            columns: ["conta_id"]
+            isOneToOne: false
+            referencedRelation: "contas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contas: {
         Row: {
           cidade: string | null

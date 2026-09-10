@@ -8,6 +8,8 @@ import { PipelineBoard } from "./PipelineBoard";
 import { NegocioDrawer } from "./NegocioDrawer";
 import { NovoNegocioModal } from "./NovoNegocioModal";
 import { formatCurrency } from "@/lib/format";
+import { baixarCsv } from "@/lib/csv";
+import { montarCsvDoPipeline, nomeDoArquivoDoPipeline } from "@/lib/pipeline-export";
 import { saudeDoNegocio } from "@/lib/negocios";
 import type { NegocioAberto } from "@/lib/data/deals";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -72,7 +74,27 @@ export function PipelineClient({
             ? "Cadastre um negócio — a leitura do quadro falhou, a escrita não."
             : `${negocios.length} ${negocios.length === 1 ? "negócio em aberto" : "negócios em aberto"} · ${podres} apodrecendo · ${formatCurrency(mrrEmJogo)}/mês em jogo`
         }
-        actions={<Button onClick={() => setMostrarNovo(true)}>+ Novo negócio</Button>}
+        actions={
+          <>
+            {/* Exporta o que ESTÁ NO QUADRO — o funil aberto, na mesma
+                ordem —, e não uma segunda consulta ao banco. Duas razões: o
+                arquivo bate com o que a pessoa acabou de ver (um export que
+                traz negócio ganho seria surpresa), e o dado já está no
+                cliente, então não há ida ao servidor nem estado de espera.
+
+                Desabilitado com o quadro vazio: baixar um arquivo só com
+                cabeçalho parece falha, e explicar isso depois custa mais que
+                não deixar acontecer. */}
+            <Button
+              variant="ghost"
+              disabled={unavailable || negocios.length === 0}
+              onClick={() => baixarCsv(nomeDoArquivoDoPipeline(agora), montarCsvDoPipeline(negocios, agora))}
+            >
+              Exportar CSV
+            </Button>
+            <Button onClick={() => setMostrarNovo(true)}>+ Novo negócio</Button>
+          </>
+        }
       />
 
       {/* Uma falha de LEITURA nunca pode tirar a capacidade de ESCREVER: o aviso
