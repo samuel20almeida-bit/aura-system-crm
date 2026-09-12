@@ -57,7 +57,7 @@ function TagDoFrescor({ frescor }: { frescor: Frescor | null }) {
 
 function Numero({ children, forte = false }: { children: React.ReactNode; forte?: boolean }) {
   return (
-    <td className={forte ? "py-2 pr-3 tabular-nums font-medium" : "py-2 pr-3 tabular-nums text-muted"}>
+    <td className={forte ? "py-3 pr-4 tabular-nums font-medium" : "py-3 pr-4 tabular-nums text-muted"}>
       {children}
     </td>
   );
@@ -120,7 +120,7 @@ export function OperacaoClient({
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-5">
       {dialogo}
 
       <Card className="p-0">
@@ -149,7 +149,10 @@ export function OperacaoClient({
                     (coluna, i) => (
                       <th
                         key={coluna || `acao-${i}`}
-                        className="label bg-surface py-2 pr-3 shadow-[inset_0_-1px_0_var(--color-border)]"
+                        // `first:pl-5`/`last:pr-5` em vez de padding no cartão:
+                        // o contêiner precisa rolar até a borda, senão o recuo
+                        // cortaria a última coluna durante a rolagem lateral.
+                        className="label bg-surface pb-2.5 pt-4 pr-4 first:pl-5 last:pr-5 shadow-[inset_0_-1px_0_var(--color-border)]"
                       >
                         {coluna}
                       </th>
@@ -160,7 +163,7 @@ export function OperacaoClient({
               <tbody>
                 {linhas.map((linha) => (
                   <tr key={linha.contaId} className="group border-b border-border-soft last:border-b-0">
-                    <td className="py-2 pr-3">
+                    <td className="py-3 pr-4 pl-5">
                       <div className="flex flex-col">
                         <span className="font-medium">{linha.contaNome}</span>
                         <span className="text-small text-faint">
@@ -177,7 +180,7 @@ export function OperacaoClient({
                       // Vínculo sem dado é um estado real e diferente de zero:
                       // ou o salão foi ligado agora, ou o sincronizador não
                       // mandou nada desta janela.
-                      <td colSpan={6} className="py-2 pr-3 text-small text-faint">
+                      <td colSpan={6} className="py-3 pr-4 text-small text-faint">
                         Sem uso recebido nos últimos {janelaDias} dias.
                       </td>
                     ) : (
@@ -194,7 +197,7 @@ export function OperacaoClient({
                           )}
                         </Numero>
                         <Numero forte>{formatCurrencyCompact(linha.resumo.valorGerado)}</Numero>
-                        <td className="py-2 pr-3 tabular-nums">
+                        <td className="py-3 pr-4 tabular-nums">
                           {linha.cobranca === null ? (
                             <span className="text-faint">—</span>
                           ) : (
@@ -213,7 +216,7 @@ export function OperacaoClient({
                             </div>
                           )}
                         </td>
-                        <td className="py-2 pr-3 tabular-nums text-muted">
+                        <td className="py-3 pr-4 tabular-nums text-muted">
                           {linha.resumo.diasComCusto === 0 ? (
                             // "—" e não "US$ 0,00": ninguém mediu. A `consumo_ia` do
                             // ClubCut já existe, mas uma chamada sem preço cadastrado
@@ -235,10 +238,10 @@ export function OperacaoClient({
                         </td>
                       </>
                     )}
-                    <td className="py-2 pr-3 text-small">
+                    <td className="py-3 pr-4 text-small">
                       <TagDoFrescor frescor={linha.frescor} />
                     </td>
-                    <td className="py-2 text-right">
+                    <td className="py-3 pr-5 text-right">
                       <button
                         type="button"
                         onClick={() => desvincular(linha)}
@@ -266,7 +269,7 @@ export function OperacaoClient({
         // é manual de propósito: "El Guardians" aqui e "El Guardians Barbearia
         // LTDA" lá casariam na maioria e errariam calado no resto — e vínculo
         // errado põe o número de um cliente no nome de outro.
-        <Card className="flex flex-col gap-2 p-4">
+        <Card className="flex flex-col gap-2.5 p-5">
           <span className="label">Salões sem conta no CRM</span>
           <p className="text-small text-muted">
             {saloesLivres.length === 1
@@ -294,7 +297,7 @@ export function OperacaoClient({
         </Card>
       )}
 
-      <Card className="p-4">
+      <Card className="p-5">
         <form onSubmit={vincular} className="flex flex-col gap-3 md:flex-row md:items-end">
           <div className="flex-1">
             <Field label="Conta do CRM">

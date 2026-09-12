@@ -53,7 +53,7 @@ export default async function OperacaoPage() {
     leituraFaturas.unavailable
   ) {
     return (
-      <PageBody>
+      <PageBody ritmo="leitura">
         <PageHeader title="Operação" sub="O que o ClubCut está fazendo por cada cliente" />
         <Unavailable title="Não foi possível ler a operação do ClubCut" />
       </PageBody>
@@ -162,7 +162,7 @@ export default async function OperacaoPage() {
   const desatualizados = linhas.filter((l) => l.frescor && l.frescor.estado !== "ok").length;
 
   return (
-    <PageBody>
+    <PageBody ritmo="leitura">
       <PageHeader
         title="Operação"
         sub={`O que o ClubCut está fazendo por cada cliente · últimos ${JANELA_PADRAO_DIAS} dias`}
