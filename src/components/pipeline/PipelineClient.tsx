@@ -4,13 +4,13 @@ import { useMemo, useState } from "react";
 import { PageHeader } from "@/components/layout/PageBody";
 import { Button } from "@/components/ui/Button";
 import { Unavailable } from "@/components/ui/Unavailable";
+import { useToast } from "@/components/ui/Toast";
 import { PipelineBoard } from "./PipelineBoard";
 import { NegocioDrawer } from "./NegocioDrawer";
 import { NovoNegocioModal } from "./NovoNegocioModal";
 import { formatCurrency } from "@/lib/format";
-import { baixarCsv } from "@/lib/csv";
-import { montarCsvDoPipeline, nomeDoArquivoDoPipeline } from "@/lib/pipeline-export";
-import { saudeDoNegocio } from "@/lib/negocios";
+import { baixarPlanilha } from "@/lib/baixar-planilha";
+import { abasDoPipeline, estaParado, nomeDaPlanilha } from "@/lib/pipeline-planilha";
 import type { NegocioAberto } from "@/lib/data/deals";
 import { EmptyState } from "@/components/ui/EmptyState";
 
@@ -30,7 +30,11 @@ export function PipelineClient({
    */
   negocioInicialId?: string | null;
 }) {
+  const { notify } = useToast();
   const [mostrarNovo, setMostrarNovo] = useState(false);
+  // A planilha é montada e zipada no navegador. Com o funil grande isso leva
+  // um instante, e um botão que não responde ao clique é lido como quebrado.
+  const [exportando, setExportando] = useState(false);
   const [idSelecionado, setIdSelecionado] = useState<string | null>(negocioInicialId);
 
   // Um instante só para a tela inteira: cartões, gaveta e resumo têm que
@@ -48,13 +52,11 @@ export function PipelineClient({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const agora = useMemo(() => new Date(), [negocios]);
 
-  const podres = negocios.filter(
-    (n) =>
-      saudeDoNegocio(
-        { proximoPasso: n.proximo_passo, proximoPassoEm: n.proximo_passo_em, mexidoEm: n.mexido_em },
-        agora
-      ) === "podre"
-  ).length;
+  // `estaParado` é `saudeDoNegocio(...) === "podre"` embrulhado — o mesmo
+  // predicado que a planilha usa para montar a aba "Parados". Compartilhar a
+  // função, e não repetir a condição, é o que garante que o número desta linha
+  // e a contagem de linhas do arquivo exportado nunca divirjam.
+  const podres = negocios.filter((n) => estaParado(n, agora)).length;
 
   const mrrEmJogo = negocios.reduce((soma, n) => soma + Number(n.mrr ?? 0), 0);
 
@@ -87,10 +89,20 @@ export function PipelineClient({
                 não deixar acontecer. */}
             <Button
               variant="ghost"
-              disabled={unavailable || negocios.length === 0}
-              onClick={() => baixarCsv(nomeDoArquivoDoPipeline(agora), montarCsvDoPipeline(negocios, agora))}
+              disabled={unavailable || negocios.length === 0 || exportando}
+              onClick={async () => {
+                setExportando(true);
+                try {
+                  await baixarPlanilha(nomeDaPlanilha(agora), abasDoPipeline(negocios, agora));
+                } catch (erro) {
+                  console.error("[pipeline] falha ao montar a planilha:", erro);
+                  notify("error", "Não foi possível gerar a planilha. Tente de novo — se persistir, me avise.");
+                } finally {
+                  setExportando(false);
+                }
+              }}
             >
-              Exportar CSV
+              {exportando ? "Gerando…" : `Exportar (${podres} parados)`}
             </Button>
             <Button onClick={() => setMostrarNovo(true)}>+ Novo negócio</Button>
           </>
